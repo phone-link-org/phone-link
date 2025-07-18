@@ -137,3 +137,52 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ───── macOS ─────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+__MACOSX/
+
+# ───── IDE ─────
+# VSCode
+.vscode/
+.history/
+
+# Cursor IDE (VSCode 기반이지만 별도 설정이 있을 경우 대비)
+.cursor/
+cursor.json
+
+# ───── React (프론트엔드) ─────
+frontend/node_modules/
+frontend/build/
+frontend/.env
+frontend/.env.*.local
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/.cache/
+
+# ───── Tailwind ─────
+tailwind.config.js
+tailwind.config.ts
+postcss.config.js
+postcss.config.ts
+
+# ───── Node.js (백엔드) ─────
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*.local
+backend/*.tsbuildinfo
+
+# ───── OS 편의 ─────
+*.swp
+Thumbs.db
+ehthumbs.db
+Desktop.ini

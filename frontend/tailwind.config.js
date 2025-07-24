@@ -9,16 +9,16 @@ module.exports = {
     extend: {
       colors: {
         background: {
-          light: '#ffffff',
-          dark: '#121212'
+          light: '#F5F5F5',
+          dark: '#343434'
         },
         foreground: {
-          light: '#1f2937',
-          dark: '#f9fafb'
+          light: '#343434',
+          dark: '#F5F5F5'
         },
         primary: {
-          light: '#15482d',
-          dark: '#34d399'
+          light: '#4F7942',
+          dark: '#9DC183'
         }
       }
     },

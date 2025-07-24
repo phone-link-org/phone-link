@@ -168,12 +168,6 @@ frontend/out/
 frontend/.turbo/
 frontend/.cache/
 
-# ───── Tailwind ─────
-tailwind.config.js
-tailwind.config.ts
-postcss.config.js
-postcss.config.ts
-
 # ───── Node.js (백엔드) ─────
 backend/node_modules/
 backend/dist/

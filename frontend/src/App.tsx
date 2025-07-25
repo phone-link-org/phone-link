@@ -1,6 +1,7 @@
 //import { useState } from 'react'
 
 import Navbar from './components/Navbar';
+import ContentBox from './components/ContentBox';
 
 function App() {
   return (
@@ -11,8 +12,11 @@ function App() {
           <h1 className="text-2xl font-bold mb-2">테스트 배너</h1>
           <p className="text-base">Fuck you B9</p>
         </div>
-        {/* 여기에 추가적인 메인 컨텐츠가 들어갑니다 */}
       </main>
+      <div className="flex flex-col sm:flex-row gap-4 max-w-4xl mx-auto px-4">
+        <ContentBox text="박스 1"></ContentBox>
+        <ContentBox text="박스 2"></ContentBox>
+      </div>
     </>
   )
 }

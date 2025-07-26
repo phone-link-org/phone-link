@@ -1,16 +1,33 @@
 import React from 'react';
 import ThemeToggleButton from './ThemeToggleButton';
 import { IoMenuOutline } from 'react-icons/io5'
+import { Link } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
   return (
-    <nav className="w-full h-16 flex items-center justify-between px-8 shadow-sm bg-background-light dark:bg-background-dark">
+    <nav className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-8 shadow-sm bg-background-light dark:bg-background-dark">
       <div className="flex items-center">
-        <span className="text-2xl font-bold mr-8 text-primary-light dark:text-primary-dark">PhoneLink</span>
+        <Link to="/">
+          <button className="text-2xl font-bold mr-8 text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity">
+            PhoneLink
+          </button>
+        </Link>
         <ul className="hidden md:flex gap-6">
-          <li><a href="#" className="text-base text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors">가격 비교</a></li>
+          <li>
+            <Link to="/offer">
+              <button className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}>
+                가격 비교
+              </button>
+            </Link>
+          </li>
           <li><a href="#" className="text-base text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors">정보</a></li>
-          <li><a href="#" className="text-base text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors">커뮤니티</a></li>
+          <li>
+            <Link to="/community">
+              <button className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}>
+                커뮤니티
+              </button>
+            </Link>
+          </li>
         </ul>
       </div>
       <div className="flex items-center gap-4">

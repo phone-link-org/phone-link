@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import offerRoutes from './routes/offer.routes';
+import priceInputRoutes from './routes/priceInput.route';
 
 dotenv.config();
 
@@ -16,5 +17,6 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/offer', offerRoutes);
+app.use('/api/price-input', priceInputRoutes);
 
 export default app;

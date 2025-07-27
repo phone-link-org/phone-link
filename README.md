@@ -53,7 +53,17 @@ npm run build
   ```env
   VITE_API_URL=http://localhost:4000
   ```
-- 백엔드: `backend/.env` (필요시)
+- 백엔드: `backend/.env`
+  ```env
+  PORT=4000
+
+  # DB Connection information
+  DATABASE_HOST='{your_db_host}'
+  DATABASE_PORT='{your_db_port}'
+  DATABASE_USER='{your_db_user_id}'
+  DATABASE_PASSWORD='{your_db_password}'
+  DATABASE_NAME='phonelink'
+  ```
 
 ---
 

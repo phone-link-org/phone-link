@@ -20,6 +20,13 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
+          <li>
+            <Link to="/price-input">
+              <button className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}>
+                가격 입력
+              </button>
+            </Link>
+          </li>
           <li><a href="#" className="text-base text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors">정보</a></li>
           <li>
             <Link to="/community">

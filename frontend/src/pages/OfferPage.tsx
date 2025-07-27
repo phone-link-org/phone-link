@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Region, RegionWithParent } from "../../../shared/types";
+import CustomCheckbox from "../components/CustomCheckbox";
+import { FiX } from "react-icons/fi";
 
 const OfferPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"region" | "model">("region");
@@ -26,7 +28,10 @@ const OfferPage: React.FC = () => {
       const parentId = selectedRegion?.region_id;
       fetch(`${SERVER}/api/offer/regions?parentId=${parentId}`)
         .then((res) => res.json())
-        .then(setSubRegions);
+        .then((data) => {
+          const all = { region_id: -parentId, parent_id: parentId, name: "전체" };
+          setSubRegions([all, ...data]);
+        });
     }
   }, [selectedRegion, SERVER]);
 
@@ -38,12 +43,35 @@ const OfferPage: React.FC = () => {
     if (!selectedRegion) return;
 
     setSelectedSubRegions((prev) => {
-      const exists = prev.find((item) => item.child.region_id === child.region_id);
+      const parentId = selectedRegion.region_id;
 
-      if (exists) {
-        return prev.filter((item) => item.child.region_id !== child.region_id);
+      const isAllSelected = child.region_id === -parentId;
+
+      if (isAllSelected) {
+        // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
+        const filtered = prev.filter(
+          (item) => item.parent.region_id !== parentId
+        );
+        return [...filtered, { parent: selectedRegion, child }];
       } else {
-        return [...prev, { parent: selectedRegion, child }];
+        const filtered = prev.filter(
+          (item) =>
+            !(item.parent.region_id === parentId && item.child.region_id === -parentId)
+        );
+
+        const alreadySelected = filtered.find(
+          (item) => item.child.region_id === child.region_id
+        );
+
+        if (alreadySelected) {
+          // 이미 선택된 항목이면 제거
+          return filtered.filter(
+            (item) => item.child.region_id !== child.region_id
+          );
+        } else {
+          // 새로운 항목 추가
+          return [...filtered, { parent: selectedRegion, child }];
+        }
       }
     });
   };
@@ -53,14 +81,14 @@ const OfferPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">
         가격 비교
       </h1>
-      <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-lg p-0 mb-0">
+      <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
         <div className="flex items-center gap-2 px-6 pt-4 pb-2">
           <button
             className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
               ${
                 activeTab === "region"
-                  ? "bg-primary-light dark:bg-primary-dark text-white border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-gray-700 text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
+                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
+                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             onClick={() => setActiveTab("region")}
           >
@@ -70,8 +98,8 @@ const OfferPage: React.FC = () => {
             className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
               ${
                 activeTab === "model"
-                  ? "bg-primary-light dark:bg-primary-dark text-white border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-gray-700 text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
+                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
+                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             onClick={() => setActiveTab("model")}
           >
@@ -80,38 +108,30 @@ const OfferPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">
-          검색 조건
-        </h2>
+      <div className="bg-white dark:bg-[#292929] rounded-b-lg shadow-lg px-6 pb-6 pt-2 mb-8">
         <div className="grid grid-cols-1 gap-6">
           {activeTab === "region" ? (
             <div className="flex gap-6">
-              <div className="w-1/4 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700">
+              <div className="w-1/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {regions.map((region) => (
                     <label
                       key={region.name}
-                      className="flex items-center space-x-2 cursor-pointer"
+                      className="flex justify-center items-center cursor-pointer"
                     >
-                      <input
-                        type="checkbox"
+                      <CustomCheckbox
+                        label={region.name}
                         checked={selectedRegion?.name === region.name}
                         onChange={() => handleRegionChange(region)}
-                        className="w-4 h-4 text-primary-light dark:text-primary-dark bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500 rounded focus:ring-primary-light dark:focus:ring-primary-dark"
                       />
-                      <span className="text-sm text-foreground-light dark:text-foreground-dark">
-                        {region.name}
-                      </span>
                     </label>
                   ))}
                 </div>
               </div>
-
-              <div className="w-3/4 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700">
+              <div className="w-3/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {selectedRegion === null ? (
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-gray-400 text-xs">
                       시/도를 먼저 선택하세요.
                     </div>
                   ) : subRegions?.length === 0 ? (
@@ -122,19 +142,15 @@ const OfferPage: React.FC = () => {
                     subRegions?.map((sub) => (
                       <label
                         key={sub.name}
-                        className="flex items-center space-x-2 cursor-pointer"
+                        className="flex justify-center items-center cursor-pointer"
                       >
-                        <input
-                          type="checkbox"
+                        <CustomCheckbox
+                          label={sub.name}
                           checked={selectedSubRegions.some(
                             (item) => item.child.region_id === sub.region_id
                           )}
                           onChange={() => handleSubRegionChange(sub)}
-                          className="w-4 h-4 text-primary-light dark:text-primary-dark bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500 rounded focus:ring-primary-light dark:focus:ring-primary-dark"
                         />
-                        <span className="text-xs text-foreground-light dark:text-foreground-dark">
-                          {sub.name}
-                        </span>
                       </label>
                     ))
                   )}
@@ -160,6 +176,42 @@ const OfferPage: React.FC = () => {
               </select>
             </div>
           )}
+        </div>
+        <div className="flex flex-col gap-3 mt-6 px-2">
+          {/* 조건태그 있을 때만 보여줌 */}
+          {selectedSubRegions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedSubRegions.map(({ parent, child }) => (
+                <span
+                  key={child.region_id}
+                  className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
+                >
+                  {parent.name} {child.name}
+                  <button
+                    onClick={() =>
+                      setSelectedSubRegions((prev) =>
+                        prev.filter(
+                          (item) => item.child.region_id !== child.region_id
+                        )
+                      )
+                    }
+                    className="ml-2 text-gray-500 hover:text-red-500"
+                  >
+                    <FiX size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end">
+            <button
+              // TODO: 검색 기능 연결
+              onClick={() => {}}
+              className="w-1/6 px-4 py-2 text-xl font-medium rounded-2xl bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light hover:opacity-90"
+            >
+              검색하기
+            </button>
+          </div>
         </div>
       </div>
     </div>

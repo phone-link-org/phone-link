@@ -18,11 +18,12 @@ PhoneLink
 ### 1. 프로젝트 클론 및 의존성 설치
 
 ```bash
-# 루트에서
-npm install
-# 또는 각각
-cd backend && npm install
-cd ../frontend && npm install
+# 프로젝트 클론
+git clone https://github.com/HyunZai/phone-link.git
+# 루트 폴더로 이동
+cd phone-link
+# 의존성 설치 스크립트 쉘 실행
+sh install-dependencies-after-pull.sh
 ```
 
 ### 2. 개발 서버 실행

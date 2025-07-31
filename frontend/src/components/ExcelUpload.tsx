@@ -1,17 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
-
-interface Input {
-  devices: string;
-  carrier: number; // 1: SK, 2: KT, 3: LG
-  buyingType: 'MNP' | 'CHG';
-  typePrice: number;
-//  addons: string;
-//  addonsFee: number;
-//  addonsRequiredDuration: number; // in months
-  location: string;
-}
+import type { PriceInput } from '../../../shared/types';
 
 type TableRow = {
   device: string,
@@ -23,7 +13,7 @@ type TableRow = {
 const apiBaseURL = import.meta.env.VITE_API_URL as string;
 
 const ExcelUpload: React.FC = () => {
-  const [data, setData] = useState<Input[]>([]);
+  const [data, setData] = useState<PriceInput[]>([]);
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -65,8 +55,8 @@ const ExcelUpload: React.FC = () => {
     reader.readAsBinaryString(file);
   };
 
-  const parseExcelData = (rows: any[][]): Input[] => {
-  const results: Input[] = [];
+  const parseExcelData = (rows: any[][]): PriceInput[] => {
+  const results: PriceInput[] = [];
   let location = "Unknown";
     if (rows.length > 0 && typeof rows[0][0] === 'string') location = rows[0][0]
 
@@ -88,7 +78,9 @@ const ExcelUpload: React.FC = () => {
     for(const c of priceByCarrier) {
         if (c.price !== '' && c.price !== undefined && !isNaN(Number(c.price))) {
           results.push({
+            storeId: 1,
             devices,
+            // TODO: 로그인 기능 구현 시 아이디정보에서 store id 뽑아야됨 user/seller 구분도 필요
             carrier: c.carrier,
             buyingType: c.type as 'MNP' | 'CHG',
             typePrice: Number(c.price),

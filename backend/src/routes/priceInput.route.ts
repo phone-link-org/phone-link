@@ -1,11 +1,21 @@
 import { Router } from "express";
-import { Input } from "../types/priceInput";
 import { pool } from "../db";
+import { PriceInput } from "shared/types";
+
+
+//PriceInput {
+//  devices: string;
+//  carrier: number; // 1: SK, 2: KT, 3: LG
+//  buyingType: 'MNP' | 'CHG';
+//  typePrice: number;
+//  location: string;
+//}
 
 const router = Router();
 
 router.post('/', async (req, res) => {
-    const data: Input = req.body;
+    const data: PriceInput = req.body;
+    console.log(data);
     // TODO: store_id should be retrieved from authenticated user's session/token
 
     const connection = await pool.getConnection();
@@ -13,11 +23,11 @@ router.post('/', async (req, res) => {
         await connection.beginTransaction();
 
         // 1. Find device_id from device_name
-        const [deviceRows]: any = await connection.execute('SELECT device_id FROM devices WHERE device_name = ?', [data.devices]);
-        if (deviceRows.length === 0) {
-            throw new Error(`Device not found: ${data.devices}`);
-        }
-        const device_id = deviceRows[0].device_id;
+        //const [deviceRows]: any = await connection.execute('SELECT device_id FROM devices WHERE device_name = ?', [data.devices]);
+        //if (deviceRows.length === 0) {
+        //    throw new Error(`Device not found: ${data.devices}`);
+        //}
+        //const device_id = deviceRows[0].device_id;
 
         // 2. Insert into offers table
         const offerQuery = 'INSERT INTO offers (store_id, carrier_id, device_id, offer_type, price) VALUES (?, ?, ?, ?, ?)';

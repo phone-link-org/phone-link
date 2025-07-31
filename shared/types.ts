@@ -17,3 +17,15 @@ export interface PriceInput {
   typePrice: number;
   location: string;
 }
+
+export interface Device {
+  device_id: number;
+  brand: string;
+  model_KR: string;
+  model_US: string;
+  storage: string;
+  retail_price: number;
+  unlocked_price: number;
+  coupang_link: string;
+  created_at: Date;
+}

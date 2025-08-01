@@ -15,6 +15,30 @@ router.get('/regions', async (req, res) => {
   res.json(rows);
 });
 
+// SELECT 
+//   o.offer_id,
+//   o.store_id,
+//   o.carrier_id,
+//   o.device_id,
+//   o.offer_type,
+//   o.price
+// FROM offers o
+// JOIN stores s ON o.store_id = s.store_id
+// JOIN regions r ON s.region_id = r.region_id
+// JOIN devices d ON o.device_id = d.device_id
+// JOIN device_images di ON d.model_US = di.model_US
+// JOIN carriers c ON o.carrier_id = c.carrier_id
+// WHERE (r.region_id  IN (134, 3) OR r.parent_id IN (1, 52, 133))
+// AND d.brand IN ('Apple', 'Samsung')
+// AND d.model_KR IN ('아이폰 16 프로')
+// AND d.storage IN ('128GB', '256GB')
+// AND offer_type IN ('MNP', 'CHG');
+
+// -- region_id가 음수인 경우 상위 지역 전체를 선택한거임
+// -- 서버에서 음수인 애들을 걸러서 양수로 전환해주고, topRegion라고 따로 변수를 빼서 거기에 담아
+// -- 그게 위에 1, 52, 133에 들어가야
+
+
 router.get('/devices', async (req, res) => {
   try {
     const {

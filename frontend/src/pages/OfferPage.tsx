@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Region, RegionWithParent } from "../../../shared/types";
 import CustomCheckbox from "../components/CustomCheckbox";
 import { FiX } from "react-icons/fi";
+import ModelSelector from "../components/offer/ModelSelector";
 
 const OfferPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"region" | "model">("region");
@@ -9,20 +10,18 @@ const OfferPage: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [subRegions, setSubRegions] = useState<Region[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<Region | null>(null);
-  const [selectedSubRegions, setSelectedSubRegions] = useState<RegionWithParent[]>([]);
+  const [selectedSubRegions, setSelectedSubRegions] = useState<
+    RegionWithParent[]
+  >([]);
 
-  const [brands, setBrands] = useState<string[]>([]);
-  const [models, setModels] = useState<string[]>([]);
-  const [storages, setStorages] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [selectedStorages, setSelectedStorages] = useState<string[]>([]);
+  // const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  // const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  // const [selectedStorages, setSelectedStorages] = useState<string[]>([]);
 
-  const [carriers, setCarriers] = useState<string[]>([]);
-  const [buyingTypes, setBuyingTypes] = useState<string[]>([]);
-  const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
-  const [selectedBuyingTypes, setSelectedBuyingTypes] = useState<string[]>([]);
-
+  // const [carriers, setCarriers] = useState<string[]>([]);
+  // const [buyingTypes, setBuyingTypes] = useState<string[]>([]);
+  // const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
+  // const [selectedBuyingTypes, setSelectedBuyingTypes] = useState<string[]>([]);
 
   const SERVER = import.meta.env.VITE_API_URL;
 
@@ -178,23 +177,7 @@ const OfferPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div>
-                <label className="block text-sm font-medium mb-2 text-foreground-light dark:text-foreground-dark">
-                  모델 선택
-                </label>
-                {/* <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-foreground-light dark:text-foreground-dark focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent"
-                >
-                  <option value="all">전체</option>
-                  <option value="galaxy-s24">갤럭시 S24</option>
-                  <option value="iphone-15">아이폰 15</option>
-                  <option value="galaxy-z-flip5">갤럭시 Z 플립5</option>
-                  <option value="iphone-14">아이폰 14</option>
-                  <option value="galaxy-s23">갤럭시 S23</option>
-                </select> */}
-              </div>
+              <ModelSelector></ModelSelector>
             )}
           </div>
           <div className="flex flex-col gap-3 mt-6 px-2">

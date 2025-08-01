@@ -9,15 +9,6 @@ export interface RegionWithParent {
   child: Region;
 }
 
-export interface PriceInput {
-  storeId: number;
-  devices: string;
-  carrier: number; // 1: SK, 2: KT, 3: LG
-  buyingType: 'MNP' | 'CHG';
-  typePrice: number;
-  location: string;
-}
-
 export interface Device {
   device_id: number;
   brand: string;
@@ -28,4 +19,13 @@ export interface Device {
   unlocked_price: number;
   coupang_link: string;
   created_at: Date;
+}
+
+export interface PriceInput {
+  storeId: number;
+  devices: string;
+  carrier: number; // 1: SK, 2: KT, 3: LG
+  buyingType: 'MNP' | 'CHG';
+  typePrice: number;
+  location: string;
 }

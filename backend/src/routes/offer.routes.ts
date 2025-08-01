@@ -1,7 +1,7 @@
 // server/src/routes/offer.routes.ts
 import { Router } from 'express';
 import { pool } from '../db';
-import { Region } from '../../../shared/types';
+import { Region, Device } from '../../../shared/types';
 import { RowDataPacket } from 'mysql2';
 
 const router = Router();
@@ -14,6 +14,31 @@ router.get('/regions', async (req, res) => {
   );
   res.json(rows);
 });
+
+router.get('/brands', async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT DISTINCT brand FROM devices ORDER BY brand ASC'
+  );
+  res.json(rows);
+});
+
+router.get('/models', async (req, res) => {
+  const {brand} = req.query;
+  const [rows] = await pool.query(
+    'SELECT DISTINCT model_KR FROM devices WHERE brand = ? ORDER BY model_KR ASC',
+    [brand]
+  );
+  res.json(rows);
+});
+
+router.get('/storages', async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT DISTINCT brand FROM devices ORDER BY brand ASC'
+  );
+  res.json(rows);
+});
+
+
 
 // SELECT 
 //   o.offer_id,
@@ -39,7 +64,7 @@ router.get('/regions', async (req, res) => {
 // -- 그게 위에 1, 52, 133에 들어가야
 
 
-router.get('/devices', async (req, res) => {
+router.get('/offers', async (req, res) => {
   try {
     const {
       brand,           // string

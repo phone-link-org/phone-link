@@ -1,53 +1,71 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { PriceInput } from "shared/types";
-
-
-//PriceInput {
-//  devices: string;
-//  carrier: number; // 1: SK, 2: KT, 3: LG
-//  buyingType: 'MNP' | 'CHG';
-//  typePrice: number;
-//  location: string;
-//}
+import { PhoneDevices } from "../dto/phoneDevices";
+import { RowDataPacket } from "mysql2/promise"; // Import RowDataPacket
 
 const router = Router();
 
-router.post('/', async (req, res) => {
-    const data: PriceInput = req.body;
-    console.log(data);
-    // TODO: store_id should be retrieved from authenticated user's session/token
+router.post("/", async (req, res) => {
+  const data: PriceInput[] = req.body;
+  const db = await pool.getConnection();
 
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
+  let storages: Map<string, {}> = new Map();
+  storages.set("128G", {});
+  storages.set("256G", {});
+  storages.set("512G", {});
+  try {
+    for (const v of data) {
+      const modelParts = v.model.trim().split(/\s+/);
+      let storage: string | null = null;
+      let modelName: string = v.model;
 
-        // 1. Find device_id from device_name
-        //const [deviceRows]: any = await connection.execute('SELECT device_id FROM devices WHERE device_name = ?', [data.devices]);
-        //if (deviceRows.length === 0) {
-        //    throw new Error(`Device not found: ${data.devices}`);
-        //}
-        //const device_id = deviceRows[0].device_id;
+      const lastPart = modelParts[modelParts.length - 1];
+      if (storages.has(lastPart)) {
+        storage = lastPart;
+        modelName = modelParts.slice(0, -1).join(" ").trim();
+      }
+      // 용량이 없거나 유효하지 않은 경우
+      if (storage && !storages.has(storage)) {
+        console.log(modelName);
+        continue;
+        // throw new Error(`유효하지 않은 용량: ${storage}`);
+      }
+      // Explicitly type the query result
+      const [deviceRows]: [(RowDataPacket & PhoneDevices)[], any] =
+        await db.query(
+                `select id
+                from phone_models
+                where replace(name_ko, ' ', '') like ?
+                or replace(name_en, ' ', '') like ?
+                limit 1`,
+          [`%${modelName}%`, `%${modelName}%`],
+        );
 
-        // 2. Insert into offers table
-        const offerQuery = 'INSERT INTO offers (store_id, carrier_id, device_id, offer_type, price) VALUES (?, ?, ?, ?, ?)';
-        await connection.execute(offerQuery, [data.storeId, data.carrier, device_id, data.buyingType, data.typePrice]);
+      // Check if deviceRows has results
+      if (deviceRows.length === 0) {
+        console.log(`No device found for model: ${v.model} in phone_models table`);
+        continue;
+      }
 
-        // 3. Insert into addons table
-        // TODO: The penalty_fee is not in the Input type, so it's hardcoded to 0.
-        const addonQuery = 'INSERT INTO addons (store_id, carrier_id, addon_name, monthly_fee, req_duration, penalty_fee) VALUES (?, ?, ?, ?, ?, ?)';
-        await connection.execute(addonQuery, [data.storeId, data.carrier, data.addons, data.addonsFee, data.addonsRequiredDuration, 0]);
+      const deviceId: number = deviceRows[0].id;
+      console.log(deviceId);
 
-        await connection.commit();
-        res.status(201).json({ message: 'Price input successful' });
-    } catch (error) {
-        await connection.rollback();
-        console.error(error);
-        res.status(500).json({ message: 'Error processing price input', error: (error as Error).message });
-    } finally {
-        connection.release();
+      // Uncomment and use the insert query as needed
+      await db.query(
+        `INSERT INTO offers (store_id, carrier_id, device_id, offer_type, price)
+         VALUES (?, ?, ?, ?, ?)`,
+        [v.storeId, v.carrier, deviceId, v.buyingType, v.typePrice]
+      );
     }
+
+    res.status(200).send("Success");
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Internal Server Error");
+  } finally {
+    db.release(); // Release the connection
+  }
 });
 
 export default router;
-

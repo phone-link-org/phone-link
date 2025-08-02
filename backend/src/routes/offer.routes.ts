@@ -1,46 +1,56 @@
 // server/src/routes/offer.routes.ts
-import { Router } from 'express';
-import { pool } from '../db';
-import { Region, Device } from '../../../shared/types';
-import { RowDataPacket } from 'mysql2';
+import { Router } from "express";
+import { pool } from "../db";
+import {
+  Region,
+  PhoneManufacturer,
+  PhoneModel,
+  PhoneStorage,
+  PhoneDevice,
+} from "../../../shared/types";
+import { RowDataPacket } from "mysql2";
 
 const router = Router();
 
-router.get('/regions', async (req, res) => {
+router.get("/regions", async (req, res) => {
   const { parentId } = req.query;
   const [rows] = await pool.query<(Region & RowDataPacket)[]>(
-    'SELECT region_id, parent_id, name FROM regions WHERE parent_id <=> ? ORDER BY name ASC',
-    [parentId === 'null' ? null : parentId]
+    "SELECT region_id, parent_id, name FROM regions WHERE parent_id <=> ? ORDER BY name ASC",
+    [parentId === "null" ? null : parentId]
   );
   res.json(rows);
 });
 
-router.get('/brands', async (req, res) => {
-  const [rows] = await pool.query(
-    'SELECT DISTINCT brand FROM devices ORDER BY brand ASC'
+router.get("/phone-manufacturers", async (req, res) => {
+  const [rows] = await pool.query<PhoneManufacturer & RowDataPacket[]>(
+    "SELECT id, name_ko, name_en FROM phone_manufacturers ORDER BY name_ko ASC"
   );
   res.json(rows);
 });
 
-router.get('/models', async (req, res) => {
-  const {brand} = req.query;
-  const [rows] = await pool.query(
-    'SELECT DISTINCT model_KR FROM devices WHERE brand = ? ORDER BY model_KR ASC',
-    [brand]
+router.get("/phone-models", async (req, res) => {
+  const { manufacturerId } = req.query;
+  const [rows] = await pool.query<PhoneModel & RowDataPacket[]>(
+    "SELECT id, manufacturer_id, name_ko, name_en, image_url FROM phone_models WHERE manufacturer_id = ?",
+    [manufacturerId === "null" ? null : manufacturerId]
   );
   res.json(rows);
 });
 
-router.get('/storages', async (req, res) => {
-  const [rows] = await pool.query(
-    'SELECT DISTINCT brand FROM devices ORDER BY brand ASC'
+router.get("/phone-storages", async (req, res) => {
+  const { modelId } = req.query;
+  const [rows] = await pool.query<PhoneStorage & RowDataPacket[]>(
+    `
+     SELECT storage FROM phone_storages ps 
+       JOIN phone_devices pd ON ps.id = pd.storage_id 
+      WHERE model_id = ?
+    `,
+    [modelId === "null" ? null : modelId]
   );
   res.json(rows);
 });
 
-
-
-// SELECT 
+// SELECT
 //   o.offer_id,
 //   o.store_id,
 //   o.carrier_id,
@@ -63,15 +73,14 @@ router.get('/storages', async (req, res) => {
 // -- 서버에서 음수인 애들을 걸러서 양수로 전환해주고, topRegion라고 따로 변수를 빼서 거기에 담아
 // -- 그게 위에 1, 52, 133에 들어가야
 
-
-router.get('/offers', async (req, res) => {
+router.get("/offers", async (req, res) => {
   try {
     const {
-      brand,           // string
-      model_KR,        // string
-      storage,         // string
-      topRegionIds,    // comma-separated string (ex: "1,2")
-      subRegionIds,    // comma-separated string (ex: "10,11")
+      brand, // string
+      model_KR, // string
+      storage, // string
+      topRegionIds, // comma-separated string (ex: "1,2")
+      subRegionIds, // comma-separated string (ex: "10,11")
     } = req.query;
 
     // 쿼리 준비
@@ -103,25 +112,32 @@ router.get('/offers', async (req, res) => {
       const regionIds = [];
 
       if (topRegionIds) {
-        const topIds = (topRegionIds as string).split(',').map(id => parseInt(id));
+        const topIds = (topRegionIds as string)
+          .split(",")
+          .map((id) => parseInt(id));
         regionIds.push(...topIds);
       }
 
       if (subRegionIds) {
-        const subIds = (subRegionIds as string).split(',').map(id => parseInt(id));
+        const subIds = (subRegionIds as string)
+          .split(",")
+          .map((id) => parseInt(id));
         regionIds.push(...subIds);
       }
 
       if (regionIds.length > 0) {
         // 예: device_regions 테이블이 있다고 가정
         conditions.push(`d.device_id IN (
-          SELECT dr.device_id FROM device_regions dr WHERE dr.region_id IN (${regionIds.map(() => '?').join(',')})
+          SELECT dr.device_id FROM device_regions dr WHERE dr.region_id IN (${regionIds
+            .map(() => "?")
+            .join(",")})
         )`);
         params.push(...regionIds);
       }
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     // 최종 쿼리
     const [rows] = await pool.query(
@@ -147,10 +163,9 @@ router.get('/offers', async (req, res) => {
 
     res.status(200).json(rows);
   } catch (error) {
-    console.error('DB Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("DB Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 export default router;

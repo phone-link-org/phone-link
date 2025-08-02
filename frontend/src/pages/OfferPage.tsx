@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
 import type { Region, RegionWithParent } from "../../../shared/types";
+
+import type {
+  //RegionCondition,
+  ModelCondition,
+  ManufacturerModelCondition,
+  OfferSearchCondition,
+} from "../../../shared/offer_types";
+
 import CustomCheckbox from "../components/CustomCheckbox";
 import { FiX } from "react-icons/fi";
 import ModelSelector from "../components/offer/ModelSelector";
@@ -14,6 +22,9 @@ const OfferPage: React.FC = () => {
     RegionWithParent[]
   >([]);
 
+  const [offerSearchCondition, setOfferSearchCondition] =
+    useState<OfferSearchCondition | null>(null);
+
   // const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   // const [selectedModels, setSelectedModels] = useState<string[]>([]);
   // const [selectedStorages, setSelectedStorages] = useState<string[]>([]);
@@ -24,6 +35,69 @@ const OfferPage: React.FC = () => {
   // const [selectedBuyingTypes, setSelectedBuyingTypes] = useState<string[]>([]);
 
   const SERVER = import.meta.env.VITE_API_URL;
+
+  // useEffect(() => {
+  //   if (!manufacturerModelCondition && !modelCondition) return;
+
+  //   setOfferSearchCondition((prev) => {
+  //     const prevCondition: OfferSearchCondition = prev ?? {
+  //       region: [],
+  //       model: [],
+  //       offerType: [],
+  //       carrier: [],
+  //     };
+
+  //     const updatedModelList = [...prevCondition.model];
+
+  //     // 1️⃣ 제조사 정보가 존재할 경우: manufacturerModelCondition 사용
+  //     if (manufacturerModelCondition) {
+  //       const manufacturerIndex = updatedModelList.findIndex(
+  //         (m) => m.manufacturer === manufacturerModelCondition.manufacturer
+  //       );
+
+  //       if (manufacturerIndex !== -1) {
+  //         // 기존 제조사 있으면 덮어쓰기
+  //         updatedModelList[manufacturerIndex] = manufacturerModelCondition;
+  //       } else {
+  //         // 없으면 추가
+  //         updatedModelList.push(manufacturerModelCondition);
+  //       }
+  //     }
+
+  //     // 2️⃣ 모델 정보가 존재할 경우: modelCondition 사용
+  //     if (modelCondition && manufacturerModelCondition) {
+  //       const manufacturerIndex = updatedModelList.findIndex(
+  //         (m) => m.manufacturer === manufacturerModelCondition.manufacturer
+  //       );
+
+  //       if (manufacturerIndex !== -1) {
+  //         const modelList = [...updatedModelList[manufacturerIndex].model];
+  //         const modelIndex = modelList.findIndex(
+  //           (m) => m.id === modelCondition.id
+  //         );
+
+  //         if (modelIndex !== -1) {
+  //           modelList[modelIndex] = modelCondition;
+  //         } else {
+  //           modelList.push(modelCondition);
+  //         }
+
+  //         updatedModelList[manufacturerIndex].model = modelList;
+  //       } else {
+  //         // 제조사 자체가 없으면 새로 생성
+  //         updatedModelList.push({
+  //           manufacturer: manufacturerModelCondition.manufacturer,
+  //           model: [modelCondition],
+  //         });
+  //       }
+  //     }
+
+  //     return {
+  //       ...prevCondition,
+  //       model: updatedModelList,
+  //     };
+  //   });
+  // }, [manufacturerModelCondition, modelCondition]);
 
   // 시/도 지역 데이터 GET
   useEffect(() => {
@@ -177,7 +251,9 @@ const OfferPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <ModelSelector></ModelSelector>
+              <ModelSelector
+                setOfferSearchCondition={() => setOfferSearchCondition}
+              ></ModelSelector>
             )}
           </div>
           <div className="flex flex-col gap-3 mt-6 px-2">

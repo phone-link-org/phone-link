@@ -42,9 +42,8 @@ export interface PhoneDevice {
 
 export interface PriceInput {
   storeId: number;
-  devices: string;
+  model: string;
   carrier: number; // 1: SK, 2: KT, 3: LG
   buyingType: "MNP" | "CHG";
   typePrice: number;
-  location: string;
 }

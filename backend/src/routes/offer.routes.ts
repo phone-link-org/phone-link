@@ -41,7 +41,7 @@ router.get("/phone-storages", async (req, res) => {
   const { modelId } = req.query;
   const [rows] = await pool.query<PhoneStorage & RowDataPacket[]>(
     `
-     SELECT storage FROM phone_storages ps 
+     SELECT ps.id, ps.storage FROM phone_storages ps 
        JOIN phone_devices pd ON ps.id = pd.storage_id 
       WHERE model_id = ?
     `,

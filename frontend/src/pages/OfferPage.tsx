@@ -1,171 +1,26 @@
 import React, { useState, useEffect } from "react";
 import type { Region, RegionWithParent } from "../../../shared/types";
+import type { OfferSearchCondition } from "../../../shared/offer_types";
 
-import type {
-  //RegionCondition,
-  ModelCondition,
-  ManufacturerModelCondition,
-  OfferSearchCondition,
-} from "../../../shared/offer_types";
-
-import CustomCheckbox from "../components/CustomCheckbox";
 import { FiX } from "react-icons/fi";
 import ModelSelector from "../components/offer/ModelSelector";
+import RegionSelector from "../components/offer/RegionSelector";
+import { useOfferSearchCondition } from "../hooks/useOfferSearchCondition";
 
 const OfferPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"region" | "model">("region");
 
-  const [regions, setRegions] = useState<Region[]>([]);
-  const [subRegions, setSubRegions] = useState<Region[]>([]);
-  const [selectedRegions, setSelectedRegions] = useState<Region | null>(null);
   const [selectedSubRegions, setSelectedSubRegions] = useState<
     RegionWithParent[]
   >([]);
 
-  const [offerSearchCondition, setOfferSearchCondition] =
-    useState<OfferSearchCondition | null>(null);
+  const { offerSearchCondition, setOfferSearchCondition } =
+    useOfferSearchCondition();
 
-  // const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  // const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  // const [selectedStorages, setSelectedStorages] = useState<string[]>([]);
-
-  // const [carriers, setCarriers] = useState<string[]>([]);
-  // const [buyingTypes, setBuyingTypes] = useState<string[]>([]);
-  // const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
-  // const [selectedBuyingTypes, setSelectedBuyingTypes] = useState<string[]>([]);
-
-  const SERVER = import.meta.env.VITE_API_URL;
-
-  // useEffect(() => {
-  //   if (!manufacturerModelCondition && !modelCondition) return;
-
-  //   setOfferSearchCondition((prev) => {
-  //     const prevCondition: OfferSearchCondition = prev ?? {
-  //       region: [],
-  //       model: [],
-  //       offerType: [],
-  //       carrier: [],
-  //     };
-
-  //     const updatedModelList = [...prevCondition.model];
-
-  //     // 1️⃣ 제조사 정보가 존재할 경우: manufacturerModelCondition 사용
-  //     if (manufacturerModelCondition) {
-  //       const manufacturerIndex = updatedModelList.findIndex(
-  //         (m) => m.manufacturer === manufacturerModelCondition.manufacturer
-  //       );
-
-  //       if (manufacturerIndex !== -1) {
-  //         // 기존 제조사 있으면 덮어쓰기
-  //         updatedModelList[manufacturerIndex] = manufacturerModelCondition;
-  //       } else {
-  //         // 없으면 추가
-  //         updatedModelList.push(manufacturerModelCondition);
-  //       }
-  //     }
-
-  //     // 2️⃣ 모델 정보가 존재할 경우: modelCondition 사용
-  //     if (modelCondition && manufacturerModelCondition) {
-  //       const manufacturerIndex = updatedModelList.findIndex(
-  //         (m) => m.manufacturer === manufacturerModelCondition.manufacturer
-  //       );
-
-  //       if (manufacturerIndex !== -1) {
-  //         const modelList = [...updatedModelList[manufacturerIndex].model];
-  //         const modelIndex = modelList.findIndex(
-  //           (m) => m.id === modelCondition.id
-  //         );
-
-  //         if (modelIndex !== -1) {
-  //           modelList[modelIndex] = modelCondition;
-  //         } else {
-  //           modelList.push(modelCondition);
-  //         }
-
-  //         updatedModelList[manufacturerIndex].model = modelList;
-  //       } else {
-  //         // 제조사 자체가 없으면 새로 생성
-  //         updatedModelList.push({
-  //           manufacturer: manufacturerModelCondition.manufacturer,
-  //           model: [modelCondition],
-  //         });
-  //       }
-  //     }
-
-  //     return {
-  //       ...prevCondition,
-  //       model: updatedModelList,
-  //     };
-  //   });
-  // }, [manufacturerModelCondition, modelCondition]);
-
-  // 시/도 지역 데이터 GET
+  // offerSearchCondition이 변경될 때마다 로그 출력
   useEffect(() => {
-    fetch(`${SERVER}/api/offer/regions?parentId=null`)
-      .then((res) => res.json())
-      .then(setRegions);
-  }, [SERVER]);
-
-  // 시/도 지역 선택 시 구/군(하위 지역) 지역 데이터 GET
-  useEffect(() => {
-    if (selectedRegions !== null) {
-      const parentId = selectedRegions?.region_id;
-      fetch(`${SERVER}/api/offer/regions?parentId=${parentId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const all = {
-            region_id: -parentId,
-            parent_id: parentId,
-            name: "전체",
-          };
-          setSubRegions([all, ...data]);
-        });
-    }
-  }, [selectedRegions, SERVER]);
-
-  const handleRegionChange = (selectedRegion: Region) => {
-    setSelectedRegions(selectedRegion);
-  };
-
-  const handleSubRegionChange = (child: Region) => {
-    if (!selectedRegions) return;
-
-    setSelectedSubRegions((prev) => {
-      const parentId = selectedRegions.region_id;
-
-      const isAllSelected = child.region_id === -parentId;
-
-      if (isAllSelected) {
-        // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
-        const filtered = prev.filter(
-          (item) => item.parent.region_id !== parentId
-        );
-        return [...filtered, { parent: selectedRegions, child }];
-      } else {
-        const filtered = prev.filter(
-          (item) =>
-            !(
-              item.parent.region_id === parentId &&
-              item.child.region_id === -parentId
-            )
-        );
-
-        const alreadySelected = filtered.find(
-          (item) => item.child.region_id === child.region_id
-        );
-
-        if (alreadySelected) {
-          // 이미 선택된 항목이면 제거
-          return filtered.filter(
-            (item) => item.child.region_id !== child.region_id
-          );
-        } else {
-          // 새로운 항목 추가
-          return [...filtered, { parent: selectedRegions, child }];
-        }
-      }
-    });
-  };
+    console.log("offerSearchCondition 변경됨:", offerSearchCondition);
+  }, [offerSearchCondition]);
 
   return (
     <>
@@ -204,84 +59,49 @@ const OfferPage: React.FC = () => {
         <div className="bg-white dark:bg-[#292929] rounded-b-lg shadow-lg px-6 pb-6 pt-2 mb-8">
           <div className="grid grid-cols-1 gap-6">
             {activeTab === "region" ? (
-              <div className="flex gap-6">
-                <div className="w-1/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {regions.map((region) => (
-                      <label
-                        key={region.name}
-                        className="flex justify-center items-center cursor-pointer"
-                      >
-                        <CustomCheckbox
-                          label={region.name}
-                          checked={selectedRegions?.name === region.name}
-                          onChange={() => handleRegionChange(region)}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="w-3/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                    {selectedRegions === null ? (
-                      <div className="text-gray-400 text-xs">
-                        시/도를 먼저 선택하세요.
-                      </div>
-                    ) : subRegions?.length === 0 ? (
-                      <span className="text-gray-400 text-xs">
-                        구/군 데이터 없음
-                      </span>
-                    ) : (
-                      subRegions?.map((sub) => (
-                        <label
-                          key={sub.name}
-                          className="flex justify-center items-center cursor-pointer"
-                        >
-                          <CustomCheckbox
-                            label={sub.name}
-                            checked={selectedSubRegions.some(
-                              (item) => item.child.region_id === sub.region_id
-                            )}
-                            onChange={() => handleSubRegionChange(sub)}
-                          />
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+              <RegionSelector
+                selectedSubRegions={selectedSubRegions}
+                setSelectedSubRegions={setSelectedSubRegions}
+                setOfferSearchCondition={setOfferSearchCondition}
+              />
             ) : (
               <ModelSelector
-                setOfferSearchCondition={() => setOfferSearchCondition}
-              ></ModelSelector>
+                setOfferSearchCondition={setOfferSearchCondition}
+              />
             )}
           </div>
           <div className="flex flex-col gap-3 mt-6 px-2">
             {/* 조건태그 있을 때만 보여줌 */}
-            {selectedSubRegions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedSubRegions.map(({ parent, child }) => (
-                  <span
-                    key={child.region_id}
-                    className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
-                  >
-                    {parent.name} {child.name}
-                    <button
-                      onClick={() =>
-                        setSelectedSubRegions((prev) =>
-                          prev.filter(
-                            (item) => item.child.region_id !== child.region_id
-                          )
-                        )
-                      }
-                      className="ml-2 text-gray-500 hover:text-red-500"
+            {offerSearchCondition?.region &&
+              offerSearchCondition.region.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {offerSearchCondition.region.map((regionCondition, index) => (
+                    <span
+                      key={`${regionCondition.parent}-${index}`}
+                      className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
                     >
-                      <FiX size={14} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+                      {/* 여기서 regionCondition.parent와 regionCondition.child를 사용하여 지역명을 표시 */}
+                      {/* 실제 지역명을 가져오려면 regions 데이터를 참조해야 할 수 있습니다 */}
+                      { regionCondition.parent} -{" "}
+                      {regionCondition.child.join(", ")}
+                      <button
+                        onClick={() => {
+                          setOfferSearchCondition((prev) => {
+                            if (!prev) return prev;
+                            return {
+                              ...prev,
+                              region: prev.region.filter((_, i) => i !== index),
+                            };
+                          });
+                        }}
+                        className="ml-2 text-gray-500 hover:text-red-500"
+                      >
+                        <FiX size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             <div className="flex justify-end">
               <button
                 // TODO: 검색 기능 연결

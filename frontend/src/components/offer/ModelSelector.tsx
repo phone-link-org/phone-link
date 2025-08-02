@@ -8,10 +8,13 @@ import CustomCheckbox from "../CustomCheckbox";
 import type {
   ManufacturerModelCondition,
   ModelCondition,
+  OfferSearchCondition,
 } from "../../../../shared/offer_types";
 
 interface ModelSelectorProps {
-  setOfferSearchCondition: () => void;
+  setOfferSearchCondition: React.Dispatch<
+    React.SetStateAction<OfferSearchCondition | null>
+  >;
 }
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
@@ -164,11 +167,33 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const handleStorageChange = (storage: PhoneStorage) => {
     // selectedStorages 업데이트
-    setSelectedStorages((prev) =>
-      prev.includes(storage)
-        ? prev.filter((s) => s !== storage)
-        : [...prev, storage]
-    );
+    setSelectedStorages((prev) => {
+      // '전체' storage인지 확인 (음수 ID)
+      const isAllStorage = storage.id < 0;
+
+      if (isAllStorage) {
+        // '전체' 선택 시: 기존 모든 storage 제거하고 '전체'만 추가
+        return [storage];
+      } else {
+        // 일반 storage 선택 시
+        const isCurrentlySelected = prev.some((s) => s.id === storage.id);
+        const hasAllStorage = prev.some((s) => s.id < 0); // '전체'가 현재 선택되어 있는지
+
+        if (isCurrentlySelected) {
+          // 현재 선택된 storage를 해제
+          return prev.filter((s) => s.id !== storage.id);
+        } else {
+          // 새로운 storage 선택
+          if (hasAllStorage) {
+            // '전체'가 선택되어 있다면 '전체' 제거하고 새 storage 추가
+            return [...prev.filter((s) => s.id >= 0), storage];
+          } else {
+            // 일반적인 추가
+            return [...prev, storage];
+          }
+        }
+      }
+    });
 
     // modelConditions 업데이트
     if (!lastSelectedModel) return;
@@ -178,13 +203,33 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         if (cond.id !== lastSelectedModel.id) return cond;
 
         const isSelected = cond.storageId.includes(storage.id);
-        console.log(
-          `${storage.storage}가 원래 선택되어 있던 애니? ${isSelected}`
-        );
-        const updatedStorage = isSelected
-          ? cond.storageId.filter((s) => s !== storage.id)
-          : [...cond.storageId, storage.id];
-        return { ...cond, storageId: updatedStorage };
+
+        // '전체' storage 처리
+        if (storage.id < 0) {
+          // '전체' 선택 시: 모든 storage ID를 '전체' ID로 변경
+          return { ...cond, storageId: [storage.id] };
+        } else {
+          // 일반 storage 처리
+          const hasAllStorage = cond.storageId.some((id) => id < 0);
+
+          if (isSelected) {
+            // 선택 해제
+            const updatedStorage = cond.storageId.filter(
+              (s) => s !== storage.id
+            );
+            return { ...cond, storageId: updatedStorage };
+          } else {
+            // 선택 추가
+            if (hasAllStorage) {
+              // '전체'가 있으면 '전체' 제거하고 새 storage 추가
+              const filteredStorage = cond.storageId.filter((id) => id >= 0);
+              return { ...cond, storageId: [...filteredStorage, storage.id] };
+            } else {
+              // 일반적인 추가
+              return { ...cond, storageId: [...cond.storageId, storage.id] };
+            }
+          }
+        }
       });
     });
   };
@@ -237,7 +282,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         <div className="flex flex-col gap-2">
           {storages.map((data) => (
             <label
-              key={data.id}
+              key={`${lastSelectedModel?.id}-${data.id}`}
               className="flex justify-center items-center cursor-pointer"
             >
               <CustomCheckbox

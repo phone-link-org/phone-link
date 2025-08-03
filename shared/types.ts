@@ -40,10 +40,22 @@ export interface PhoneDevice {
   created_at: Date;
 }
 
+export interface Addon {
+  name: string;
+  fee: number;
+  requiredDuration: number;
+}
+
 export interface PriceInput {
   storeId: number;
   model: string;
   carrier: number; // 1: SK, 2: KT, 3: LG
   buyingType: "MNP" | "CHG";
   typePrice: number;
+  capacity: string;
+}
+
+export interface PriceSubmissionData {
+  priceInputs: Omit<PriceInput, 'storeId' | 'location'>[];
+  addons: Addon[];
 }

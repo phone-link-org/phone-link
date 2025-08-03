@@ -135,7 +135,7 @@ const ExcelUpload: React.FC = () => {
       // const promises = data.map(item =>
       //   axios.post(`${apiBaseURL}/api/price-input`, item)
       // );
-      const responses = await axios.post(`${apiBaseURL}/api/price-input`, data);
+      const responses = await axios.post(`${apiBaseURL}/api/price-input/excel`, data);
 
       //const responses = await Promise.all(promises);
 

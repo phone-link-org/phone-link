@@ -4,7 +4,7 @@ export interface Region {
   name: string;
 }
 
-export interface RegionWithParent {
+export interface RegionCondition {
   parent: Region;
   child: Region;
 }
@@ -28,7 +28,10 @@ export interface PhoneStorage {
   storage: string;
 }
 
-
+export interface ModelCondition {
+  model: PhoneModel;
+  storage?: PhoneStorage[];
+}
 
 export interface PhoneDevice {
   id: number;
@@ -56,6 +59,6 @@ export interface PriceInput {
 }
 
 export interface PriceSubmissionData {
-  priceInputs: Omit<PriceInput, 'storeId' | 'location'>[];
+  priceInputs: Omit<PriceInput, "storeId" | "location">[];
   addons: Addon[];
 }

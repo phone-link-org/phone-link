@@ -1,26 +1,82 @@
-import React, { useState, useEffect } from "react";
-import type { Region, RegionWithParent } from "../../../shared/types";
-import type { OfferSearchCondition } from "../../../shared/offer_types";
+/*
+    - 상위 지역, 하위 지역 <= RegionSelector.tsx
+    - 제조사, 모델명, 용량 <= ModelSelector.tsx
+    - 통신사(SKT, KT, LG U+)
+    - 번호이동 or 기기변경
+    - 사용자가 선택한 조건 태그
+    - 검색된 결과 리스트(offer)
+*/
 
+import React, { useState } from "react";
+import type { RegionCondition, ModelCondition } from "../../../shared/types";
 import { FiX } from "react-icons/fi";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
-import { useOfferSearchCondition } from "../hooks/useOfferSearchCondition";
+import CarrierSelector from "../components/offer/CarrierSelector";
+import OfferTypeSelector from "../components/offer/OfferTypeSelector";
+import { toast } from "sonner";
 
 const OfferPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"region" | "model">("region");
+  const [activeTab, setActiveTab] = useState<
+    "region" | "model" | "carrier" | "offerType"
+  >("region");
 
-  const [selectedSubRegions, setSelectedSubRegions] = useState<
-    RegionWithParent[]
-  >([]);
+  const [regionConditions, setRegionConditions] = useState<RegionCondition[]>(
+    []
+  );
+  const [modelConditions, setModelConditions] = useState<ModelCondition[]>([]);
+  const [carrierConditions, setCarrierConditions] = useState<string[]>([]);
+  const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
 
-  const { offerSearchCondition, setOfferSearchCondition } =
-    useOfferSearchCondition();
+  const SERVER = import.meta.env.VITE_API_URL;
 
-  // offerSearchCondition이 변경될 때마다 로그 출력
-  useEffect(() => {
-    console.log("offerSearchCondition 변경됨:", offerSearchCondition);
-  }, [offerSearchCondition]);
+  // TODO: DB에서 가져오게 처리해야되는데 일단 지금은 이렇게....ㅎㅎ
+  const getManufacturerName = (manufacturerId: number): string => {
+    const manufacturers: { [key: number]: string } = {
+      1: "삼성",
+      2: "애플",
+    };
+    return manufacturers[manufacturerId] || "알 수 없음";
+  };
+
+  const handleSearch = () => {
+    if (
+      regionConditions.length === 0 &&
+      modelConditions.length === 0 &&
+      carrierConditions.length === 0 &&
+      offerTypeConditions.length === 0
+    ) {
+      toast.error("검색할 조건이 없습니다.");
+    }
+
+    // 검색 조건들을 객체로 구성
+    const searchConditions = {
+      regionConditions,
+      modelConditions,
+      carrierConditions,
+      offerTypeConditions,
+    };
+
+    console.log(searchConditions);
+
+    // POST 요청으로 JSON 데이터 전송
+    fetch(`${SERVER}/api/offer/search`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(searchConditions),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("검색 결과:", data);
+        // TODO: 검색 결과를 상태에 저장
+      })
+      .catch((error) => {
+        console.error("검색 오류:", error);
+        // TODO: 에러 처리
+      });
+  };
 
   return (
     <>
@@ -53,6 +109,28 @@ const OfferPage: React.FC = () => {
             >
               모델
             </button>
+            <button
+              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
+              ${
+                activeTab === "carrier"
+                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
+                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+              onClick={() => setActiveTab("carrier")}
+            >
+              통신사
+            </button>
+            <button
+              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
+              ${
+                activeTab === "offerType"
+                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
+                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+              onClick={() => setActiveTab("offerType")}
+            >
+              개통방식
+            </button>
           </div>
         </div>
 
@@ -60,52 +138,162 @@ const OfferPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-6">
             {activeTab === "region" ? (
               <RegionSelector
-                selectedSubRegions={selectedSubRegions}
-                setSelectedSubRegions={setSelectedSubRegions}
-                setOfferSearchCondition={setOfferSearchCondition}
+                regionConditions={regionConditions}
+                onRegionConditionsChange={setRegionConditions}
+              />
+            ) : activeTab === "carrier" ? (
+              <CarrierSelector
+                carrierConditions={carrierConditions}
+                onCarriersChange={setCarrierConditions}
+              />
+            ) : activeTab === "offerType" ? (
+              <OfferTypeSelector
+                offerTypeConditions={offerTypeConditions}
+                onOfferTypesChange={setOfferTypeConditions}
               />
             ) : (
-              <ModelSelector
-                setOfferSearchCondition={setOfferSearchCondition}
-              />
+              <div>
+                <ModelSelector
+                  modelConditions={modelConditions}
+                  onModelConditionsChange={setModelConditions}
+                />
+              </div>
             )}
           </div>
           <div className="flex flex-col gap-3 mt-6 px-2">
-            {/* 조건태그 있을 때만 보여줌 */}
-            {offerSearchCondition?.region &&
-              offerSearchCondition.region.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {offerSearchCondition.region.map((regionCondition, index) => (
-                    <span
-                      key={`${regionCondition.parent}-${index}`}
-                      className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
+            {/* 지역 조건태그 */}
+            {regionConditions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {regionConditions.map(({ parent, child }) => (
+                  <span
+                    key={child.region_id}
+                    className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
+                  >
+                    {parent.name} {child.name}
+                    <button
+                      onClick={() =>
+                        setRegionConditions((prev) =>
+                          prev.filter(
+                            (item) => item.child.region_id !== child.region_id
+                          )
+                        )
+                      }
+                      className="ml-2 text-gray-500 hover:text-red-500"
                     >
-                      {/* 여기서 regionCondition.parent와 regionCondition.child를 사용하여 지역명을 표시 */}
-                      {/* 실제 지역명을 가져오려면 regions 데이터를 참조해야 할 수 있습니다 */}
-                      { regionCondition.parent} -{" "}
-                      {regionCondition.child.join(", ")}
+                      <FiX size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 모델 조건태그 */}
+            {modelConditions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {modelConditions.map(({ model, storage }) => {
+                  // 제조사 정보 가져오기 (manufacturer_id를 기반으로)
+                  const manufacturerName = getManufacturerName(
+                    model.manufacturer_id
+                  );
+
+                  // 조건 태그 텍스트 생성
+                  let tagText = "";
+
+                  if (model.id < 0) {
+                    // 전체 모델 선택 (음수 ID)
+                    tagText = manufacturerName;
+                  } else {
+                    // 특정 모델 선택
+                    tagText = model.name_ko;
+
+                    if (storage && storage.length > 0) {
+                      if (storage.length === 1 && storage[0].id < 0) {
+                        // 전체 용량 선택
+                        tagText = model.name_ko;
+                      } else {
+                        // 특정 용량들 선택
+                        const storageNames = storage
+                          .filter((s) => s.id > 0) // 전체 용량 제외
+                          .map((s) => s.storage)
+                          .join(", ");
+                        tagText = `${model.name_ko} ${storageNames}`;
+                      }
+                    }
+                  }
+
+                  return (
+                    <span
+                      key={model.id}
+                      className="flex items-center text-sm bg-blue-100 dark:bg-blue-700 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full"
+                    >
+                      {tagText}
                       <button
-                        onClick={() => {
-                          setOfferSearchCondition((prev) => {
-                            if (!prev) return prev;
-                            return {
-                              ...prev,
-                              region: prev.region.filter((_, i) => i !== index),
-                            };
-                          });
-                        }}
-                        className="ml-2 text-gray-500 hover:text-red-500"
+                        onClick={() =>
+                          setModelConditions((prev) =>
+                            prev.filter((item) => item.model.id !== model.id)
+                          )
+                        }
+                        className="ml-2 text-blue-500 hover:text-red-500"
                       >
                         <FiX size={14} />
                       </button>
                     </span>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 통신사 조건태그 */}
+            {carrierConditions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {carrierConditions.map((carrier) => (
+                  <span
+                    key={carrier}
+                    className="flex items-center text-sm bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200 px-3 py-1 rounded-full"
+                  >
+                    {carrier}
+                    <button
+                      onClick={() =>
+                        setCarrierConditions((prev) =>
+                          prev.filter((c) => c !== carrier)
+                        )
+                      }
+                      className="ml-2 text-green-500 hover:text-red-500"
+                    >
+                      <FiX size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 개통방식 조건태그 */}
+            {offerTypeConditions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {offerTypeConditions.map((offerType) => (
+                  <span
+                    key={offerType}
+                    className="flex items-center text-sm bg-purple-100 dark:bg-purple-700 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full"
+                  >
+                    {offerType === "MNP" ? "번호이동" : "기기변경"}
+                    <button
+                      onClick={() =>
+                        setOfferTypeConditions((prev) =>
+                          prev.filter((type) => type !== offerType)
+                        )
+                      }
+                      className="ml-2 text-purple-500 hover:text-red-500"
+                    >
+                      <FiX size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex justify-end">
               <button
                 // TODO: 검색 기능 연결
-                onClick={() => {}}
+                onClick={handleSearch}
                 className="w-1/6 px-4 py-2 text-xl font-medium rounded-2xl bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light hover:opacity-90"
               >
                 검색하기
@@ -129,7 +317,7 @@ const OfferPage: React.FC = () => {
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 {/* 썸네일 */}
                 <img
-                  src="https://via.placeholder.com/100x100?text=Phone"
+                  src="https://placehold.co/100x100?text=Phone"
                   alt="Phone Thumbnail"
                   className="w-24 h-24 object-cover rounded-lg self-center md:self-auto"
                 />

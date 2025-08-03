@@ -1,25 +1,15 @@
 import React, { useState, useEffect } from "react";
-import type { Region, RegionWithParent } from "../../../../shared/types";
-import type {
-  OfferSearchCondition,
-  RegionCondition,
-} from "../../../../shared/offer_types";
+import type { Region, RegionCondition } from "../../../../shared/types";
 import CustomCheckbox from "../CustomCheckbox";
 
 interface RegionSelectorProps {
-  selectedSubRegions: RegionWithParent[];
-  setSelectedSubRegions: React.Dispatch<
-    React.SetStateAction<RegionWithParent[]>
-  >;
-  setOfferSearchCondition: React.Dispatch<
-    React.SetStateAction<OfferSearchCondition | null>
-  >;
+  regionConditions: RegionCondition[];
+  onRegionConditionsChange: (conditions: RegionCondition[]) => void;
 }
 
 const RegionSelector: React.FC<RegionSelectorProps> = ({
-  selectedSubRegions,
-  setSelectedSubRegions,
-  setOfferSearchCondition,
+  regionConditions,
+  onRegionConditionsChange,
 }) => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [subRegions, setSubRegions] = useState<Region[]>([]);
@@ -51,132 +41,48 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
     }
   }, [selectedRegions, SERVER]);
 
-  const handleRegionChange = (selectedRegion: Region) => {
-    setSelectedRegions(selectedRegion);
-  };
-
   const handleSubRegionChange = (child: Region) => {
     if (!selectedRegions) return;
 
-    setOfferSearchCondition((prev) => {
-      const current = prev || {
-        region: [],
-        model: [],
-        offerType: [],
-        carrier: [],
-      };
+    const parentId = selectedRegions.region_id;
+    const isAllSelected = child.region_id === -parentId;
 
-      const parentId = selectedRegions.region_id;
-      const isAllSelected = child.region_id === -parentId;
+    if (isAllSelected) {
+      // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
+      const filtered = regionConditions.filter(
+        (item) => item.parent.region_id !== parentId
+      );
+      onRegionConditionsChange([
+        ...filtered,
+        { parent: selectedRegions, child },
+      ]);
+    } else {
+      const filtered = regionConditions.filter(
+        (item) =>
+          !(
+            item.parent.region_id === parentId &&
+            item.child.region_id === -parentId
+          )
+      );
 
-      if (isAllSelected) {
-        // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
-        const filtered = current.region.filter(
-          (item) => item.parent !== parentId
+      const alreadySelected = filtered.find(
+        (item) => item.child.region_id === child.region_id
+      );
+
+      if (alreadySelected) {
+        // 이미 선택된 항목이면 제거
+        onRegionConditionsChange(
+          filtered.filter((item) => item.child.region_id !== child.region_id)
         );
-        return {
-          ...current,
-          region: [...filtered, { parent: parentId, child: [child.region_id] }],
-        };
       } else {
-        const filtered = current.region.filter(
-          (item) =>
-            !(item.parent === parentId && item.child.includes(-parentId))
-        );
-
-        const existingParent = filtered.find(
-          (item) => item.parent === parentId
-        );
-
-        if (existingParent) {
-          // 같은 parent가 이미 있으면 child 배열 업데이트
-          const isChildSelected = existingParent.child.includes(
-            child.region_id
-          );
-
-          if (isChildSelected) {
-            // 선택 해제
-            const updatedChild = existingParent.child.filter(
-              (id) => id !== child.region_id
-            );
-            if (updatedChild.length === 0) {
-              // child가 없으면 parent도 제거
-              return {
-                ...current,
-                region: filtered.filter((item) => item.parent !== parentId),
-              };
-            } else {
-              return {
-                ...current,
-                region: filtered.map((item) =>
-                  item.parent === parentId
-                    ? { ...item, child: updatedChild }
-                    : item
-                ),
-              };
-            }
-          } else {
-            // 선택 추가
-            return {
-              ...current,
-              region: filtered.map((item) =>
-                item.parent === parentId
-                  ? { ...item, child: [...item.child, child.region_id] }
-                  : item
-              ),
-            };
-          }
-        } else {
-          // 새로운 parent 추가
-          return {
-            ...current,
-            region: [
-              ...filtered,
-              { parent: parentId, child: [child.region_id] },
-            ],
-          };
-        }
+        // 새로운 항목 추가
+        onRegionConditionsChange([
+          ...filtered,
+          { parent: selectedRegions, child },
+        ]);
       }
-    });
-
-    // 기존 selectedSubRegions 로직도 유지 (UI 표시용)
-    setSelectedSubRegions((prev) => {
-      const parentId = selectedRegions.region_id;
-
-      const isAllSelected = child.region_id === -parentId;
-
-      if (isAllSelected) {
-        // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
-        const filtered = prev.filter(
-          (item) => item.parent.region_id !== parentId
-        );
-        return [...filtered, { parent: selectedRegions, child }];
-      } else {
-        const filtered = prev.filter(
-          (item) =>
-            !(
-              item.parent.region_id === parentId &&
-              item.child.region_id === -parentId
-            )
-        );
-
-        const alreadySelected = filtered.find(
-          (item) => item.child.region_id === child.region_id
-        );
-
-        if (alreadySelected) {
-          // 이미 선택된 항목이면 제거
-          return filtered.filter(
-            (item) => item.child.region_id !== child.region_id
-          );
-        } else {
-          // 새로운 항목 추가
-          return [...filtered, { parent: selectedRegions, child }];
-        }
-      }
-    });
+    }
   };
-
   return (
     <div className="flex gap-6">
       <div className="w-1/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
@@ -189,7 +95,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
               <CustomCheckbox
                 label={region.name}
                 checked={selectedRegions?.name === region.name}
-                onChange={() => handleRegionChange(region)}
+                onChange={() => setSelectedRegions(region)}
               />
             </label>
           ))}
@@ -211,7 +117,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
               >
                 <CustomCheckbox
                   label={sub.name}
-                  checked={selectedSubRegions.some(
+                  checked={regionConditions.some(
                     (item) => item.child.region_id === sub.region_id
                   )}
                   onChange={() => handleSubRegionChange(sub)}

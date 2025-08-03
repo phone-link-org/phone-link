@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ExcelUpload from "../components/ExcelUpload";
+import ManualUpload from "../components/ManualUpload";
 
 const PriceInputOfferPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState< 'manual' | 'excel' >('manual');
@@ -29,6 +30,7 @@ const PriceInputOfferPage: React.FC = () => {
             엑셀 파일 업로드
           </button>
         </div>
+        {activeTab === 'manual' && <ManualUpload />}
         {activeTab === 'excel' && (
           <div className="p-6">
             <ExcelUpload />

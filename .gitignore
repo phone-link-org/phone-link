@@ -180,3 +180,7 @@ backend/*.tsbuildinfo
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+
+# crush agent
+.crush

@@ -1,10 +1,11 @@
 import axios from "axios";
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-import type { PriceInput } from "../../../shared/types";
+import type { PriceInput, Addon, PriceSubmissionData } from "../../../shared/types";
 
 type TableRow = {
   model: string;
+  capacity: string;
   sk_mnp?: number;
   sk_chg?: number;
   kt_mnp?: number;
@@ -12,6 +13,12 @@ type TableRow = {
   lg_mnp?: number;
   lg_chg?: number;
 };
+const CARRIERS = {
+  '1': 'SKT',
+  '2': 'KT',
+  '3': 'LG U+',
+};
+
 
 const apiBaseURL = import.meta.env.VITE_API_URL as string;
 
@@ -20,6 +27,24 @@ const ExcelUpload: React.FC = () => {
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [addons, setAddons] = useState<Addon[]>([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+  const storages = new Set(["128G", "256G", "512G", "1T"]);
+
+  const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const newAddons = [...addons];
+    newAddons[index] = { ...newAddons[index], [name]: value };
+    setAddons(newAddons);
+  };
+
+  const addAddon = () => {
+    setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+  };
+
+  const removeAddon = (index: number) => {
+    const newAddons = addons.filter((_, i) => i !== index);
+    setAddons(newAddons);
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,23 +89,30 @@ const ExcelUpload: React.FC = () => {
 
   const parseExcelData = (rows: any[][]): PriceInput[] => {
     const results: PriceInput[] = [];
-    //if (rows.length > 0 && typeof rows[0][0] === 'string') location = rows[0][0]
 
-    // 실제 데이터는 5번째 행(=인덱스 4) 부터 시작:
     for (let i = 3; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !row[0] || typeof row[0] !== "string") continue;
-      const model = row[0].trim();
+      
+      const modelParts = row[0].trim().split(/\s+/);
+      let storage: string | null = null;
+      let modelName: string = row[0];
 
-      // 각 통신사별 가격 뽑기
+      const lastPart = modelParts[modelParts.length - 1].toUpperCase();
+      if (storages.has(lastPart)) {
+        storage = lastPart;
+        modelName = modelParts.slice(0, -1).join(" ").trim();
+      }
+
       const priceByCarrier = [
-        { carrier: 1, type: "MNP", price: row[1] },
-        { carrier: 1, type: "CHG", price: row[2] },
-        { carrier: 2, type: "MNP", price: row[3] },
-        { carrier: 2, type: "CHG", price: row[4] },
-        { carrier: 3, type: "MNP", price: row[5] },
-        { carrier: 3, type: "CHG", price: row[6] },
+        { carrier: '1', type: "MNP", price: row[1] },
+        { carrier: '1', type: "CHG", price: row[2] },
+        { carrier: '2', type: "MNP", price: row[3] },
+        { carrier: '2', type: "CHG", price: row[4] },
+        { carrier: '3', type: "MNP", price: row[5] },
+        { carrier: '3', type: "CHG", price: row[6] },
       ];
+
       for (const c of priceByCarrier) {
         if (
           c.price !== "" &&
@@ -88,9 +120,9 @@ const ExcelUpload: React.FC = () => {
           !isNaN(Number(c.price))
         ) {
           results.push({
-            storeId: 1,
-            model,
-            // TODO: 로그인 기능 구현 시 아이디정보에서 store id 뽑아야됨 user/seller 구분도 필요
+            storeId: 1, // Placeholder
+            model: modelName,
+            capacity: storage || '',
             carrier: c.carrier,
             buyingType: c.type as "MNP" | "CHG",
             typePrice: Number(c.price),
@@ -103,11 +135,24 @@ const ExcelUpload: React.FC = () => {
 
   function toExcelStyleTable(rows: any[][]): TableRow[] {
     const result: TableRow[] = [];
+
     for (let i = 3; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !row[0] || typeof row[0] !== "string") continue;
+
+      const modelParts = row[0].trim().split(/\s+/);
+      let storage: string | null = null;
+      let modelName: string = row[0];
+
+      const lastPart = modelParts[modelParts.length - 1].toUpperCase();
+      if (storages.has(lastPart)) {
+        storage = lastPart;
+        modelName = modelParts.slice(0, -1).join(" ").trim();
+      }
+
       result.push({
-        model: row[0],
+        model: modelName,
+        capacity: storage || '-',
         sk_mnp: numVal(row[1]),
         sk_chg: numVal(row[2]),
         kt_mnp: numVal(row[3]),
@@ -132,19 +177,17 @@ const ExcelUpload: React.FC = () => {
     }
     setIsProcessing(true);
     try {
-      // const promises = data.map(item =>
-      //   axios.post(`${apiBaseURL}/api/price-input`, item)
-      // );
-      const responses = await axios.post(`${apiBaseURL}/api/price-input/excel`, data);
+      const submissionData: PriceSubmissionData = {
+        priceInputs: data,
+        addons,
+      };
+      const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
 
-      //const responses = await Promise.all(promises);
-
-      console.log("Server responses:", responses);
-      alert(
-        `Data submitted successfully! Server responded ${responses.data.length} times.`,
-      );
+      console.log("Server response:", response.data);
+      alert("Data submitted successfully!");
       setData([]);
       setFileName(null);
+      setAddons([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]); // Reset addons
     } catch (error) {
       console.error("Error submitting data:", error);
       alert(`Failed to submit data. See console for details.`);
@@ -165,7 +208,7 @@ const ExcelUpload: React.FC = () => {
       <div className="flex items-center gap-4">
         <label
           htmlFor="excel-upload"
-          className={`cursor-pointer text-white font-bold py-2 px-4 rounded transition-colors duration-200 ${isProcessing ? "bg-gray-500" : "bg-blue-500 hover:bg-blue-600"}`}
+          className={`cursor-pointer text-white font-bold py-2 px-4 rounded transition-colors duration-200 ${isProcessing ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"}`}
         >
           {isProcessing
             ? "Processing..."
@@ -190,12 +233,13 @@ const ExcelUpload: React.FC = () => {
 
       {data.length > 0 && !isProcessing && (
         <div className="mt-6">
+
           <button
             onClick={handleSubmit}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light"
             disabled={isProcessing}
           >
-            {isProcessing ? "Submitting..." : `Submit ${data.length} Records`}
+            {isProcessing ? "Submitting..." : `Submit ${tableData.length} Records`}
           </button>
           <div className="mt-4 overflow-auto max-h-96">
             <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -207,6 +251,13 @@ const ExcelUpload: React.FC = () => {
                     className="border py-3 px-6 text-center align-middle"
                   >
                     기기
+                  </th>
+                  <th
+                    rowSpan={2}
+                    scope="col"
+                    className="border py-3 px-6 text-center align-middle"
+                  >
+                    용량
                   </th>
                   {columns.map((col) => (
                     <th
@@ -238,6 +289,7 @@ const ExcelUpload: React.FC = () => {
                     className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
                   >
                     <td className="py-4 px-6 text-center">{row.model}</td>
+                    <td className="py-4 px-6 text-center">{row.capacity}</td>
                     <td className="py-4 px-6 text-center">
                       {row.sk_mnp ?? "-"}
                     </td>
@@ -260,6 +312,76 @@ const ExcelUpload: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              부가서비스
+            </label>
+            {addons.map((addon, index) => (
+              <div key={index} className="flex items-center gap-2 mt-2">
+                <input
+                  type="text"
+                  name="name"
+                  value={addon.name}
+                  onChange={(e) => handleAddonChange(index, e)}
+                  placeholder="부가서비스명"
+                  className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+                />
+                <input
+                  type="text"
+                  name="carrier"
+                  value={CARRIERS[addon.carrier as keyof typeof CARRIERS] || addon.carrier}
+                  onChange={(e) => handleAddonChange(index, e)}
+                  list="carrier-options"
+                  placeholder="통신사 선택 또는 입력"
+                  className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+                />
+                <datalist id="carrier-options">
+                  {Object.values(CARRIERS).map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <input
+                  type="number"
+                  name="fee"
+                  value={addon.monthlyFee}
+                  onChange={(e) => handleAddonChange(index, e)}
+                  placeholder="월 요금"
+                  className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+                />
+                <input
+                  type="number"
+                  name="requiredDuration"
+                  value={addon.requiredDuration}
+                  onChange={(e) => handleAddonChange(index, e)}
+                  placeholder="유지 기간 (개월)"
+                  className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+                />
+                <input
+                  type="number"
+                  name="requiredDuration"
+                  value={addon.penaltyFee}
+                  onChange={(e) => handleAddonChange(index, e)}
+                  placeholder="미가입시 발생 요금(만원)"
+                  className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeAddon(index)}
+                  className="px-3 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
+                >
+                  -
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addAddon}
+              className="mt-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              + 부가서비스 추가
+            </button>
           </div>
         </div>
       )}

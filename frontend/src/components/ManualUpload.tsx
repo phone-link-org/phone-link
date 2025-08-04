@@ -19,7 +19,7 @@ const apiBaseURL = import.meta.env.VITE_API_URL as string;
 const ManualUpload: React.FC = () => {
   const [models, setModels] = useState<{name: string, capacity: string}[]>([]);
   const [prices, setPrices] = useState<Record<string, Record<string, number | ''>>>({});
-  const [addons, setAddons] = useState<Addon[]>([{ name: '', fee: 0, requiredDuration: 0 }]);
+  const [addons, setAddons] = useState<Addon[]>([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
 
   const handleModelNameChange = (index: number, value: string) => {
     const newModels = [...models];
@@ -65,12 +65,18 @@ const ManualUpload: React.FC = () => {
   const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
-    newAddons[index] = { ...newAddons[index], [name]: value };
+
+    if (name === 'carrier') {
+      const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
+      newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
+    } else {
+      newAddons[index] = { ...newAddons[index], [name]: value };
+    }
     setAddons(newAddons);
   };
 
   const addAddon = () => {
-    setAddons([...addons, { name: '', fee: 0, requiredDuration: 0 }]);
+    setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
   };
 
   const removeAddon = (index: number) => {
@@ -81,7 +87,7 @@ const ManualUpload: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('handleSubmit called');
-    const priceInputs: Omit<PriceInput, 'storeId' | 'location'>[] = [];
+    const priceInputs: PriceInput[] = [];
     models.forEach(model => {
       if (!model.name) return; // Don't submit empty model names
       Object.keys(CARRIERS).forEach(carrier => {
@@ -89,9 +95,10 @@ const ManualUpload: React.FC = () => {
           const price = prices[model.name]?.[`${carrier}-${buyingType}`];
           if (price !== undefined && price !== '') {
             priceInputs.push({
+                storeId: 1,
                 model: model.name,
                 capacity: model.capacity,
-                carrier: Number(carrier),
+                carrier: carrier,
                 buyingType: buyingType as 'MNP' | 'CHG',
                 typePrice: price,
             });
@@ -102,12 +109,12 @@ const ManualUpload: React.FC = () => {
 
     const submissionData: PriceSubmissionData = {
       priceInputs,
-      addons,
+      addons: addons
     };
 
     console.log('Submitting Data:', submissionData);
     try {
-      const response = await axios.post(`${apiBaseURL}/api/price-input/manual`, submissionData);
+      const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
       if (response.data) {
         alert("Data submisson success");
       }
@@ -219,9 +226,23 @@ const ManualUpload: React.FC = () => {
               className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
             />
             <input
+              type="text"
+              name="carrier"
+              value={CARRIERS[addon.carrier as keyof typeof CARRIERS] || addon.carrier}
+              onChange={(e) => handleAddonChange(index, e)}
+              list="carrier-options"
+              placeholder="통신사 선택 또는 입력"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+            />
+            <datalist id="carrier-options">
+              {Object.values(CARRIERS).map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <input
               type="number"
               name="fee"
-              value={addon.fee}
+              value={addon.monthlyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="월 요금"
               className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
@@ -232,6 +253,14 @@ const ManualUpload: React.FC = () => {
               value={addon.requiredDuration}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="유지 기간 (개월)"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+            />
+            <input
+              type="number"
+              name="requiredDuration"
+              value={addon.penaltyFee}
+              onChange={(e) => handleAddonChange(index, e)}
+              placeholder="미가입시 발생 요금(만원)"
               className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
             />
             <button

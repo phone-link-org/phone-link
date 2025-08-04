@@ -45,20 +45,22 @@ export interface PhoneDevice {
 
 export interface Addon {
   name: string;
-  fee: number;
+  carrier: string;
+  monthlyFee: number;
   requiredDuration: number;
+  penaltyFee: number
 }
 
 export interface PriceInput {
   storeId: number;
   model: string;
-  carrier: number; // 1: SK, 2: KT, 3: LG
+  carrier: string; // 1: SK, 2: KT, 3: LG
   buyingType: "MNP" | "CHG";
   typePrice: number;
   capacity: string;
 }
 
 export interface PriceSubmissionData {
-  priceInputs: Omit<PriceInput, "storeId" | "location">[];
+  priceInputs: PriceInput[];
   addons: Addon[];
 }

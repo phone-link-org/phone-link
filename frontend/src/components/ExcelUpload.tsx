@@ -28,14 +28,46 @@ const ExcelUpload: React.FC = () => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [addons, setAddons] = useState<Addon[]>([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+  //const [addons, setAddons] = useState<Addon[]>([{ name: "", carrier: "1", monthlyFee: "", requiredDuration: "", penaltyFee: "" }]);
   const storages = new Set(["128G", "256G", "512G", "1T"]);
 
   const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
-    newAddons[index] = { ...newAddons[index], [name]: value };
+
+    // 숫자 필드 처리
+    //if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
+    //  newAddons[index] = { ...newAddons[index], [name]: parseInt(value) }
+    //} else if (name === "carrier") {
+    //  const carrierKey = Object.keys(CARRIERS).find(k => CARRIERS[k as keyof typeof CARRIERS] === value)
+    //  newAddons[index] = { ...newAddons[index], [name]: carrierKey || value }
+    //} else {
+    //  newAddons[index] = { ...newAddons[index], [name]: value }
+    //}
+      newAddons[index] = { ...newAddons[index], [name]: value }
+
     setAddons(newAddons);
   };
+  //const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  //const { name, value } = e.target;
+  //const newAddons = [...addons];
+//
+  //if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
+  //  newAddons[index] = {
+  //    ...newAddons[index],
+  //    [name]: value === "" ? "" : isNaN(Number(value)) ? newAddons[index][name] : Number(value),
+  //  };
+  //} else if (name === "carrier") {
+  //  const carrierKey = Object.keys(CARRIERS).find(
+  //    (k) => CARRIERS[k as keyof typeof CARRIERS] === value
+  //  );
+  //  newAddons[index] = { ...newAddons[index], [name]: carrierKey || value };
+  //} else {
+  //  newAddons[index] = { ...newAddons[index], [name]: value };
+  //}
+//
+  //setAddons(newAddons);
+  //};
 
   const addAddon = () => {
     setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
@@ -179,7 +211,13 @@ const ExcelUpload: React.FC = () => {
     try {
       const submissionData: PriceSubmissionData = {
         priceInputs: data,
-        addons,
+        addons: addons
+        //addons: addons.map((addon) => ({
+        //  ...addon,
+        //  monthlyFee: Number(addon.monthlyFee) || 0,
+        //  requiredDuration: Number(addon.requiredDuration) || 0,
+        //  penaltyFee: Number(addon.penaltyFee) || 0
+        //}))
       };
       const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
 
@@ -344,8 +382,8 @@ const ExcelUpload: React.FC = () => {
                 </datalist>
                 <input
                   type="number"
-                  name="fee"
-                  value={addon.monthlyFee}
+                  name="monthlyFee"
+                  value={addon.monthlyFee ?? ""}
                   onChange={(e) => handleAddonChange(index, e)}
                   placeholder="월 요금"
                   className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
@@ -353,15 +391,15 @@ const ExcelUpload: React.FC = () => {
                 <input
                   type="number"
                   name="requiredDuration"
-                  value={addon.requiredDuration}
+                  value={addon.requiredDuration ?? ""}
                   onChange={(e) => handleAddonChange(index, e)}
                   placeholder="유지 기간 (개월)"
                   className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
                 />
                 <input
                   type="number"
-                  name="requiredDuration"
-                  value={addon.penaltyFee}
+                  name="penaltyFee"
+                  value={addon.penaltyFee ?? ""}
                   onChange={(e) => handleAddonChange(index, e)}
                   placeholder="미가입시 발생 요금(만원)"
                   className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"

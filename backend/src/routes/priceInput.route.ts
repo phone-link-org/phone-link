@@ -15,11 +15,11 @@ router.post("/", async (req, res) => {
 
     const addonIds = [];
     if (addons && addons.length > 0) {
-      for (const addon of addons) {
-        if (!addon.name || !addon.fee || !addon.requiredDuration) continue;
+      for (let i = 0; i < addons.length; i++) {
+        if (!addons[i].name || !addons[i].monthlyFee || !addons[i].requiredDuration || !addons[i].penaltyFee) continue;
         const [result] = await db.query(
-          `INSERT INTO addons (store_id, carrier_id, addon_name, monthly_fee, req_duration, penalty_fee) VALUES (?, ?, ?)`,
-          [priceInputs.storeId , addon.fee, addon.requiredDuration]
+          `INSERT INTO addons (store_id, carrier_id, addon_name, monthly_fee, req_duration, penalty_fee) VALUES (?, ?, ?, ?, ?, ?)`,
+          [priceInputs[i].storeId, addons[i].carrier, addons[i].name, addons[i].monthlyFee, addons[i].requiredDuration, addons[i].penaltyFee]
         );
         addonIds.push((result as any).insertId);
       }
@@ -45,7 +45,7 @@ router.post("/", async (req, res) => {
 
       const [offerResult] = await db.query(
         `INSERT INTO offers (store_id, carrier_id, device_id, offer_type, price) VALUES (?, ?, ?, ?, ?)`,
-        [1, priceInput.carrier, deviceId, priceInput.buyingType, priceInput.typePrice]
+        [priceInput.storeId, priceInput.carrier, deviceId, priceInput.buyingType, priceInput.typePrice]
       );
       const offerId = (offerResult as any).insertId;
 

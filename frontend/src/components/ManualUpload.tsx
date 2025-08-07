@@ -66,12 +66,13 @@ const ManualUpload: React.FC = () => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    if (name === 'carrier') {
-      const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
-      newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
-    } else {
-      newAddons[index] = { ...newAddons[index], [name]: value };
-    }
+    //if (name === 'carrier') {
+    //  const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
+    //  newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
+    //} else {
+    //  newAddons[index] = { ...newAddons[index], [name]: value };
+    //}
+    newAddons[index] = { ...newAddons[index], [name]: value }
     setAddons(newAddons);
   };
 
@@ -241,7 +242,7 @@ const ManualUpload: React.FC = () => {
             </datalist>
             <input
               type="number"
-              name="fee"
+              name="monthlyFee"
               value={addon.monthlyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="월 요금"
@@ -257,7 +258,7 @@ const ManualUpload: React.FC = () => {
             />
             <input
               type="number"
-              name="requiredDuration"
+              name="penaltyFee"
               value={addon.penaltyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="미가입시 발생 요금(만원)"

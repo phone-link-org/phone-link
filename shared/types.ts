@@ -43,12 +43,22 @@ export interface PhoneDevice {
   created_at: Date;
 }
 
+export interface DisplayOffer {
+  offer_id: number;
+  store_name: string;
+  region_name: string;
+  carrier_name: string;
+  model_name: string;
+  offer_type: string;
+  price: number;
+}
+
 export interface Addon {
   name: string;
   carrier: string;
   monthlyFee: number;
   requiredDuration: number;
-  penaltyFee: number
+  penaltyFee: number;
 }
 
 export interface PriceInput {

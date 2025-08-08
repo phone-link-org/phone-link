@@ -7,8 +7,12 @@
     - 검색된 결과 리스트(offer)
 */
 
-import React, { useState } from "react";
-import type { RegionCondition, ModelCondition } from "../../../shared/types";
+import React, { useEffect, useState } from "react";
+import type {
+  RegionCondition,
+  ModelCondition,
+  DisplayOffer,
+} from "../../../shared/types";
 import { FiX } from "react-icons/fi";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
@@ -28,7 +32,19 @@ const OfferPage: React.FC = () => {
   const [carrierConditions, setCarrierConditions] = useState<string[]>([]);
   const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
 
+  const [offerDatas, setOfferDatas] = useState([]);
+
   const SERVER = import.meta.env.VITE_API_URL;
+
+  // useEffect(() => {
+  //   fetch(`${SERVER}/api/offer/search`, { method: "POST" })
+  //     .then((res) => res.json())
+  //     .then(setOfferDatas)
+  //     .catch((error) => {
+  //       toast.error("데이터 조회 과정에서 에러가 발생했습니다.");
+  //       console.error("검색 오류:", error);
+  //     });
+  // }, [SERVER]);
 
   // TODO: DB에서 가져오게 처리해야되는데 일단 지금은 이렇게....ㅎㅎ
   const getManufacturerName = (manufacturerId: number): string => {
@@ -38,6 +54,27 @@ const OfferPage: React.FC = () => {
     };
     return manufacturers[manufacturerId] || "알 수 없음";
   };
+
+  function transformRegions(data: RegionCondition[]) {
+    const result = {
+      allRegion: [] as number[],
+      region: [] as number[],
+    };
+
+    data.forEach((item) => {
+      if (item.child.region_id < 0) {
+        result.allRegion.push(item.parent.region_id);
+      } else {
+        result.region.push(item.child.region_id);
+      }
+    });
+
+    return result;
+  }
+
+  function transformModels(data: ModelCondition[]) {
+    console.log(data);
+  }
 
   const handleSearch = () => {
     if (
@@ -49,15 +86,8 @@ const OfferPage: React.FC = () => {
       toast.error("검색할 조건이 없습니다.");
     }
 
-    // 검색 조건들을 객체로 구성
-    const searchConditions = {
-      regionConditions,
-      modelConditions,
-      carrierConditions,
-      offerTypeConditions,
-    };
-
-    console.log(searchConditions);
+    const regionCondData = transformRegions(regionConditions);
+    const modelCondData = transformModels(modelConditions);
 
     // POST 요청으로 JSON 데이터 전송
     fetch(`${SERVER}/api/offer/search`, {
@@ -65,16 +95,15 @@ const OfferPage: React.FC = () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(searchConditions),
+      body: JSON.stringify({ regions: regionCondData }),
     })
       .then((res) => res.json())
       .then((data) => {
+        setOfferDatas(data);
         console.log("검색 결과:", data);
-        // TODO: 검색 결과를 상태에 저장
       })
       .catch((error) => {
         console.error("검색 오류:", error);
-        // TODO: 에러 처리
       });
   };
 
@@ -302,15 +331,15 @@ const OfferPage: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col gap-4 mt-8">
-          {[1, 2, 3].map((_, idx) => (
+          {offerDatas.map((data: DisplayOffer) => (
             <div
-              key={idx}
+              key={`offer_${data.offer_id}`}
               className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-2xl shadow p-4 flex flex-col gap-3"
             >
               {/* 상단: 대리점명 / 지역 */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-semibold">스마트모바일 강남점</span>
-                <span>서울 강남구</span>
+                <span className="font-semibold">{data.store_name}</span>
+                <span>{data.region_name}</span>
               </div>
 
               {/* 본문: 썸네일 / 모델명 / 가격+토글 */}
@@ -325,7 +354,7 @@ const OfferPage: React.FC = () => {
                 {/* 모델명 */}
                 <div className="flex-1 text-center md:text-left">
                   <h2 className="text-base sm:text-lg font-semibold text-foreground-light dark:text-foreground-dark">
-                    아이폰 15 Pro
+                    {data.model_name}
                   </h2>
                 </div>
 
@@ -342,7 +371,7 @@ const OfferPage: React.FC = () => {
                     </label>
                   </div>
                   <p className="text-base font-bold text-primary-light dark:text-primary-dark mt-1">
-                    ₩1,290,000
+                    {data.price}만원
                   </p>
                 </div>
               </div>

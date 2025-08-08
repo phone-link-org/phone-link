@@ -82,7 +82,63 @@ interface SearchConditions {
   offerTypeConditions: string[];
 }
 
-router.get("/search", async (req, res) => {
+router.post("/search", async (req, res) => {
+  try {
+    const { regions, models } = req.body;
+
+    const regionConds: string[] = [];
+    if (regions.allRegion.length > 0) {
+      regionConds.push(`r.parent_id IN (${regions.allRegion.join(",")})`);
+    }
+    if (regions.region.length > 0) {
+      regionConds.push(`r.region_id IN (${regions.region.join(",")})`);
+    }
+
+    const condRegionSql = regionConds.join(" OR ");
+
+    const sql = `
+                SELECT 
+                    o.offer_id, 
+                    s.store_name, 
+                    CONCAT_WS(' ', r2.name, r.name) as region_name,
+                    c.carrier_name, 
+                    CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name,
+                    CASE 
+                        WHEN o.offer_type = 'MNP' THEN '번호이동'
+                        WHEN o.offer_type = 'CHG' THEN '기기변경'
+                        ELSE o.offer_type
+                    END AS offer_type,
+                    o.price
+                FROM offers o
+                JOIN stores s ON o.store_id = s.store_id
+                JOIN regions r ON s.region_id = r.region_id
+                JOIN regions r2 ON r.parent_id = r2.region_id  
+                JOIN phone_devices pd ON o.device_id = pd.id
+                JOIN phone_models pm ON pd.model_id = pm.id
+                JOIN phone_storages ps on pd.storage_id = ps.id
+                JOIN carriers c ON o.carrier_id = c.carrier_id
+                WHERE ${condRegionSql};`;
+
+    console.log(sql);
+
+    const [rows] = await pool.query(sql);
+
+    res.status(200).json(rows);
+
+    // const useOR = regions.allRegion.length > 0 && regions.region.length > 0;
+    // let condRegionSql = "";
+    // if (regions.allRegion.length > 0) {
+    //   condRegionSql = `r.parent_id IN (${regions.allRegion.join(",")})`;
+    // }
+
+    // if (regions.region.length > 0) {
+    //   if (useOR) condRegionSql += " OR ";
+    //   condRegionSql += `r.region_id IN (${regions.region.join(",")})`;
+    // }
+  } catch (error) {
+    console.error("DB Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
   // try {
   //   const reqConds: SearchConditions = req.body;
   //   // 쿼리 준비

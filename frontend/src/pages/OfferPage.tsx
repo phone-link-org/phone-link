@@ -36,15 +36,38 @@ const OfferPage: React.FC = () => {
 
   const SERVER = import.meta.env.VITE_API_URL;
 
-  // useEffect(() => {
-  //   fetch(`${SERVER}/api/offer/search`, { method: "POST" })
-  //     .then((res) => res.json())
-  //     .then(setOfferDatas)
-  //     .catch((error) => {
-  //       toast.error("데이터 조회 과정에서 에러가 발생했습니다.");
-  //       console.error("검색 오류:", error);
-  //     });
-  // }, [SERVER]);
+  const fetchOfferDatas = async () => {
+    try {
+      const params = {
+        regions: regionConditions ? transformRegions(regionConditions) : null,
+        models: modelConditions,
+        carriers: carrierConditions,
+        offerTypes: offerTypeConditions,
+      };
+
+      await fetch(`${SERVER}/api/offer/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(params),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setOfferDatas(data);
+          console.log("검색 결과:", data);
+        })
+        .catch((error) => {
+          console.error("검색 오류:", error);
+        });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOfferDatas();
+  }, [SERVER]);
 
   // TODO: DB에서 가져오게 처리해야되는데 일단 지금은 이렇게....ㅎㅎ
   const getManufacturerName = (manufacturerId: number): string => {
@@ -72,10 +95,6 @@ const OfferPage: React.FC = () => {
     return result;
   }
 
-  function transformModels(data: ModelCondition[]) {
-    console.log(data);
-  }
-
   const handleSearch = () => {
     if (
       regionConditions.length === 0 &&
@@ -86,25 +105,24 @@ const OfferPage: React.FC = () => {
       toast.error("검색할 조건이 없습니다.");
     }
 
-    const regionCondData = transformRegions(regionConditions);
-    const modelCondData = transformModels(modelConditions);
+    fetchOfferDatas();
 
     // POST 요청으로 JSON 데이터 전송
-    fetch(`${SERVER}/api/offer/search`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ regions: regionCondData }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setOfferDatas(data);
-        console.log("검색 결과:", data);
-      })
-      .catch((error) => {
-        console.error("검색 오류:", error);
-      });
+    //   fetch(`${SERVER}/api/offer/search`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({ regions: regionCondData }),
+    //   })
+    //     .then((res) => res.json())
+    //     .then((data) => {
+    //       setOfferDatas(data);
+    //       console.log("검색 결과:", data);
+    //     })
+    //     .catch((error) => {
+    //       console.error("검색 오류:", error);
+    //     });
   };
 
   return (
@@ -330,53 +348,113 @@ const OfferPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-4 mt-8">
-          {offerDatas.map((data: DisplayOffer) => (
-            <div
-              key={`offer_${data.offer_id}`}
-              className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-2xl shadow p-4 flex flex-col gap-3"
-            >
-              {/* 상단: 대리점명 / 지역 */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-semibold">{data.store_name}</span>
-                <span>{data.region_name}</span>
-              </div>
+        <div className="flex flex-col gap-6 mt-8">
+          {offerDatas.map((data: DisplayOffer) => {
+            // 통신사별 색상 설정
+            const getCarrierBadgeColor = (carrier: string) => {
+              switch (carrier) {
+                case "KT":
+                  return "bg-[#5EDFDE] text-black";
+                case "SKT":
+                  return "bg-[#3618CE] text-white";
+                case "LGU+":
+                  return "bg-[#E2207E] text-white";
+                default:
+                  return "bg-gray-400 text-white";
+              }
+            };
 
-              {/* 본문: 썸네일 / 모델명 / 가격+토글 */}
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                {/* 썸네일 */}
-                <img
-                  src="https://placehold.co/100x100?text=Phone"
-                  alt="Phone Thumbnail"
-                  className="w-24 h-24 object-cover rounded-lg self-center md:self-auto"
-                />
+            // 개통방식별 색상 설정
+            const getOfferTypeBadgeColor = (offerType: string) => {
+              return offerType === "번호이동"
+                ? "bg-emerald-500 text-white"
+                : "bg-amber-500 text-white";
+            };
 
-                {/* 모델명 */}
-                <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-base sm:text-lg font-semibold text-foreground-light dark:text-foreground-dark">
-                    {data.model_name}
-                  </h2>
+            return (
+              <div
+                key={`offer_${data.offer_id}`}
+                className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
+              >
+                {/* 상단: 대리점명 / 지역 */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    {data.store_name}
+                  </span>
+                  <span className="mt-1 sm:mt-0">{data.region_name}</span>
                 </div>
 
-                {/* 가격 + 토글 */}
-                <div className="flex flex-col items-center md:items-end justify-between gap-1 w-full md:w-auto">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                      24개월로 나누기
-                    </span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
-                      <div className="w-10 h-6 bg-gray-300 peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark rounded-full transition-colors"></div>
-                      <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white border border-gray-300 dark:border-gray-500 rounded-full transition-transform duration-200 transform peer-checked:translate-x-4"></div>
-                    </label>
+                {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6">
+                  {/* 썸네일 */}
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center rounded-xl flex-shrink-0 self-center lg:self-start">
+                    <img
+                      src={`${SERVER}/${data.image_url}`}
+                      alt={data.model_name}
+                      className="max-w-full max-h-full object-contain"
+                    />
                   </div>
-                  <p className="text-base font-bold text-primary-light dark:text-primary-dark mt-1">
-                    {data.price}만원
-                  </p>
+
+                  {/* 모델명과 뱃지 섹션 */}
+                  <div className="flex-1 text-center lg:text-left space-y-3">
+                    {/* 뱃지들 */}
+                    <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                      {/* 통신사 뱃지 */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getCarrierBadgeColor(
+                          data.carrier_name
+                        )}`}
+                      >
+                        {data.carrier_name}
+                      </span>
+
+                      {/* 개통방식 뱃지 */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getOfferTypeBadgeColor(
+                          data.offer_type
+                        )}`}
+                      >
+                        {data.offer_type}
+                      </span>
+                    </div>
+
+                    {/* 모델명 */}
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                      {data.model_name}
+                    </h2>
+                  </div>
+
+                  {/* 가격 + 토글 */}
+                  <div className="flex flex-col items-center lg:items-end justify-center gap-3 w-full lg:w-auto flex-shrink-0">
+                    {/* 토글 스위치 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        24개월로 나누기
+                      </span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-300 peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark rounded-full transition-colors duration-200"></div>
+                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white border border-gray-300 dark:border-gray-500 rounded-full transition-transform duration-200 transform peer-checked:translate-x-5 shadow-sm"></div>
+                      </label>
+                    </div>
+
+                    {/* 가격 */}
+                    <div className="text-center lg:text-right">
+                      <p
+                        className={`text-2xl sm:text-3xl font-bold ${
+                          data.price < 0
+                            ? "text-red-500 dark:text-red-400"
+                            : "text-primary-light dark:text-primary-dark"
+                        }`}
+                      >
+                        {data.price}만원
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </>

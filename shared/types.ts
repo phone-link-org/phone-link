@@ -51,6 +51,7 @@ export interface DisplayOffer {
   model_name: string;
   offer_type: string;
   price: number;
+  image_url: string;
 }
 
 export interface Addon {

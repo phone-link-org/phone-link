@@ -96,7 +96,59 @@ router.post("/search", async (req, res) => {
 
     const condRegionSql = regionConds.join(" OR ");
 
-    const sql = `
+    // ********************** Model 조건 생성 로직 start ********************** //
+    let modelWhere = "";
+    let modelParams: any[] = [];
+
+    if (models && Array.isArray(models) && models.length > 0) {
+      const modelClauses: string[] = [];
+
+      models.forEach((item) => {
+        const model = item.model;
+        const storage = item.storage;
+
+        if (model.id < 0) {
+          // 제조사 전체
+          modelClauses.push("pm2.id = ?");
+          modelParams.push(model.manufacturer_id);
+        } else {
+          // 특정 모델
+          if (
+            !storage ||
+            storage.length === 0 ||
+            storage.some((s: { id: number }) => s.id < 0)
+          ) {
+            // 모든 저장용량
+            modelClauses.push("pd.model_id = ?");
+            modelParams.push(model.id);
+          } else {
+            // 특정 저장용량
+            const storageIds = storage
+              .filter((s: { id: number }) => s.id > 0)
+              .map((s: { id: any }) => s.id);
+            if (storageIds.length > 0) {
+              modelClauses.push(
+                `(pd.model_id = ? AND pd.storage_id IN (${storageIds
+                  .map(() => "?")
+                  .join(",")}))`
+              );
+              modelParams.push(model.id, ...storageIds);
+            } else {
+              // 모든 저장용량
+              modelClauses.push("pd.model_id = ?");
+              modelParams.push(model.id);
+            }
+          }
+        }
+      });
+
+      if (modelClauses.length > 0) {
+        modelWhere = `AND (${modelClauses.join(" OR ")})`;
+      }
+    }
+    // *********************** Model 조건 생성 로직 end *********************** //
+
+    let sql = `
                 SELECT 
                     o.offer_id, 
                     s.store_name, 
@@ -108,7 +160,8 @@ router.post("/search", async (req, res) => {
                         WHEN o.offer_type = 'CHG' THEN '기기변경'
                         ELSE o.offer_type
                     END AS offer_type,
-                    o.price
+                    o.price,
+                    pm.image_url
                 FROM offers o
                 JOIN stores s ON o.store_id = s.store_id
                 JOIN regions r ON s.region_id = r.region_id
@@ -116,100 +169,19 @@ router.post("/search", async (req, res) => {
                 JOIN phone_devices pd ON o.device_id = pd.id
                 JOIN phone_models pm ON pd.model_id = pm.id
                 JOIN phone_storages ps on pd.storage_id = ps.id
+                JOIN phone_manufacturers pm2 ON pm.manufacturer_id = pm2.id
                 JOIN carriers c ON o.carrier_id = c.carrier_id
-                WHERE ${condRegionSql};`;
+                WHERE 1=1 ${condRegionSql ? "AND " : ""}
+                ${condRegionSql}
+                ${modelWhere}
+            `;
 
-    console.log(sql);
-
-    const [rows] = await pool.query(sql);
-
+    const [rows] = await pool.query(sql, modelParams);
     res.status(200).json(rows);
-
-    // const useOR = regions.allRegion.length > 0 && regions.region.length > 0;
-    // let condRegionSql = "";
-    // if (regions.allRegion.length > 0) {
-    //   condRegionSql = `r.parent_id IN (${regions.allRegion.join(",")})`;
-    // }
-
-    // if (regions.region.length > 0) {
-    //   if (useOR) condRegionSql += " OR ";
-    //   condRegionSql += `r.region_id IN (${regions.region.join(",")})`;
-    // }
   } catch (error) {
     console.error("DB Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-  // try {
-  //   const reqConds: SearchConditions = req.body;
-  //   // 쿼리 준비
-  //   const conditions: string[] = [];
-  //   const params: any[] = [];
-  //   if (reqConds.carrierConditions.length > 0) {
-  //     conditions.push(``)
-  //   }
-  //   // 모델명 필터
-  //   if (reqConds.modelConditions.length > 0) {
-  //   }
-  //   // 저장 용량 필터
-  //   if (storage) {
-  //     conditions.push(`d.storage = ?`);
-  //     params.push(storage);
-  //   }
-  //   // 지역 조건은 실제 devices 테이블과 연결되는 구조가 필요
-  //   // 현재 구조엔 지역 정보가 없으므로, 향후 device_regions 등의 테이블이 필요
-  //   // 예시용 조건만 구성해 둡니다.
-  //   if (topRegionIds || subRegionIds) {
-  //     const regionIds = [];
-  //     if (topRegionIds) {
-  //       const topIds = (topRegionIds as string)
-  //         .split(",")
-  //         .map((id) => parseInt(id));
-  //       regionIds.push(...topIds);
-  //     }
-  //     if (subRegionIds) {
-  //       const subIds = (subRegionIds as string)
-  //         .split(",")
-  //         .map((id) => parseInt(id));
-  //       regionIds.push(...subIds);
-  //     }
-  //     if (regionIds.length > 0) {
-  //       // 예: device_regions 테이블이 있다고 가정
-  //       conditions.push(`d.device_id IN (
-  //         SELECT dr.device_id FROM device_regions dr WHERE dr.region_id IN (${regionIds
-  //           .map(() => "?")
-  //           .join(",")})
-  //       )`);
-  //       params.push(...regionIds);
-  //     }
-  //   }
-  //   const whereClause =
-  //     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  //   // 최종 쿼리
-  //   const [rows] = await pool.query(
-  //     `
-  //     SELECT
-  //       d.device_id,
-  //       d.brand,
-  //       d.model_KR,
-  //       d.model_US,
-  //       d.storage,
-  //       d.retail_price,
-  //       d.unlocked_price,
-  //       d.coupang_link,
-  //       d.created_at,
-  //       di.image_url
-  //     FROM devices d
-  //     LEFT JOIN device_images di ON d.model_US = di.model_US
-  //     ${whereClause}
-  //     ORDER BY d.created_at DESC
-  //     `,
-  //     params
-  //   );
-  //   res.status(200).json(rows);
-  // } catch (error) {
-  //   console.error("DB Error:", error);
-  //   res.status(500).json({ error: "Internal Server Error" });
-  // }
 });
 
 export default router;

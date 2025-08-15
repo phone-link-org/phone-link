@@ -1,25 +1,68 @@
-import React, { useState } from 'react';
-import type { PriceInput, Addon, PriceSubmissionData } from '../../../shared/types';
-import axios from 'axios';
-
+import React, { useState, useEffect, useMemo } from "react";
+import type {
+  PriceInput,
+  Addon,
+  PriceSubmissionData,
+} from "../../../shared/types";
+import axios from "axios";
 
 const CARRIERS = {
-  '1': 'SKT',
-  '2': 'KT',
-  '3': 'LG U+',
+  "1": "SKT",
+  "2": "KT",
+  "3": "LG U+",
 };
 
 const BUYING_TYPES = {
-  'MNP': '번호이동',
-  'CHG': '기기변경',
+  MNP: "번호이동",
+  CHG: "기기변경",
+};
+
+const BRANDS = {
+  GALAXY: 1,
+  APPLE: 2,
 };
 
 const apiBaseURL = import.meta.env.VITE_API_URL as string;
 
+interface PhoneModel {
+  name_ko: string;
+  manufacturer_id: number;
+}
+
 const ManualUpload: React.FC = () => {
-  const [models, setModels] = useState<{name: string, capacity: string}[]>([]);
-  const [prices, setPrices] = useState<Record<string, Record<string, number | ''>>>({});
-  const [addons, setAddons] = useState<Addon[]>([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+  const [allModels, setAllModels] = useState<PhoneModel[]>([]);
+  const [models, setModels] = useState<{ name: string; capacity: string }[]>([]);
+  const [brand, setBrand] = useState(BRANDS.GALAXY);
+  const [prices, setPrices] = useState<
+    Record<string, Record<string, number | "">>
+  >({});
+  const [addons, setAddons] = useState<Addon[]>([
+    {
+      name: "",
+      carrier: "1",
+      monthlyFee: 0,
+      requiredDuration: 0,
+      penaltyFee: 0,
+    },
+  ]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await axios.get(`${apiBaseURL}/api/price-input/list-models`);
+        setAllModels(response.data);
+      } catch (error) {
+        console.error("Error fetching models:", error);
+      }
+    };
+    fetchModels();
+  }, []);
+
+  const filteredModels = useMemo(() => {
+    return allModels
+      .filter((model) => model.manufacturer_id === brand)
+      .map((model) => model.name_ko);
+  }, [allModels, brand]);
 
   const handleModelNameChange = (index: number, value: string) => {
     const newModels = [...models];
@@ -34,7 +77,7 @@ const ManualUpload: React.FC = () => {
   };
 
   const addModel = () => {
-    setModels([...models, { name: '', capacity: '' }]);
+    setModels([...models, { name: "", capacity: "" }]);
   };
 
   const removeModel = (index: number) => {
@@ -43,7 +86,7 @@ const ManualUpload: React.FC = () => {
     setModels(newModels);
 
     if (modelToRemove?.name) {
-      setPrices(prev => {
+      setPrices((prev) => {
         const newPrices = { ...prev };
         delete newPrices[modelToRemove.name];
         return newPrices;
@@ -51,9 +94,14 @@ const ManualUpload: React.FC = () => {
     }
   };
 
-  const handlePriceChange = (model: string, carrier: string, buyingType: string, value: string) => {
-    const price = value === '' ? '' : Number(value);
-    setPrices(prev => ({
+  const handlePriceChange = (
+    model: string,
+    carrier: string,
+    buyingType: string,
+    value: string,
+  ) => {
+    const price = value === "" ? "" : Number(value);
+    setPrices((prev) => ({
       ...prev,
       [model]: {
         ...prev[model],
@@ -62,22 +110,35 @@ const ManualUpload: React.FC = () => {
     }));
   };
 
-  const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddonChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    if (name === 'carrier') {
-      const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
+    if (name === "carrier") {
+      const carrierKey = Object.keys(CARRIERS).find(
+        (key) => CARRIERS[key as keyof typeof CARRIERS] === value,
+      );
       newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
     } else {
       newAddons[index] = { ...newAddons[index], [name]: value };
     }
-    //newAddons[index] = { ...newAddons[index], [name]: value }
     setAddons(newAddons);
   };
 
   const addAddon = () => {
-    setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+    setAddons([
+      ...addons,
+      {
+        name: "",
+        carrier: "1",
+        monthlyFee: 0,
+        requiredDuration: 0,
+        penaltyFee: 0,
+      },
+    ]);
   };
 
   const removeAddon = (index: number) => {
@@ -87,21 +148,21 @@ const ManualUpload: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit called');
+    console.log("handleSubmit called");
     const priceInputs: PriceInput[] = [];
-    models.forEach(model => {
+    models.forEach((model) => {
       if (!model.name) return; // Don't submit empty model names
-      Object.keys(CARRIERS).forEach(carrier => {
-        Object.keys(BUYING_TYPES).forEach(buyingType => {
+      Object.keys(CARRIERS).forEach((carrier) => {
+        Object.keys(BUYING_TYPES).forEach((buyingType) => {
           const price = prices[model.name]?.[`${carrier}-${buyingType}`];
-          if (price !== undefined && price !== '') {
+          if (price !== undefined && price !== "") {
             priceInputs.push({
-                storeId: 1,
-                model: model.name,
-                capacity: model.capacity,
-                carrier: carrier,
-                buyingType: buyingType as 'MNP' | 'CHG',
-                typePrice: price,
+              storeId: 1,
+              model: model.name,
+              capacity: model.capacity,
+              carrier: carrier,
+              buyingType: buyingType as "MNP" | "CHG",
+              typePrice: price,
             });
           }
         });
@@ -110,23 +171,38 @@ const ManualUpload: React.FC = () => {
 
     const submissionData: PriceSubmissionData = {
       priceInputs,
-      addons: addons
+      addons: addons,
     };
 
-    console.log('Submitting Data:', submissionData);
+    console.log("Submitting Data:", submissionData);
     try {
-      const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
+      const response = await axios.post(
+        `${apiBaseURL}/api/price-input`,
+        submissionData,
+      );
       if (response.data) {
         alert("Data submisson success");
       }
     } catch (e) {
-      console.error(e)
-      alert('Data submission failed !');
+      console.error(e);
+      alert("Data submission failed !");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"
+    >
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          브랜드
+        </label>
+        <div className="flex gap-4 mt-2">
+          <button type="button" onClick={() => setBrand(BRANDS.GALAXY)} className={`px-4 py-2 rounded-md ${brand === BRANDS.GALAXY ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Galaxy</button>
+          <button type="button" onClick={() => setBrand(BRANDS.APPLE)} className={`px-4 py-2 rounded-md ${brand === BRANDS.APPLE ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Apple</button>
+        </div>
+      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           모델
@@ -138,8 +214,14 @@ const ManualUpload: React.FC = () => {
               value={model.name}
               onChange={(e) => handleModelNameChange(index, e.target.value)}
               placeholder="모델명 (예: Z플립5)"
+              list="model-options"
               className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
             />
+            <datalist id="model-options">
+              {filteredModels.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
             <input
               type="text"
               value={model.capacity}
@@ -170,43 +252,74 @@ const ManualUpload: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
                   모델
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
                   용량
                 </th>
                 {Object.entries(CARRIERS).map(([carrierKey, carrierName]) =>
-                  Object.entries(BUYING_TYPES).map(([buyingTypeKey, buyingTypeName]) => (
-                    <th key={`${carrierKey}-${buyingTypeKey}`} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {carrierName} {buyingTypeName}
-                    </th>
-                  ))
+                  Object.entries(BUYING_TYPES).map(
+                    ([buyingTypeKey, buyingTypeName]) => (
+                      <th
+                        key={`${carrierKey}-${buyingTypeKey}`}
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                      >
+                        {carrierName} {buyingTypeName}
+                      </th>
+                    ),
+                  ),
                 )}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {models.map((model, index) => (
-                model.name && (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{model.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{model.capacity}</td>
-                  {Object.keys(CARRIERS).map(carrierKey =>
-                    Object.keys(BUYING_TYPES).map(buyingTypeKey => (
-                      <td key={`${carrierKey}-${buyingTypeKey}`} className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          className="w-full px-2 py-1 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
-                          placeholder='단위: 만원'
-                          value={prices[model.name]?.[`${carrierKey}-${buyingTypeKey}`] ?? ''}
-                          onChange={(e) => handlePriceChange(model.name, carrierKey, buyingTypeKey, e.target.value)}
-                        />
+              {models.map(
+                (model, index) =>
+                  model.name && (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {model.name}
                       </td>
-                    ))
-                  )}
-                </tr>
-                )
-              ))}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        {model.capacity}
+                      </td>
+                      {Object.keys(CARRIERS).map((carrierKey) =>
+                        Object.keys(BUYING_TYPES).map((buyingTypeKey) => (
+                          <td
+                            key={`${carrierKey}-${buyingTypeKey}`}
+                            className="px-6 py-4 whitespace-nowrap"
+                          >
+                            <input
+                              type="number"
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
+                              placeholder="단위: 만원"
+                              value={
+                                prices[model.name]?.[
+                                  `${carrierKey}-${buyingTypeKey}`
+                                ] ?? ""
+                              }
+                              onChange={(e) =>
+                                handlePriceChange(
+                                  model.name,
+                                  carrierKey,
+                                  buyingTypeKey,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                        )),
+                      )}
+                    </tr>
+                  ),
+              )}
             </tbody>
           </table>
         </div>
@@ -229,7 +342,10 @@ const ManualUpload: React.FC = () => {
             <input
               type="text"
               name="carrier"
-              value={CARRIERS[addon.carrier as keyof typeof CARRIERS] || addon.carrier}
+              value={
+                CARRIERS[addon.carrier as keyof typeof CARRIERS] ||
+                addon.carrier
+              }
               onChange={(e) => handleAddonChange(index, e)}
               list="carrier-options"
               placeholder="통신사 선택 또는 입력"

@@ -43,6 +43,11 @@ export interface PhoneDevice {
   created_at: Date;
 }
 
+export interface Carrier {
+  carrier_id: number;
+  carrier_name: string;
+}
+
 export interface DisplayOffer {
   offer_id: number;
   store_name: string;

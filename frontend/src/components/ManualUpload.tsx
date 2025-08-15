@@ -66,13 +66,13 @@ const ManualUpload: React.FC = () => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    //if (name === 'carrier') {
-    //  const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
-    //  newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
-    //} else {
-    //  newAddons[index] = { ...newAddons[index], [name]: value };
-    //}
-    newAddons[index] = { ...newAddons[index], [name]: value }
+    if (name === 'carrier') {
+      const carrierKey = Object.keys(CARRIERS).find(key => CARRIERS[key as keyof typeof CARRIERS] === value);
+      newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
+    } else {
+      newAddons[index] = { ...newAddons[index], [name]: value };
+    }
+    //newAddons[index] = { ...newAddons[index], [name]: value }
     setAddons(newAddons);
   };
 

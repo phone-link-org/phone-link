@@ -35,39 +35,18 @@ const ExcelUpload: React.FC = () => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    // 숫자 필드 처리
-    //if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
-    //  newAddons[index] = { ...newAddons[index], [name]: parseInt(value) }
-    //} else if (name === "carrier") {
-    //  const carrierKey = Object.keys(CARRIERS).find(k => CARRIERS[k as keyof typeof CARRIERS] === value)
-    //  newAddons[index] = { ...newAddons[index], [name]: carrierKey || value }
-    //} else {
-    //  newAddons[index] = { ...newAddons[index], [name]: value }
-    //}
+    if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
+      newAddons[index] = { ...newAddons[index], [name]: parseInt(value) }
+    } else if (name === "carrier") {
+      const carrierKey = Object.keys(CARRIERS).find(k => CARRIERS[k as keyof typeof CARRIERS] === value)
+      newAddons[index] = { ...newAddons[index], [name]: carrierKey || value }
+    } else {
+      newAddons[index] = { ...newAddons[index], [name]: value }
+    }
       newAddons[index] = { ...newAddons[index], [name]: value }
 
     setAddons(newAddons);
   };
-  //const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-  //const { name, value } = e.target;
-  //const newAddons = [...addons];
-//
-  //if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
-  //  newAddons[index] = {
-  //    ...newAddons[index],
-  //    [name]: value === "" ? "" : isNaN(Number(value)) ? newAddons[index][name] : Number(value),
-  //  };
-  //} else if (name === "carrier") {
-  //  const carrierKey = Object.keys(CARRIERS).find(
-  //    (k) => CARRIERS[k as keyof typeof CARRIERS] === value
-  //  );
-  //  newAddons[index] = { ...newAddons[index], [name]: carrierKey || value };
-  //} else {
-  //  newAddons[index] = { ...newAddons[index], [name]: value };
-  //}
-//
-  //setAddons(newAddons);
-  //};
 
   const addAddon = () => {
     setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);

@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import { DataSource } from "typeorm";
-import { Region } from "./typeorm/regions.entity";
 
 dotenv.config();
 

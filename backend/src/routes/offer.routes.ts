@@ -1,91 +1,80 @@
 // server/src/routes/offer.routes.ts
 import { Router } from "express";
-import { pool } from "../db";
-import {
-  Region,
-  PhoneManufacturer,
-  PhoneModel,
-  PhoneStorage,
-  PhoneDevice,
-  RegionCondition,
-  ModelCondition,
-} from "../../../shared/types";
-import { RowDataPacket } from "mysql2";
+import { AppDataSource } from "../db";
+import { IsNull } from "typeorm";
+import { Region } from "../typeorm/regions.entity";
+import { Carrier } from "../typeorm/carriers.entity";
+import { PhoneManufacturer } from "../typeorm/phoneManufacturers.entity";
+import { PhoneModel } from "../typeorm/phoneModels.entity";
+import { PhoneStorage } from "../typeorm/phoneStorage.entity";
+import { PhoneDevice } from "../typeorm/phoneDevices.entity";
+import { Offer } from "../typeorm/offers.entity";
+import { RegionCondition, ModelCondition } from "../../../shared/types";
 
 const router = Router();
 
-router.get("/regions", async (req, res) => {
-  const { parentId } = req.query;
-  const [rows] = await pool.query<(Region & RowDataPacket)[]>(
-    "SELECT region_id, parent_id, name FROM regions WHERE parent_id <=> ? ORDER BY name ASC",
-    [parentId === "null" ? null : parentId]
-  );
+router.post("/regions", async (req, res) => {
+  try {
+    const { parentId } = req.body;
+
+    const regionRepo = AppDataSource.getRepository(Region);
+
+    const rows = await regionRepo.find({
+      where:
+        parentId === null ? { parent_id: IsNull() } : { parent_id: parentId },
+      order: { name: "ASC" },
+    });
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching regions:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/carriers", async (req, res) => {
+  const CarrierRepo = AppDataSource.getRepository(Carrier);
+  const rows = await CarrierRepo.find();
   res.json(rows);
 });
 
 router.get("/phone-manufacturers", async (req, res) => {
-  const [rows] = await pool.query<PhoneManufacturer & RowDataPacket[]>(
-    "SELECT id, name_ko, name_en FROM phone_manufacturers ORDER BY name_ko ASC"
-  );
+  const PhoneManufacturerRepo = AppDataSource.getRepository(PhoneManufacturer);
+  const rows = await PhoneManufacturerRepo.find();
   res.json(rows);
 });
 
-router.get("/phone-models", async (req, res) => {
-  const { manufacturerId } = req.query;
-  const [rows] = await pool.query<PhoneModel & RowDataPacket[]>(
-    "SELECT id, manufacturer_id, name_ko, name_en, image_url FROM phone_models WHERE manufacturer_id = ?",
-    [manufacturerId === "null" ? null : manufacturerId]
-  );
+router.post("/phone-models", async (req, res) => {
+  const { manufacturerId } = req.body;
+  const PhoneModelRepo = AppDataSource.getRepository(PhoneModel);
+  const rows = await PhoneModelRepo.find({
+    where: {
+      manufacturer_id: manufacturerId,
+    },
+  });
   res.json(rows);
 });
 
 router.get("/phone-storages", async (req, res) => {
   const { modelId } = req.query;
-  const [rows] = await pool.query<PhoneStorage & RowDataPacket[]>(
-    `
-     SELECT ps.id, ps.storage FROM phone_storages ps 
-       JOIN phone_devices pd ON ps.id = pd.storage_id 
-      WHERE model_id = ?
-    `,
-    [modelId === "null" ? null : modelId]
-  );
-  res.json(rows);
+  const phoneStorageRepo = AppDataSource.getRepository(PhoneStorage);
+
+  const storages = await phoneStorageRepo
+    .createQueryBuilder("ps")
+    .innerJoin("ps.devices", "pd") // PhoneStorage 엔티티에 PhoneDevice relation 있어야 함
+    .where("pd.model_id = :modelId", {
+      modelId: modelId === "null" ? null : Number(modelId),
+    })
+    .select(["ps.id", "ps.storage"])
+    .getMany();
+
+  res.json(storages);
 });
-
-// SELECT
-//   o.offer_id,
-//   o.store_id,
-//   o.carrier_id,
-//   o.device_id,
-//   o.offer_type,
-//   o.price
-// FROM offers o
-// JOIN stores s ON o.store_id = s.store_id
-// JOIN regions r ON s.region_id = r.region_id
-// JOIN devices d ON o.device_id = d.device_id
-// JOIN device_images di ON d.model_US = di.model_US
-// JOIN carriers c ON o.carrier_id = c.carrier_id
-// WHERE (r.region_id  IN (134, 3) OR r.parent_id IN (1, 52, 133))
-// AND d.brand IN ('Apple', 'Samsung')
-// AND d.model_KR IN ('아이폰 16 프로')
-// AND d.storage IN ('128GB', '256GB')
-// AND offer_type IN ('MNP', 'CHG');
-
-// -- region_id가 음수인 경우 상위 지역 전체를 선택한거임
-// -- 서버에서 음수인 애들을 걸러서 양수로 전환해주고, topRegion라고 따로 변수를 빼서 거기에 담아
-// -- 그게 위에 1, 52, 133에 들어가야
-
-interface SearchConditions {
-  regionConditions: RegionCondition[];
-  modelConditions: ModelCondition[];
-  carrierConditions: string[];
-  offerTypeConditions: string[];
-}
 
 router.post("/search", async (req, res) => {
   try {
-    const { regions, models } = req.body;
+    const { regions, models, carriers, offerTypes } = req.body;
 
+    // 지역 조건
     const regionConds: string[] = [];
     if (regions.allRegion.length > 0) {
       regionConds.push(`r.parent_id IN (${regions.allRegion.join(",")})`);
@@ -93,90 +82,112 @@ router.post("/search", async (req, res) => {
     if (regions.region.length > 0) {
       regionConds.push(`r.region_id IN (${regions.region.join(",")})`);
     }
-
     const condRegionSql = regionConds.join(" OR ");
 
-    // ********************** Model 조건 생성 로직 start ********************** //
+    // 모델 조건
     let modelWhere = "";
     let modelParams: any[] = [];
-
     if (models && Array.isArray(models) && models.length > 0) {
       const modelClauses: string[] = [];
-
       models.forEach((item) => {
         const model = item.model;
         const storage = item.storage;
-
         if (model.id < 0) {
-          // 제조사 전체
-          modelClauses.push("pm2.id = ?");
-          modelParams.push(model.manufacturer_id);
+          modelClauses.push("pm2.id = :manufacturerId");
+          modelParams.push({ manufacturerId: model.manufacturer_id });
         } else {
-          // 특정 모델
           if (
             !storage ||
             storage.length === 0 ||
             storage.some((s: { id: number }) => s.id < 0)
           ) {
-            // 모든 저장용량
-            modelClauses.push("pd.model_id = ?");
-            modelParams.push(model.id);
+            modelClauses.push("pd.model_id = :modelId");
+            modelParams.push({ modelId: model.id });
           } else {
-            // 특정 저장용량
             const storageIds = storage
               .filter((s: { id: number }) => s.id > 0)
               .map((s: { id: any }) => s.id);
             if (storageIds.length > 0) {
               modelClauses.push(
-                `(pd.model_id = ? AND pd.storage_id IN (${storageIds
-                  .map(() => "?")
-                  .join(",")}))`
+                `(pd.model_id = :modelId AND pd.storage_id IN (:...storageIds))`
               );
-              modelParams.push(model.id, ...storageIds);
+              modelParams.push({ modelId: model.id, storageIds });
             } else {
-              // 모든 저장용량
-              modelClauses.push("pd.model_id = ?");
-              modelParams.push(model.id);
+              modelClauses.push("pd.model_id = :modelId");
+              modelParams.push({ modelId: model.id });
             }
           }
         }
       });
-
       if (modelClauses.length > 0) {
-        modelWhere = `AND (${modelClauses.join(" OR ")})`;
+        modelWhere = `(${modelClauses.join(" OR ")})`;
       }
     }
-    // *********************** Model 조건 생성 로직 end *********************** //
 
-    let sql = `
-                SELECT 
-                    o.offer_id, 
-                    s.store_name, 
-                    CONCAT_WS(' ', r2.name, r.name) as region_name,
-                    c.carrier_name, 
-                    CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name,
-                    CASE 
-                        WHEN o.offer_type = 'MNP' THEN '번호이동'
-                        WHEN o.offer_type = 'CHG' THEN '기기변경'
-                        ELSE o.offer_type
-                    END AS offer_type,
-                    o.price,
-                    pm.image_url
-                FROM offers o
-                JOIN stores s ON o.store_id = s.store_id
-                JOIN regions r ON s.region_id = r.region_id
-                JOIN regions r2 ON r.parent_id = r2.region_id  
-                JOIN phone_devices pd ON o.device_id = pd.id
-                JOIN phone_models pm ON pd.model_id = pm.id
-                JOIN phone_storages ps on pd.storage_id = ps.id
-                JOIN phone_manufacturers pm2 ON pm.manufacturer_id = pm2.id
-                JOIN carriers c ON o.carrier_id = c.carrier_id
-                WHERE 1=1 ${condRegionSql ? "AND " : ""}
-                ${condRegionSql}
-                ${modelWhere}
-            `;
+    console.log(modelWhere);
+    console.log(modelParams);
 
-    const [rows] = await pool.query(sql, modelParams);
+    // 통신사 조건
+    let carriersConditionSql = "";
+    let carrierParams: any = {};
+    if (carriers && carriers.length > 0) {
+      const carrierIds = carriers.map((c: Carrier) => c.carrier_id);
+      carriersConditionSql = `c.carrier_id IN (:...carrierIds)`;
+      carrierParams = { carrierIds };
+    }
+
+    console.log(carriersConditionSql);
+    console.log(carrierParams);
+
+    // 번호이동 or 기기변경 조건
+    let offerTypesConditionSql = "";
+    let offerTtypeParams: any = {};
+    if (offerTypes && offerTypes.length > 0) {
+      carriersConditionSql = `o.offer_type IN (:...offerTypes)`;
+      carrierParams = { offerTypes };
+    }
+
+    console.log(offerTypesConditionSql);
+    console.log(offerTtypeParams);
+
+    // TypeORM QueryBuilder
+    const qb = AppDataSource.getRepository(Offer)
+      .createQueryBuilder("o")
+      .select([
+        "o.offer_id AS offer_id",
+        "s.store_name AS store_name",
+        "CONCAT_WS(' ', r2.name, r.name) as region_name",
+        "c.carrier_name AS carrier_name",
+        "CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name",
+        "CASE WHEN o.offer_type = 'MNP' THEN '번호이동' WHEN o.offer_type = 'CHG' THEN '기기변경' ELSE o.offer_type END AS offer_type",
+        "o.price AS price",
+        "pm.image_url AS image_url",
+      ])
+      .innerJoin("o.store", "s")
+      .innerJoin("s.region", "r")
+      .innerJoin(Region, "r2", "r.parent_id = r2.region_id")
+      .innerJoin("o.device", "pd")
+      .innerJoin("pd.model", "pm")
+      .innerJoin("pd.storage", "ps")
+      .innerJoin("pm.manufacturer", "pm2")
+      .innerJoin("o.carrier", "c")
+      .where("1=1");
+
+    if (condRegionSql) {
+      qb.andWhere(`(${condRegionSql})`);
+    }
+    if (modelWhere) {
+      // modelParams는 여러 개의 객체 배열이므로, 각 파라미터를 병합
+      modelParams.forEach((param) => qb.andWhere(modelWhere, param));
+    }
+    if (carriersConditionSql) {
+      qb.andWhere(carriersConditionSql, carrierParams);
+    }
+    if (offerTypesConditionSql) {
+      qb.andWhere(offerTypesConditionSql, offerTtypeParams);
+    }
+
+    const rows = await qb.getRawMany();
     res.status(200).json(rows);
   } catch (error) {
     console.error("DB Error:", error);

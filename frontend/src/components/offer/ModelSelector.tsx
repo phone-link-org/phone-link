@@ -38,9 +38,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   // 모델 목록 조회 (제조사 선택 시)
   useEffect(() => {
     if (selectedManufacturer !== null) {
-      fetch(
-        `${SERVER}/api/offer/phone-models?manufacturerId=${selectedManufacturer.id}`
-      )
+      fetch(`${SERVER}/api/offer/phone-models`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manufacturerId: selectedManufacturer.id }),
+      })
         .then((res) => res.json())
         .then((data) => {
           const all = {

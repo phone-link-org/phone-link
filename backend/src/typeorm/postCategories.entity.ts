@@ -1,18 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Post } from './posts.entity';
-import { Category } from './categories.entity';
+import { Entity, PrimaryColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Post } from "./posts.entity";
+import { Category } from "./categories.entity";
 
-@Entity('post_categories')
+@Entity("post_categories")
 export class PostCategory {
-    @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-    post_id: number;
+  @PrimaryColumn({ type: "bigint" })
+  post_id: number;
 
-    @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-    category_id: number;
+  @PrimaryColumn({ type: "bigint" })
+  category_id: number;
 
-    @ManyToOne(() => Post, post => post.postCategories)
-    post: Post;
+  @ManyToOne(() => Post, (post) => post.postCategories)
+  @JoinColumn({ name: "post_id" })
+  post: Post;
 
-    @ManyToOne(() => Category, category => category.postCategories)
-    category: Category;
+  @ManyToOne(() => Category, (category) => category.postCategories)
+  @JoinColumn({ name: "category_id" })
+  category: Category;
 }

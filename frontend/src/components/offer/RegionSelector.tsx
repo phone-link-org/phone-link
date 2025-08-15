@@ -13,22 +13,30 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
 }) => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [subRegions, setSubRegions] = useState<Region[]>([]);
-  const [selectedRegions, setSelectedRegions] = useState<Region | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
 
   const SERVER = import.meta.env.VITE_API_URL;
 
   // 시/도 지역 데이터 GET
   useEffect(() => {
-    fetch(`${SERVER}/api/offer/regions?parentId=null`)
+    fetch(`${SERVER}/api/offer/regions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId: null }),
+    })
       .then((res) => res.json())
       .then(setRegions);
   }, [SERVER]);
 
   // 시/도 지역 선택 시 구/군(하위 지역) 지역 데이터 GET
   useEffect(() => {
-    if (selectedRegions !== null) {
-      const parentId = selectedRegions?.region_id;
-      fetch(`${SERVER}/api/offer/regions?parentId=${parentId}`)
+    if (selectedRegion !== null) {
+      const parentId = selectedRegion?.region_id;
+      fetch(`${SERVER}/api/offer/regions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentId }),
+      })
         .then((res) => res.json())
         .then((data) => {
           const all = {
@@ -39,12 +47,12 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
           setSubRegions([all, ...data]);
         });
     }
-  }, [selectedRegions, SERVER]);
+  }, [selectedRegion, SERVER]);
 
   const handleSubRegionChange = (child: Region) => {
-    if (!selectedRegions) return;
+    if (!selectedRegion) return;
 
-    const parentId = selectedRegions.region_id;
+    const parentId = selectedRegion.region_id;
     const isAllSelected = child.region_id === -parentId;
 
     if (isAllSelected) {
@@ -54,7 +62,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       );
       onRegionConditionsChange([
         ...filtered,
-        { parent: selectedRegions, child },
+        { parent: selectedRegion, child },
       ]);
     } else {
       const filtered = regionConditions.filter(
@@ -78,7 +86,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
         // 새로운 항목 추가
         onRegionConditionsChange([
           ...filtered,
-          { parent: selectedRegions, child },
+          { parent: selectedRegion, child },
         ]);
       }
     }
@@ -94,8 +102,8 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
             >
               <CustomCheckbox
                 label={region.name}
-                checked={selectedRegions?.name === region.name}
-                onChange={() => setSelectedRegions(region)}
+                checked={selectedRegion?.name === region.name}
+                onChange={() => setSelectedRegion(region)}
               />
             </label>
           ))}
@@ -103,7 +111,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       </div>
       <div className="w-3/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          {selectedRegions === null ? (
+          {selectedRegion === null ? (
             <div className="text-gray-400 text-xs">
               시/도를 먼저 선택하세요.
             </div>

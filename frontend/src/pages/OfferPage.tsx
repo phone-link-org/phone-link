@@ -12,6 +12,7 @@ import type {
   RegionCondition,
   ModelCondition,
   DisplayOffer,
+  Carrier,
 } from "../../../shared/types";
 import { FiX } from "react-icons/fi";
 import ModelSelector from "../components/offer/ModelSelector";
@@ -29,7 +30,7 @@ const OfferPage: React.FC = () => {
     []
   );
   const [modelConditions, setModelConditions] = useState<ModelCondition[]>([]);
-  const [carrierConditions, setCarrierConditions] = useState<string[]>([]);
+  const [carrierConditions, setCarrierConditions] = useState<Carrier[]>([]);
   const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
 
   const [offerDatas, setOfferDatas] = useState([]);
@@ -295,10 +296,10 @@ const OfferPage: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 {carrierConditions.map((carrier) => (
                   <span
-                    key={carrier}
+                    key={carrier.carrier_id}
                     className="flex items-center text-sm bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200 px-3 py-1 rounded-full"
                   >
-                    {carrier}
+                    {carrier.carrier_name}
                     <button
                       onClick={() =>
                         setCarrierConditions((prev) =>

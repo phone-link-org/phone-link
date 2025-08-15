@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn } from 'typeorm';
 import { Store } from './stores.entity';
 import { Carrier } from './carriers.entity';
 
@@ -28,8 +28,10 @@ export class Addon {
     penalty_fee: number;
 
     @ManyToOne(() => Store, store => store.addons)
+    @JoinColumn({ name: 'store_id' })
     store: Store;
 
     @ManyToOne(() => Carrier, carrier => carrier.addons)
+    @JoinColumn({ name: 'carrier_id' })
     carrier: Carrier;
 }

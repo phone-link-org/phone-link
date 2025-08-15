@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Index, JoinColumn } from 'typeorm';
 import { PhoneModel } from './phoneModels.entity';
 import { PhoneStorage } from './phoneStorage.entity';
 
@@ -28,8 +28,10 @@ export class PhoneDevice {
     created_at: Date;
 
     @ManyToOne(() => PhoneModel, model => model.devices)
+    @JoinColumn({ name: 'model_id' })
     model: PhoneModel;
 
     @ManyToOne(() => PhoneStorage, storage => storage.devices)
+    @JoinColumn({ name: 'storage_id' })
     storage: PhoneStorage;
 }

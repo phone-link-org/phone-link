@@ -1,72 +1,94 @@
 import { Router } from "express";
-import { pool } from "../db";
+import { AppDataSource } from "../db";
 import { PriceSubmissionData } from "shared/types";
-import { PhoneDevices } from "../dto/phoneDevices";
-import { RowDataPacket } from "mysql2/promise";
+import { Addon } from "../typeorm/addons.entity";
+import { Offer } from "../typeorm/offers.entity";
+import { PhoneDevice } from "../typeorm/phoneDevices.entity";
+import { PhoneModel } from "../typeorm/phoneModels.entity";
+import { PhoneStorage } from "../typeorm/phoneStorage.entity";
 
 const router = Router();
 
 router.post("/", async (req, res) => {
   const { priceInputs, addons }: PriceSubmissionData = req.body;
-  const db = await pool.getConnection();
 
   try {
-    await db.beginTransaction();
+    await AppDataSource.transaction(async (transactionalEntityManager) => {
+      const savedAddons: Addon[] = [];
+      if (addons && addons.length > 0) {
+        for (let i = 0; i < addons.length; i++) {
+          if (
+            !addons[i].name ||
+            !addons[i].monthlyFee ||
+            !addons[i].requiredDuration ||
+            !addons[i].penaltyFee
+          )
+            continue;
 
-    const addonIds = [];
-    if (addons && addons.length > 0) {
-      for (let i = 0; i < addons.length; i++) {
-        if (!addons[i].name || !addons[i].monthlyFee || !addons[i].requiredDuration || !addons[i].penaltyFee) continue;
-        const [result] = await db.query(
-          `INSERT INTO addons (store_id, carrier_id, addon_name, monthly_fee, req_duration, penalty_fee) VALUES (?, ?, ?, ?, ?, ?)`,
-          [priceInputs[i].storeId, addons[i].carrier, addons[i].name, addons[i].monthlyFee, addons[i].requiredDuration, addons[i].penaltyFee]
-        );
-        addonIds.push((result as any).insertId);
+          const newAddon = new Addon();
+          newAddon.store_id = priceInputs[i].storeId;
+          newAddon.carrier_id = parseInt(addons[i].carrier);
+          newAddon.addon_name = addons[i].name;
+          newAddon.monthly_fee = addons[i].monthlyFee;
+          newAddon.req_duration = addons[i].requiredDuration;
+          newAddon.penalty_fee = addons[i].penaltyFee;
+
+          const savedAddon = await transactionalEntityManager.save(newAddon);
+          savedAddons.push(savedAddon);
+        }
       }
-    }
 
-    for (const priceInput of priceInputs) {
-      const [deviceRows]: [(RowDataPacket & PhoneDevices)[], any] = await db.query(
-        `SELECT pd.id
-         FROM phone_devices pd
-         JOIN phone_models pm ON pd.model_id = pm.id
-         JOIN phone_storages ps ON pd.storage_id = ps.id
-         WHERE (REPLACE(pm.name_ko, ' ', '') LIKE ? OR REPLACE(pm.name_en, ' ', '') LIKE ?)
-           AND ps.storage = ?
-         LIMIT 1`,
-        [`%${priceInput.model.replace(/\s/g, '')}%`, `%${priceInput.model.replace(/\s/g, '')}%`, priceInput.capacity]
-      );
+      for (const priceInput of priceInputs) {
+        const phoneDevice = await transactionalEntityManager
+          .getRepository(PhoneDevice)
+          .createQueryBuilder("pd")
+          .innerJoin(PhoneModel, "pm", "pd.model_id = pm.id")
+          .innerJoin(PhoneStorage, "ps", "pd.storage_id = ps.id")
+          .where("REPLACE(pm.name_ko, ' ', '') LIKE :model", {
+            model: `%${priceInput.model.replace(/\s/g, "")}%`,
+          })
+          .orWhere("REPLACE(pm.name_en, ' ', '') LIKE :model", {
+            model: `%${priceInput.model.replace(/\s/g, "")}%`,
+          })
+          .andWhere("ps.storage = :storage", { storage: priceInput.capacity })
+          .getOne();
 
-      if (deviceRows.length === 0) {
-        console.warn(`Device not found for model: ${priceInput.model} with capacity: ${priceInput.capacity}`);
-        continue;
+        if (!phoneDevice) {
+          console.warn(
+            `Device not found for model: ${priceInput.model} with capacity: ${priceInput.capacity}`,
+          );
+          continue;
+        }
+
+        const newOffer = new Offer();
+        newOffer.store_id = priceInput.storeId;
+        newOffer.carrier_id = parseInt(priceInput.carrier);
+        newOffer.device_id = phoneDevice.id;
+        newOffer.offer_type = priceInput.buyingType;
+        newOffer.price = priceInput.typePrice;
+        //newOffer.addons = savedAddons;
+
+        await transactionalEntityManager.save(newOffer);
       }
-      const deviceId = deviceRows[0].id;
+    });
 
-      const [offerResult] = await db.query(
-        `INSERT INTO offers (store_id, carrier_id, device_id, offer_type, price) VALUES (?, ?, ?, ?, ?)`,
-        [priceInput.storeId, priceInput.carrier, deviceId, priceInput.buyingType, priceInput.typePrice]
-      );
-      const offerId = (offerResult as any).insertId;
-
-      for (const addonId of addonIds) {
-        await db.query(
-          `INSERT INTO offer_addons (offer_id, addon_id) VALUES (?, ?)`,
-          [offerId, addonId]
-        );
-      }
-    }
-
-    await db.commit();
     res.status(201).json({ message: "Data successfully saved." });
-
-  } catch (error) {
-    await db.rollback();
-    console.error("Error during data insertion:", error);
+  } catch (e) {
+    console.error("Error during data insertion:", e);
     res.status(500).json({ message: "Failed to save data." });
-  } finally {
-    db.release();
   }
 });
+
+router.get('/list-models', async(_, res) => {
+  try {
+    const phoneModels = await AppDataSource.getRepository(PhoneModel).find({
+      select: ["name_ko", "manufacturer_id"],
+    });
+    res.status(200).json(phoneModels);
+  } catch(e) {
+    console.error("Error during fetch phone models", e);
+    res.status(500).json({ message: "Failed to fetch phone models" });
+  }
+})
 
 export default router;

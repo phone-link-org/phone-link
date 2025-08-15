@@ -1,13 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, ManyToOne } from 'typeorm';
 import { Post } from './posts.entity';
 import { Category } from './categories.entity';
 
 @Entity('post_categories')
 export class PostCategory {
-    @PrimaryGeneratedColumn('increment', { type: 'bigint' })
+    @PrimaryColumn({ type: 'bigint' })
     post_id: number;
 
-    @PrimaryGeneratedColumn('increment', { type: 'bigint' })
+    @PrimaryColumn({ type: 'bigint' })
     category_id: number;
 
     @ManyToOne(() => Post, post => post.postCategories)

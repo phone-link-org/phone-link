@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import CustomCheckbox from "../CustomCheckbox";
 import type { Carrier } from "../../../../shared/types";
 
 interface CarrierSelectorProps {
@@ -11,9 +10,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
   carrierConditions,
   onCarriersChange,
 }) => {
-  // const [carriers, setCarriers] = useState
   const [carriers, setCarriers] = useState<Carrier[]>([]);
-
   const SERVER = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -24,35 +21,62 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
   }, [SERVER]);
 
   const handleCarrierChange = (carrier: Carrier) => {
-    const isSelected = carrierConditions.includes(carrier);
+    const isSelected = carrierConditions.some(
+      (c) => c.carrier_id === carrier.carrier_id
+    );
 
     if (isSelected) {
-      // 선택 해제
-      onCarriersChange(carrierConditions.filter((c) => c !== carrier));
+      onCarriersChange(
+        carrierConditions.filter((c) => c.carrier_id !== carrier.carrier_id)
+      );
     } else {
-      // 선택 추가
       onCarriersChange([...carrierConditions, carrier]);
     }
   };
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-2 text-foreground-light dark:text-foreground-dark">
-        통신사 선택
-      </label>
-      <div className="grid grid-cols-3 gap-3">
-        {carriers.map((carrier) => (
-          <label
-            key={carrier.carrier_id}
-            className="flex justify-center items-center cursor-pointer"
-          >
-            <CustomCheckbox
-              label={carrier.carrier_name}
-              checked={carrierConditions.includes(carrier)}
-              onChange={() => handleCarrierChange(carrier)}
-            />
-          </label>
-        ))}
+      <div
+        className={`grid gap-4 justify-items-center content-center min-h-60 ${
+          carriers.length === 1
+            ? "grid-cols-1"
+            : carriers.length === 2
+            ? "grid-cols-2"
+            : carriers.length === 3
+            ? "grid-cols-3"
+            : carriers.length === 4
+            ? "grid-cols-4"
+            : "grid-cols-5"
+        }`}
+      >
+        {carriers.map((carrier) => {
+          const isSelected = carrierConditions.some(
+            (c) => c.carrier_id === carrier.carrier_id
+          );
+
+          return (
+            <button
+              key={carrier.carrier_id}
+              type="button"
+              onClick={() => handleCarrierChange(carrier)}
+              className={`flex flex-col items-center justify-center w-full h-24 rounded-2xl border transition-all shadow-sm hover:shadow-md cursor-pointer
+    ${
+      isSelected
+        ? "border-green-600 bg-green-50 dark:bg-green-900/20"
+        : "border-gray-300 bg-white dark:bg-gray-800"
+    }
+  `}
+            >
+              <div className="flex items-center justify-center w-16 h-16">
+                <img
+                  src={`${SERVER}/uploads/images/carrier/${carrier.carrier_name}.png`}
+                  alt={carrier.carrier_name}
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

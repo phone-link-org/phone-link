@@ -31,10 +31,7 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-2 text-foreground-light dark:text-foreground-dark">
-        개통방식 선택
-      </label>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 min-h-60">
         {offerTypes.map(({ value, label }) => (
           <label
             key={value}
@@ -44,6 +41,7 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
               label={label}
               checked={offerTypeConditions.includes(value)}
               onChange={() => handleOfferTypeChange(value)}
+              textStyle="text-lg"
             />
           </label>
         ))}

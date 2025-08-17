@@ -79,7 +79,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get('/list-models', async(_, res) => {
+router.get("/list-models", async (_, res) => {
   try {
     const phoneModels = await AppDataSource.getRepository(PhoneModel).find({
       select: ["name_ko", "manufacturer_id"],
@@ -89,9 +89,9 @@ router.get('/list-models', async(_, res) => {
     console.error("Error during fetch phone models", e);
     res.status(500).json({ message: "Failed to fetch phone models" });
   }
-})
+});
 
-router.get('/list-storages', async(_, res) => {
+router.get("/list-storages", async (_, res) => {
   try {
     const storages = await AppDataSource.getRepository(PhoneStorage).find({
       select: ["storage"],
@@ -101,6 +101,6 @@ router.get('/list-storages', async(_, res) => {
     console.error("Error during fetch storages");
     res.status(500).json({ message: "Failed to fetch storages" });
   }
-})
+});
 
 export default router;

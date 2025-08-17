@@ -22,7 +22,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     useState<PhoneManufacturer | null>(null);
   const [models, setModels] = useState<PhoneModel[]>([]);
   const [lastSelectedModel, setLastSelectedModel] = useState<PhoneModel | null>(
-    null
+    null,
   );
   const [storages, setStorages] = useState<PhoneStorage[]>([]);
 
@@ -60,7 +60,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   useEffect(() => {
     if (lastSelectedModel !== null && lastSelectedModel.id > 0) {
       fetch(
-        `${SERVER}/api/offer/phone-storages?modelId=${lastSelectedModel.id}`
+        `${SERVER}/api/offer/phone-storages?modelId=${lastSelectedModel.id}`,
       )
         .then((res) => res.json())
         .then((data) => {
@@ -81,7 +81,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const handleModelChange = (model: PhoneModel) => {
     const isAlreadySelected = modelConditions.some(
-      (condition) => condition.model.id === model.id
+      (condition) => condition.model.id === model.id,
     );
 
     // 현재 선택된 모델이 있고, 해당 모델의 용량이 선택되지 않았는지 확인
@@ -93,7 +93,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
       if (isSameSign) {
         const currentCondition = modelConditions.find(
-          (condition) => condition.model.id === lastSelectedModel.id
+          (condition) => condition.model.id === lastSelectedModel.id,
         );
 
         // 용량이 선택되지 않았거나 빈 배열인 경우
@@ -120,7 +120,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       // 선택된 제조사의 모델들을 제거하고 '전체'만 추가
       const filteredConditions = modelConditions.filter(
         (condition) =>
-          condition.model.manufacturer_id !== selectedManufacturer?.id
+          condition.model.manufacturer_id !== selectedManufacturer?.id,
       );
       onModelConditionsChange([...filteredConditions, { model }]);
     } else {
@@ -130,19 +130,19 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           !(
             condition.model.manufacturer_id === selectedManufacturer?.id &&
             condition.model.id === -selectedManufacturer.id
-          )
+          ),
       );
 
       const alreadySelected = filteredConditions.find(
-        (condition) => condition.model.id === model.id
+        (condition) => condition.model.id === model.id,
       );
 
       if (alreadySelected) {
         // 모델 선택 해제
         onModelConditionsChange(
           filteredConditions.filter(
-            (condition) => condition.model.id !== model.id
-          )
+            (condition) => condition.model.id !== model.id,
+          ),
         );
       } else {
         // 모델 선택 추가
@@ -156,7 +156,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     // 현재 선택된 모델의 storage 정보 가져오기
     const currentCondition = modelConditions.find(
-      (condition) => condition.model.id === lastSelectedModel.id
+      (condition) => condition.model.id === lastSelectedModel.id,
     );
     const currentStorages = currentCondition?.storage || [];
 
@@ -171,7 +171,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     } else {
       // 일반 storage 선택 시
       const isCurrentlySelected = currentStorages.some(
-        (s) => s.id === storage.id
+        (s) => s.id === storage.id,
       );
       const hasAllStorage = currentStorages.some((s) => s.id < 0); // '전체'가 현재 선택되어 있는지
 
@@ -241,7 +241,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 <CustomCheckbox
                   label={model.name_ko}
                   checked={modelConditions.some(
-                    (item) => item.model.id == model.id
+                    (item) => item.model.id == model.id,
                   )}
                   onChange={() => handleModelChange(model)}
                 />
@@ -261,11 +261,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 label={data.storage}
                 checked={(() => {
                   const currentCondition = modelConditions.find(
-                    (condition) => condition.model.id === lastSelectedModel?.id
+                    (condition) => condition.model.id === lastSelectedModel?.id,
                   );
                   return (
                     currentCondition?.storage?.some(
-                      (item) => item.id === data.id
+                      (item) => item.id === data.id,
                     ) || false
                   );
                 })()}

@@ -368,7 +368,7 @@ router.post("/search", async (req, res) => {
         if (!hasNegativeStorage && positiveStorageIds.length > 0) {
           // 스토리지 조건 적용
           modelClauses.push(
-            `(pd.model_id = :${prefix}_model AND pd.storage_id IN (:...${prefix}_storages))`
+            `(pd.model_id = :${prefix}_model AND pd.storage_id IN (:...${prefix}_storages))`,
           );
           modelParams[`${prefix}_model`] = modelId;
           modelParams[`${prefix}_storages`] = positiveStorageIds;

@@ -27,7 +27,7 @@ const OfferPage: React.FC = () => {
   >("region");
 
   const [regionConditions, setRegionConditions] = useState<RegionCondition[]>(
-    []
+    [],
   );
   const [modelConditions, setModelConditions] = useState<ModelCondition[]>([]);
   const [carrierConditions, setCarrierConditions] = useState<Carrier[]>([]);
@@ -222,8 +222,8 @@ const OfferPage: React.FC = () => {
                       onClick={() =>
                         setRegionConditions((prev) =>
                           prev.filter(
-                            (item) => item.child.region_id !== child.region_id
-                          )
+                            (item) => item.child.region_id !== child.region_id,
+                          ),
                         )
                       }
                       className="ml-2 text-gray-500 hover:text-red-500"
@@ -241,7 +241,7 @@ const OfferPage: React.FC = () => {
                 {modelConditions.map(({ model, storage }) => {
                   // 제조사 정보 가져오기 (manufacturer_id를 기반으로)
                   const manufacturerName = getManufacturerName(
-                    model.manufacturer_id
+                    model.manufacturer_id,
                   );
 
                   // 조건 태그 텍스트 생성
@@ -278,7 +278,7 @@ const OfferPage: React.FC = () => {
                       <button
                         onClick={() =>
                           setModelConditions((prev) =>
-                            prev.filter((item) => item.model.id !== model.id)
+                            prev.filter((item) => item.model.id !== model.id),
                           )
                         }
                         className="ml-2 text-blue-500 hover:text-red-500"
@@ -303,7 +303,7 @@ const OfferPage: React.FC = () => {
                     <button
                       onClick={() =>
                         setCarrierConditions((prev) =>
-                          prev.filter((c) => c !== carrier)
+                          prev.filter((c) => c !== carrier),
                         )
                       }
                       className="ml-2 text-green-500 hover:text-red-500"
@@ -327,7 +327,7 @@ const OfferPage: React.FC = () => {
                     <button
                       onClick={() =>
                         setOfferTypeConditions((prev) =>
-                          prev.filter((type) => type !== offerType)
+                          prev.filter((type) => type !== offerType),
                         )
                       }
                       className="ml-2 text-purple-500 hover:text-red-500"
@@ -403,7 +403,7 @@ const OfferPage: React.FC = () => {
                       {/* 통신사 뱃지 */}
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${getCarrierBadgeColor(
-                          data.carrier_name
+                          data.carrier_name,
                         )}`}
                       >
                         {data.carrier_name}
@@ -412,7 +412,7 @@ const OfferPage: React.FC = () => {
                       {/* 개통방식 뱃지 */}
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${getOfferTypeBadgeColor(
-                          data.offer_type
+                          data.offer_type,
                         )}`}
                       >
                         {data.offer_type}

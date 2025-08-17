@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ContentBoxProps {
   text: string;
@@ -12,4 +12,4 @@ const ContentBox: React.FC<ContentBoxProps> = ({ text }) => {
   );
 };
 
-export default ContentBox; 
+export default ContentBox;

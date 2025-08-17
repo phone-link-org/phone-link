@@ -29,8 +29,13 @@ interface PhoneModel {
   manufacturer_id: number;
 }
 
+interface Storages {
+  storage: string;
+}
+
 const ManualUpload: React.FC = () => {
   const [allModels, setAllModels] = useState<PhoneModel[]>([]);
+  const [allStorages, setAllStorages] = useState<Storages[]>([]);
   const [models, setModels] = useState<{ name: string; capacity: string }[]>([]);
   const [brand, setBrand] = useState(BRANDS.GALAXY);
   const [prices, setPrices] = useState<
@@ -46,6 +51,26 @@ const ManualUpload: React.FC = () => {
     },
   ]);
 
+  const sortedStorages = useMemo(() => {
+    const getStorageValue = (storageString: string): number => {
+      if (!storageString) return 0;
+      const lowerCaseStorage = storageString.toLowerCase().trim();
+      const value = parseFloat(lowerCaseStorage);
+      if (isNaN(value)) return 0;
+
+      if (lowerCaseStorage.endsWith("t") || lowerCaseStorage.endsWith("tb")) {
+        return value * 1024;
+      }
+      return value;
+    };
+
+    return [...allStorages].sort((a, b) => {
+      const valueA = getStorageValue(a.storage);
+      const valueB = getStorageValue(b.storage);
+      return valueA - valueB;
+    });
+  }, [allStorages]);
+
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -55,7 +80,17 @@ const ManualUpload: React.FC = () => {
         console.error("Error fetching models:", error);
       }
     };
+
+    const fetchStorages = async () => {
+      try {
+        const response = await axios.get(`${apiBaseURL}/api/price-input/list-storages`);
+        setAllStorages(response.data);
+      } catch (error) {
+        console.error("Error fetching storages:", error);
+      }
+    }
     fetchModels();
+    fetchStorages();
   }, []);
 
   const filteredModels = useMemo(() => {
@@ -227,8 +262,14 @@ const ManualUpload: React.FC = () => {
               value={model.capacity}
               onChange={(e) => handleModelCapacityChange(index, e.target.value)}
               placeholder="용량 (예: 256GB)"
+              list="storage-options"
               className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
             />
+            <datalist id="storage-options">
+              {sortedStorages.map((storage) => (
+                <option key={storage.storage} value={storage.storage} />
+              ))}
+            </datalist>
             <button
               type="button"
               onClick={() => removeModel(index)}

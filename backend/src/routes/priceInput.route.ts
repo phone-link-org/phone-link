@@ -85,9 +85,21 @@ router.get('/list-models', async(_, res) => {
       select: ["name_ko", "manufacturer_id"],
     });
     res.status(200).json(phoneModels);
-  } catch(e) {
+  } catch (e) {
     console.error("Error during fetch phone models", e);
     res.status(500).json({ message: "Failed to fetch phone models" });
+  }
+})
+
+router.get('/list-storages', async(_, res) => {
+  try {
+    const storages = await AppDataSource.getRepository(PhoneStorage).find({
+      select: ["storage"],
+    });
+    res.status(200).json(storages);
+  } catch (e) {
+    console.error("Error during fetch storages");
+    res.status(500).json({ message: "Failed to fetch storages" });
   }
 })
 

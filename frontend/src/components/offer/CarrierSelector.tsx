@@ -22,12 +22,12 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
 
   const handleCarrierChange = (carrier: Carrier) => {
     const isSelected = carrierConditions.some(
-      (c) => c.carrier_id === carrier.carrier_id
+      (c) => c.carrier_id === carrier.carrier_id,
     );
 
     if (isSelected) {
       onCarriersChange(
-        carrierConditions.filter((c) => c.carrier_id !== carrier.carrier_id)
+        carrierConditions.filter((c) => c.carrier_id !== carrier.carrier_id),
       );
     } else {
       onCarriersChange([...carrierConditions, carrier]);
@@ -41,17 +41,17 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
           carriers.length === 1
             ? "grid-cols-1"
             : carriers.length === 2
-            ? "grid-cols-2"
-            : carriers.length === 3
-            ? "grid-cols-3"
-            : carriers.length === 4
-            ? "grid-cols-4"
-            : "grid-cols-5"
+              ? "grid-cols-2"
+              : carriers.length === 3
+                ? "grid-cols-3"
+                : carriers.length === 4
+                  ? "grid-cols-4"
+                  : "grid-cols-5"
         }`}
       >
         {carriers.map((carrier) => {
           const isSelected = carrierConditions.some(
-            (c) => c.carrier_id === carrier.carrier_id
+            (c) => c.carrier_id === carrier.carrier_id,
           );
 
           return (

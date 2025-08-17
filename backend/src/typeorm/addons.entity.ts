@@ -34,11 +34,11 @@ export class Addon {
   @Column({ type: "int" })
   penalty_fee: number;
 
-  @ManyToOne(() => Store, store => store.addons)
-  @JoinColumn({ name: 'store_id' })
+  @ManyToOne(() => Store, (store) => store.addons)
+  @JoinColumn({ name: "store_id" })
   store: Store;
 
-  @ManyToOne(() => Carrier, carrier => carrier.addons)
-  @JoinColumn({ name: 'carrier_id' })
+  @ManyToOne(() => Carrier, (carrier) => carrier.addons)
+  @JoinColumn({ name: "carrier_id" })
   carrier: Carrier;
 }

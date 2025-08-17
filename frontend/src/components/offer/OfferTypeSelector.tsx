@@ -21,7 +21,7 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
     if (isSelected) {
       // 선택 해제
       onOfferTypesChange(
-        offerTypeConditions.filter((type) => type !== offerType)
+        offerTypeConditions.filter((type) => type !== offerType),
       );
     } else {
       // 선택 추가

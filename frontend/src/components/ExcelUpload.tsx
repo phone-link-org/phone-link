@@ -1,7 +1,11 @@
 import axios from "axios";
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-import type { PriceInput, Addon, PriceSubmissionData } from "../../../shared/types";
+import type {
+  PriceInput,
+  Addon,
+  PriceSubmissionData,
+} from "../../../shared/types";
 
 type TableRow = {
   model: string;
@@ -14,11 +18,10 @@ type TableRow = {
   lg_chg?: number;
 };
 const CARRIERS = {
-  '1': 'SKT',
-  '2': 'KT',
-  '3': 'LG U+',
+  "1": "SKT",
+  "2": "KT",
+  "3": "LG U+",
 };
-
 
 const apiBaseURL = import.meta.env.VITE_API_URL as string;
 
@@ -27,29 +30,55 @@ const ExcelUpload: React.FC = () => {
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [addons, setAddons] = useState<Addon[]>([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+  const [addons, setAddons] = useState<Addon[]>([
+    {
+      name: "",
+      carrier: "1",
+      monthlyFee: 0,
+      requiredDuration: 0,
+      penaltyFee: 0,
+    },
+  ]);
   //const [addons, setAddons] = useState<Addon[]>([{ name: "", carrier: "1", monthlyFee: "", requiredDuration: "", penaltyFee: "" }]);
   const storages = new Set(["128G", "256G", "512G", "1T"]);
 
-  const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddonChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
-      newAddons[index] = { ...newAddons[index], [name]: parseInt(value) }
+    if (
+      name === "monthlyFee" ||
+      name === "requiredDuration" ||
+      name === "penaltyFee"
+    ) {
+      newAddons[index] = { ...newAddons[index], [name]: parseInt(value) };
     } else if (name === "carrier") {
-      const carrierKey = Object.keys(CARRIERS).find(k => CARRIERS[k as keyof typeof CARRIERS] === value)
-      newAddons[index] = { ...newAddons[index], [name]: carrierKey || value }
+      const carrierKey = Object.keys(CARRIERS).find(
+        (k) => CARRIERS[k as keyof typeof CARRIERS] === value,
+      );
+      newAddons[index] = { ...newAddons[index], [name]: carrierKey || value };
     } else {
-      newAddons[index] = { ...newAddons[index], [name]: value }
+      newAddons[index] = { ...newAddons[index], [name]: value };
     }
-      newAddons[index] = { ...newAddons[index], [name]: value }
+    newAddons[index] = { ...newAddons[index], [name]: value };
 
     setAddons(newAddons);
   };
 
   const addAddon = () => {
-    setAddons([...addons, { name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]);
+    setAddons([
+      ...addons,
+      {
+        name: "",
+        carrier: "1",
+        monthlyFee: 0,
+        requiredDuration: 0,
+        penaltyFee: 0,
+      },
+    ]);
   };
 
   const removeAddon = (index: number) => {
@@ -104,7 +133,7 @@ const ExcelUpload: React.FC = () => {
     for (let i = 3; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !row[0] || typeof row[0] !== "string") continue;
-      
+
       const modelParts = row[0].trim().split(/\s+/);
       let storage: string | null = null;
       let modelName: string = row[0];
@@ -116,12 +145,12 @@ const ExcelUpload: React.FC = () => {
       }
 
       const priceByCarrier = [
-        { carrier: '1', type: "MNP", price: row[1] },
-        { carrier: '1', type: "CHG", price: row[2] },
-        { carrier: '2', type: "MNP", price: row[3] },
-        { carrier: '2', type: "CHG", price: row[4] },
-        { carrier: '3', type: "MNP", price: row[5] },
-        { carrier: '3', type: "CHG", price: row[6] },
+        { carrier: "1", type: "MNP", price: row[1] },
+        { carrier: "1", type: "CHG", price: row[2] },
+        { carrier: "2", type: "MNP", price: row[3] },
+        { carrier: "2", type: "CHG", price: row[4] },
+        { carrier: "3", type: "MNP", price: row[5] },
+        { carrier: "3", type: "CHG", price: row[6] },
       ];
 
       for (const c of priceByCarrier) {
@@ -133,7 +162,7 @@ const ExcelUpload: React.FC = () => {
           results.push({
             storeId: 1, // Placeholder
             model: modelName,
-            capacity: storage || '',
+            capacity: storage || "",
             carrier: c.carrier,
             buyingType: c.type as "MNP" | "CHG",
             typePrice: Number(c.price),
@@ -163,7 +192,7 @@ const ExcelUpload: React.FC = () => {
 
       result.push({
         model: modelName,
-        capacity: storage || '-',
+        capacity: storage || "-",
         sk_mnp: numVal(row[1]),
         sk_chg: numVal(row[2]),
         kt_mnp: numVal(row[3]),
@@ -190,7 +219,7 @@ const ExcelUpload: React.FC = () => {
     try {
       const submissionData: PriceSubmissionData = {
         priceInputs: data,
-        addons: addons
+        addons: addons,
         //addons: addons.map((addon) => ({
         //  ...addon,
         //  monthlyFee: Number(addon.monthlyFee) || 0,
@@ -198,13 +227,24 @@ const ExcelUpload: React.FC = () => {
         //  penaltyFee: Number(addon.penaltyFee) || 0
         //}))
       };
-      const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
+      const response = await axios.post(
+        `${apiBaseURL}/api/price-input`,
+        submissionData,
+      );
 
       console.log("Server response:", response.data);
       alert("Data submitted successfully!");
       setData([]);
       setFileName(null);
-      setAddons([{ name: '', carrier: '1', monthlyFee: 0, requiredDuration: 0, penaltyFee: 0 }]); // Reset addons
+      setAddons([
+        {
+          name: "",
+          carrier: "1",
+          monthlyFee: 0,
+          requiredDuration: 0,
+          penaltyFee: 0,
+        },
+      ]); // Reset addons
     } catch (error) {
       console.error("Error submitting data:", error);
       alert(`Failed to submit data. See console for details.`);
@@ -250,13 +290,14 @@ const ExcelUpload: React.FC = () => {
 
       {data.length > 0 && !isProcessing && (
         <div className="mt-6">
-
           <button
             onClick={handleSubmit}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light"
             disabled={isProcessing}
           >
-            {isProcessing ? "Submitting..." : `Submit ${tableData.length} Records`}
+            {isProcessing
+              ? "Submitting..."
+              : `Submit ${tableData.length} Records`}
           </button>
           <div className="mt-4 overflow-auto max-h-96">
             <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -348,7 +389,10 @@ const ExcelUpload: React.FC = () => {
                 <input
                   type="text"
                   name="carrier"
-                  value={CARRIERS[addon.carrier as keyof typeof CARRIERS] || addon.carrier}
+                  value={
+                    CARRIERS[addon.carrier as keyof typeof CARRIERS] ||
+                    addon.carrier
+                  }
                   onChange={(e) => handleAddonChange(index, e)}
                   list="carrier-options"
                   placeholder="통신사 선택 또는 입력"

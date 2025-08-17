@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import { useState, useEffect, useCallback } from "react";
+import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 
 interface BannerImage {
   src: string;
@@ -12,28 +12,28 @@ const BannerSlider = () => {
 
   const banners: BannerImage[] = [
     {
-      src: '/images/banners/test_banner_1.webp',
-      alt: '배너 1'
+      src: "/images/banners/test_banner_1.webp",
+      alt: "배너 1",
     },
     {
-      src: '/images/banners/test_banner_2.jpg',
-      alt: '배너 2'
+      src: "/images/banners/test_banner_2.jpg",
+      alt: "배너 2",
     },
     {
-      src: '/images/banners/test_banner_3.webp',
-      alt: '배너 3'
-    }
+      src: "/images/banners/test_banner_3.webp",
+      alt: "배너 3",
+    },
   ];
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === banners.length - 1 ? 0 : prevIndex + 1
+    setCurrentIndex((prevIndex) =>
+      prevIndex === banners.length - 1 ? 0 : prevIndex + 1,
     );
   }, [banners.length]);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === 0 ? banners.length - 1 : prevIndex - 1
+    setCurrentIndex((prevIndex) =>
+      prevIndex === 0 ? banners.length - 1 : prevIndex - 1,
     );
   }, [banners.length]);
 
@@ -46,7 +46,7 @@ const BannerSlider = () => {
   }, [nextSlide, isHovered]);
 
   return (
-    <div 
+    <div
       className="relative w-full h-24 sm:h-32 md:h-40 lg:h-48 overflow-hidden rounded-lg shadow-lg"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -57,7 +57,7 @@ const BannerSlider = () => {
           <div
             key={index}
             className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-              index === currentIndex ? 'opacity-100' : 'opacity-0'
+              index === currentIndex ? "opacity-100" : "opacity-0"
             }`}
           >
             <img
@@ -66,9 +66,11 @@ const BannerSlider = () => {
               className="w-full h-full object-cover"
             />
             {/* 호버 시에만 어두워지는 오버레이 */}
-            <div className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-              isHovered ? 'bg-opacity-20' : 'bg-opacity-0'
-            }`} />
+            <div
+              className={`absolute inset-0 bg-black transition-opacity duration-300 ${
+                isHovered ? "bg-opacity-20" : "bg-opacity-0"
+              }`}
+            />
           </div>
         ))}
       </div>
@@ -100,9 +102,9 @@ const BannerSlider = () => {
             key={index}
             onClick={() => setCurrentIndex(index)}
             className={`w-2 h-2 rounded-full transition-all duration-200 ${
-              index === currentIndex 
-                ? 'bg-white scale-125' 
-                : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+              index === currentIndex
+                ? "bg-white scale-125"
+                : "bg-white bg-opacity-50 hover:bg-opacity-75"
             }`}
             aria-label={`배너 ${index + 1}로 이동`}
           />
@@ -112,4 +114,4 @@ const BannerSlider = () => {
   );
 };
 
-export default BannerSlider; 
+export default BannerSlider;

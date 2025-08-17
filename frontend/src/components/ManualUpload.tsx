@@ -36,7 +36,9 @@ interface Storages {
 const ManualUpload: React.FC = () => {
   const [allModels, setAllModels] = useState<PhoneModel[]>([]);
   const [allStorages, setAllStorages] = useState<Storages[]>([]);
-  const [models, setModels] = useState<{ name: string; capacity: string }[]>([]);
+  const [models, setModels] = useState<{ name: string; capacity: string }[]>(
+    [],
+  );
   const [brand, setBrand] = useState(BRANDS.GALAXY);
   const [prices, setPrices] = useState<
     Record<string, Record<string, number | "">>
@@ -74,7 +76,9 @@ const ManualUpload: React.FC = () => {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await axios.get(`${apiBaseURL}/api/price-input/list-models`);
+        const response = await axios.get(
+          `${apiBaseURL}/api/price-input/list-models`,
+        );
         setAllModels(response.data);
       } catch (error) {
         console.error("Error fetching models:", error);
@@ -83,12 +87,14 @@ const ManualUpload: React.FC = () => {
 
     const fetchStorages = async () => {
       try {
-        const response = await axios.get(`${apiBaseURL}/api/price-input/list-storages`);
+        const response = await axios.get(
+          `${apiBaseURL}/api/price-input/list-storages`,
+        );
         setAllStorages(response.data);
       } catch (error) {
         console.error("Error fetching storages:", error);
       }
-    }
+    };
     fetchModels();
     fetchStorages();
   }, []);
@@ -234,8 +240,20 @@ const ManualUpload: React.FC = () => {
           브랜드
         </label>
         <div className="flex gap-4 mt-2">
-          <button type="button" onClick={() => setBrand(BRANDS.GALAXY)} className={`px-4 py-2 rounded-md ${brand === BRANDS.GALAXY ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Galaxy</button>
-          <button type="button" onClick={() => setBrand(BRANDS.APPLE)} className={`px-4 py-2 rounded-md ${brand === BRANDS.APPLE ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Apple</button>
+          <button
+            type="button"
+            onClick={() => setBrand(BRANDS.GALAXY)}
+            className={`px-4 py-2 rounded-md ${brand === BRANDS.GALAXY ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Galaxy
+          </button>
+          <button
+            type="button"
+            onClick={() => setBrand(BRANDS.APPLE)}
+            className={`px-4 py-2 rounded-md ${brand === BRANDS.APPLE ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Apple
+          </button>
         </div>
       </div>
       <div>

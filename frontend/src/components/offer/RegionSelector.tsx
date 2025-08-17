@@ -58,7 +58,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
     if (isAllSelected) {
       // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
       const filtered = regionConditions.filter(
-        (item) => item.parent.region_id !== parentId
+        (item) => item.parent.region_id !== parentId,
       );
       onRegionConditionsChange([
         ...filtered,
@@ -70,17 +70,17 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
           !(
             item.parent.region_id === parentId &&
             item.child.region_id === -parentId
-          )
+          ),
       );
 
       const alreadySelected = filtered.find(
-        (item) => item.child.region_id === child.region_id
+        (item) => item.child.region_id === child.region_id,
       );
 
       if (alreadySelected) {
         // 이미 선택된 항목이면 제거
         onRegionConditionsChange(
-          filtered.filter((item) => item.child.region_id !== child.region_id)
+          filtered.filter((item) => item.child.region_id !== child.region_id),
         );
       } else {
         // 새로운 항목 추가
@@ -126,7 +126,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
                 <CustomCheckbox
                   label={sub.name}
                   checked={regionConditions.some(
-                    (item) => item.child.region_id === sub.region_id
+                    (item) => item.child.region_id === sub.region_id,
                   )}
                   onChange={() => handleSubRegionChange(sub)}
                 />

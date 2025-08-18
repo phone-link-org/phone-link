@@ -74,6 +74,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   }, [lastSelectedModel, SERVER]);
 
   const handleManufacturerChange = (manufacturer: PhoneManufacturer) => {
+    //TODO: 모델만 선택한 후 제조사 변경 시 에러 메시지 출력 + return;
+
     setSelectedManufacturer(manufacturer);
     setStorages([]);
     setLastSelectedModel(null);
@@ -101,7 +103,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           !currentCondition?.storage ||
           currentCondition.storage.length === 0
         ) {
-          toast.error("용량을 선택해주세요.");
+          toast.error(`${lastSelectedModel.name_ko}의 용량을 선택해주세요.`);
           return; // 모델 선택을 중단
         }
       }

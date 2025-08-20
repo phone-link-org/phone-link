@@ -57,7 +57,13 @@ router.post("/login", async (req, res) => {
       res.status(401).json({ message: "Password is incorrect" });
       return;
     }
-    res.status(200).json({ message: `${user.id} logged in.` });
+    res.status(200).json({
+      message: `${user.id} logged in.`,
+      user: {
+        id: user.id,
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error("Failed to Login", error);
     res.status(500).json({ message: "Failed to Login." });

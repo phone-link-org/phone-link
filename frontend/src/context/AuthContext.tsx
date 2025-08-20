@@ -3,7 +3,7 @@ import Cookies from "js-cookie";
 
 interface User {
   id: string;
-  userType: "user" | "seller";
+  userType: string;
 }
 
 interface AuthContextType {

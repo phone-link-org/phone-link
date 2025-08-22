@@ -70,7 +70,7 @@ router.get("/phone-storages", async (req, res) => {
 
 router.post("/search", async (req, res) => {
   try {
-    // page: 현재 페이지 번호, limit: 페이지 당 아이템 수
+    // page: 현재 페이지 번호, limit: 페이지 당 아이템 수, sortOrder: 정렬 순서
     const {
       regions,
       models,
@@ -78,6 +78,7 @@ router.post("/search", async (req, res) => {
       offerTypes,
       page = 1,
       limit = 20,
+      sortOrder = "default",
     } = req.body;
 
     // 지역 조건
@@ -201,6 +202,13 @@ router.post("/search", async (req, res) => {
     }
     if (offerTypeClause) {
       qb.andWhere(offerTypeClause, offerTypeParams);
+    }
+
+    // 정렬 조건 적용
+    if (sortOrder === "price_asc") {
+      qb.orderBy("o.price", "ASC");
+    } else if (sortOrder === "price_desc") {
+      qb.orderBy("o.price", "DESC");
     }
 
     // 페이지네이션을 위한 총 개수 카운트 (주석처리됨, 필요시 활성화)

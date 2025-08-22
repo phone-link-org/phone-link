@@ -4,21 +4,21 @@ interface CustomCheckboxProps {
   label: string;
   checked: boolean;
   onChange: () => void;
-  textStyle?: string;
+  customStyle?: string;
 }
 
 const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
   label,
   checked,
   onChange,
-  textStyle,
+  customStyle,
 }) => {
   return (
     <button
       onClick={onChange}
       className={`
         px-4 py-1 rounded-lg border transition ${
-          textStyle ? textStyle : "text-sm"
+          customStyle || "text-sm w-full"
         }
         ${
           checked

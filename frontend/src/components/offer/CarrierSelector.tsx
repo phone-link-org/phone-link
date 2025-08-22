@@ -34,6 +34,16 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
     }
   };
 
+  const getCarrierImageUrl = (carrierName: string) => {
+    try {
+      return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url)
+        .href;
+    } catch (error) {
+      console.error(`Error loading image for carrier: ${carrierName}`, error);
+      return "https://placehold.co/500x500";
+    }
+  };
+
   return (
     <div>
       <div
@@ -69,7 +79,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
             >
               <div className="flex items-center justify-center w-16 h-16">
                 <img
-                  src={`${SERVER}/uploads/images/carrier/${carrier.carrier_name}.png`}
+                  src={getCarrierImageUrl(carrier.carrier_name)}
                   alt={carrier.carrier_name}
                   className="max-w-full max-h-full object-contain"
                 />

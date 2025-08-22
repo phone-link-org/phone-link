@@ -6,9 +6,13 @@ interface User {
   userType: string;
 }
 
+interface LoginData extends User {
+  token: string;
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (user: User) => void;
+  login: (data: LoginData) => void;
   logout: () => void;
 }
 
@@ -26,14 +30,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = (userData: User) => {
+  const login = (data: LoginData) => {
+    const { token, ...userData } = data;
     setUser(userData);
     Cookies.set("user", JSON.stringify(userData), { expires: 7 }); // 7일 동안 쿠키 저장
+    Cookies.set("token", token, { expires: 7 });
   };
 
   const logout = () => {
     setUser(null);
     Cookies.remove("user");
+    Cookies.remove("token");
   };
 
   return (

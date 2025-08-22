@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -14,7 +14,29 @@ const SignupPage: React.FC = () => {
     gender: "male",
     role: "user",
   });
+  const [isSsoSignup, setIsSsoSignup] = useState(false);
+  const [signupToken, setSignupToken] = useState<string | null>(null);
+
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // NaverCallbackPage에서 전달된 state가 있는지 확인
+    if (location.state && location.state.ssoData) {
+      const { ssoData, signupToken } = location.state;
+      setFormData((prev) => ({
+        ...prev,
+        email: ssoData.email || "",
+        name: ssoData.name || "",
+        gender: ssoData.gender || "male",
+        phoneNumber: ssoData.phone_number
+          ? ssoData.phone_number.replace("+82 ", "0")
+          : "",
+      }));
+      setIsSsoSignup(true);
+      setSignupToken(signupToken);
+    }
+  }, [location.state]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -24,14 +46,17 @@ const SignupPage: React.FC = () => {
   };
 
   const handleSignup = async () => {
-    // 1. 빈 필드 검사
-    if (Object.values(formData).some((value) => value === "")) {
+    // 1. 빈 필드 검사 (SSO 가입 시에는 password 제외)
+    const requiredFields = isSsoSignup
+      ? { ...formData, password: "temp_password" } // password 검사를 통과시키기 위한 임시값
+      : formData;
+    if (Object.values(requiredFields).some((value) => value === "")) {
       toast.error("모든 필드를 입력해주세요.");
       return;
     }
 
     // 2. 이메일 형식 검사
-    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
     if (!emailRegex.test(formData.email)) {
       toast.error("유효하지 않은 이메일 형식입니다.");
       return;
@@ -44,25 +69,31 @@ const SignupPage: React.FC = () => {
       return;
     }
 
-    // 4. 비밀번호 규칙 검사
-    const { password } = formData;
-    if (password.length < 12) {
-      toast.error("비밀번호는 최소 12자리 이상이어야 합니다.");
-      return;
-    }
-    if (!/[A-Z]/.test(password)) {
-      toast.error("비밀번호에는 최소 1개 이상의 대문자가 포함되어야 합니다.");
-      return;
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      toast.error("비밀번호에는 최소 1개 이상의 특수문자가 포함되어야 합니다.");
-      return;
+    // 4. 비밀번호 규칙 검사 (일반 가입 시에만)
+    if (!isSsoSignup) {
+      const { password } = formData;
+      if (password.length < 12) {
+        toast.error("비밀번호는 최소 12자리 이상이어야 합니다.");
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        toast.error("비밀번호에는 최소 1개 이상의 대문자가 포함되어야 합니다.");
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        toast.error(
+          "비밀번호에는 최소 1개 이상의 특수문자가 포함되어야 합니다.",
+        );
+        return;
+      }
     }
 
     try {
+      const payload = isSsoSignup ? { ...formData, signupToken } : formData;
+
       const response = await axios.post(
         "http://localhost:4000/api/user/signup",
-        formData,
+        payload,
       );
 
       if (response.status === 201) {
@@ -79,10 +110,10 @@ const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-lg p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-        <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
-          회원가입
+    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="w-full max-w-lg p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
+        <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
+          {isSsoSignup ? "추가 정보 입력" : "회원가입"}
         </h1>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
@@ -99,7 +130,7 @@ const SignupPage: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="user@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-200 dark:disabled:bg-gray-600"
             />
           </div>
           <div>
@@ -119,23 +150,27 @@ const SignupPage: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
           </div>
-          <div className="md:col-span-2">
-            <label
-              htmlFor="password"
-              className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              비밀번호
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="영문, 대문자, 특수문자 포함 12자 이상"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
-          </div>
+
+          {!isSsoSignup && (
+            <div className="md:col-span-2">
+              <label
+                htmlFor="password"
+                className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                비밀번호
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="영문, 대문자, 특수문자 포함 12자 이상"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+            </div>
+          )}
+
           <div>
             <label
               htmlFor="name"
@@ -149,8 +184,9 @@ const SignupPage: React.FC = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
+              disabled={isSsoSignup}
               placeholder="홍길동"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-200 dark:disabled:bg-gray-600"
             />
           </div>
           <div>
@@ -166,8 +202,9 @@ const SignupPage: React.FC = () => {
               name="phoneNumber"
               value={formData.phoneNumber}
               onChange={handleChange}
+              disabled={isSsoSignup}
               placeholder="010-1234-5678"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-200 dark:disabled:bg-gray-600"
             />
           </div>
           <div className="md:col-span-2">
@@ -199,7 +236,8 @@ const SignupPage: React.FC = () => {
               name="gender"
               value={formData.gender}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              disabled={isSsoSignup}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-200 dark:disabled:bg-gray-600"
             >
               <option value="male">남성</option>
               <option value="female">여성</option>
@@ -228,7 +266,7 @@ const SignupPage: React.FC = () => {
           onClick={handleSignup}
           className="w-full px-4 py-2 font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80"
         >
-          가입하기
+          {isSsoSignup ? "가입 완료" : "가입하기"}
         </button>
         <div className="text-sm text-center">
           <Link

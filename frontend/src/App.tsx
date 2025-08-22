@@ -12,6 +12,7 @@ import PriceInputOfferPage from "./pages/PriceInputPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
+import NaverCallbackPage from "./pages/NaverCallbackPage";
 
 function App() {
   const themeContext = useContext(ThemeContext);
@@ -29,6 +30,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/mypage" element={<MyPage />} />
+          <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster

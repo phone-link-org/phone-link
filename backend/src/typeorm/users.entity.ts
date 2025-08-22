@@ -14,11 +14,14 @@ export class User {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   user_id: number;
 
+  @Column({ type: "varchar", length: 100, nullable: false })
+  id: string;
+
   @Column({ type: "varchar", length: 255 })
   email: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  password: string;
+  password?: string;
 
   @Column({ type: "varchar", length: 20, nullable: true })
   name: string;
@@ -38,14 +41,11 @@ export class User {
   })
   login_provider: "local" | "google" | "apple" | "naver" | "kakao";
 
-  @Column({ type: "varchar", length: 255, nullable: true })
-  provider_id: string;
+  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  sso_id: string;
 
   @Column({ type: "enum", enum: ["user", "seller", "admin"] })
   role: "user" | "seller" | "admin";
-
-  @Column({ type: "varchar", length: 100, nullable: false })
-  id: string;
 
   @CreateDateColumn()
   created_at: Date;

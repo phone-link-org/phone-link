@@ -4,6 +4,18 @@ import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import { toast } from "sonner";
 
+import appleLogo from "../assets/images/apple.png";
+import googleLogo from "../assets/images/google.png";
+import kakaoLogo from "../assets/images/kakao.png";
+import naverLogo from "../assets/images/naver.png";
+
+const ssoProviders = [
+  { name: "Apple", logo: appleLogo, alt: "Apple 로그인" },
+  { name: "Google", logo: googleLogo, alt: "Google 로그인" },
+  { name: "Kakao", logo: kakaoLogo, alt: "Kakao 로그인" },
+  { name: "Naver", logo: naverLogo, alt: "Naver 로그인" },
+];
+
 const LoginPage: React.FC = () => {
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
@@ -14,6 +26,22 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const idInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  const handleNaverLogin = () => {
+    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI;
+
+    // CSRF 공격 방지를 위한 state 값 생성
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    const state = Array.from(array, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    sessionStorage.setItem("naver_oauth_state", state);
+
+    const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&state=${state}&redirect_uri=${redirectUri}`;
+    window.location.href = naverAuthUrl;
+  };
 
   const handleLogin = async () => {
     const isIdEmpty = !id;
@@ -58,9 +86,9 @@ const LoginPage: React.FC = () => {
       );
 
       if (response.status === 200) {
-        const { user } = response.data;
+        const { user, token } = response.data; // token을 응답받는다고 가정
         if (authContext) {
-          authContext.login({ id: user.id, userType: user.role });
+          authContext.login({ id: user.id, userType: user.role, token });
           toast.success("로그인에 성공했습니다!");
           navigate("/");
         }
@@ -106,7 +134,7 @@ const LoginPage: React.FC = () => {
                 if (idError) setIdError(false);
                 if (errorMessage) setErrorMessage("");
               }}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:text-white border-gray-300 dark:border-gray-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:text-white border-gray-300 dark:border-gray-500 ${
                 idError ? "animate-shake" : ""
               }`}
               placeholder="아이디를 입력하세요"
@@ -133,7 +161,7 @@ const LoginPage: React.FC = () => {
                 if (passwordError) setPasswordError(false);
                 if (errorMessage) setErrorMessage("");
               }}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:text-white border-gray-300 dark:border-gray-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:text-white border-gray-300 dark:border-gray-500 ${
                 passwordError ? "animate-shake" : ""
               }`}
               placeholder="비밀번호를 입력하세요"
@@ -147,7 +175,7 @@ const LoginPage: React.FC = () => {
 
           <button
             onClick={handleLogin}
-            className="w-full px-4 py-2 font-bold text-white rounded-md bg-primary-light hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80 dark:text-[#292929]"
+            className="w-full px-4 py-2 font-bold text-white rounded-lg bg-primary-light hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80 dark:text-[#292929]"
           >
             로그인
           </button>
@@ -160,6 +188,28 @@ const LoginPage: React.FC = () => {
           >
             회원가입
           </Link>
+        </div>
+
+        {/* Divider */}
+        <div className="relative flex items-center">
+          <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+          <span className="flex-shrink mx-4 text-xs text-gray-500 dark:text-gray-400">
+            SNS 계정으로 로그인
+          </span>
+          <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+        </div>
+
+        {/* SSO Buttons */}
+        <div className="flex justify-center space-x-4">
+          {ssoProviders.map((provider) => (
+            <button
+              key={provider.name}
+              onClick={provider.name === "Naver" ? handleNaverLogin : undefined}
+              className="w-14 h-14 flex items-center justify-center border-2 border-none dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <img src={provider.logo} alt={provider.alt} className="w-8 h-8" />
+            </button>
+          ))}
         </div>
       </div>
     </div>

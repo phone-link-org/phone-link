@@ -16,6 +16,7 @@ export const AppDataSource = new DataSource({
   entities: [__dirname + "/typeorm/*.entity.ts"],
   logger: new SqlLogger(),
   logging: true,
+  timezone: "Asia/Seoul", // 한국 시간대 설정
 });
 
 (async () => {

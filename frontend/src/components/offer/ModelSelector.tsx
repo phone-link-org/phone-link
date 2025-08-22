@@ -219,6 +219,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 label={manufacturer.name_ko}
                 checked={selectedManufacturer === manufacturer}
                 onChange={() => handleManufacturerChange(manufacturer)}
+                customStyle="text-sm w-[150px]"
               />
             </label>
           ))}
@@ -246,6 +247,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     (item) => item.model.id == model.id,
                   )}
                   onChange={() => handleModelChange(model)}
+                  customStyle="text-sm w-[150px]"
                 />
               </label>
             ))
@@ -272,6 +274,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                   );
                 })()}
                 onChange={() => handleStorageChange(data)}
+                customStyle="text-sm w-[150px]"
               />
             </label>
           ))}

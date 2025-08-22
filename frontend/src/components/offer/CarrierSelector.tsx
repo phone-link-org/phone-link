@@ -37,7 +37,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
   return (
     <div>
       <div
-        className={`grid gap-4 justify-items-center content-center min-h-60 ${
+        className={`grid gap-3 items-center min-h-60 ${
           carriers.length === 1
             ? "grid-cols-1"
             : carriers.length === 2
@@ -59,11 +59,11 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
               key={carrier.carrier_id}
               type="button"
               onClick={() => handleCarrierChange(carrier)}
-              className={`flex flex-col items-center justify-center w-full h-24 rounded-2xl border transition-all shadow-sm hover:shadow-md cursor-pointer
+              className={`flex flex-col items-center justify-center gap-3 w-full h-full max-h-44 rounded-lg border transition-all shadow-sm hover:shadow-md cursor-pointer
     ${
       isSelected
-        ? "border-green-600 bg-green-50 dark:bg-green-900/20"
-        : "border-gray-300 bg-white dark:bg-gray-800"
+        ? "border-green-600 bg-green-50 dark:border-gray-400 dark:bg-primary-dark/20 shadow-md"
+        : "border-gray-300 bg-white dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-600/40"
     }
   `}
             >
@@ -74,6 +74,9 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {carrier.carrier_name}
+              </span>
             </button>
           );
         })}

@@ -104,6 +104,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
                 label={region.name}
                 checked={selectedRegion?.name === region.name}
                 onChange={() => setSelectedRegion(region)}
+                customStyle="text-sm w-[81px]"
               />
             </label>
           ))}
@@ -129,6 +130,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
                     (item) => item.child.region_id === sub.region_id,
                   )}
                   onChange={() => handleSubRegionChange(sub)}
+                  customStyle="text-sm w-[81px]"
                 />
               </label>
             ))

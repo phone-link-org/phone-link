@@ -7,7 +7,7 @@
     - 검색된 결과 리스트(offer)
 */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import type {
   RegionCondition,
   ModelCondition,
@@ -15,13 +15,18 @@ import type {
   Carrier,
 } from "../../../shared/types";
 import { FiX } from "react-icons/fi";
+import { BsArrowClockwise } from "react-icons/bs";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
 import CarrierSelector from "../components/offer/CarrierSelector";
 import OfferTypeSelector from "../components/offer/OfferTypeSelector";
+import Swal from "sweetalert2";
 import { toast } from "sonner";
+import { useTheme } from "../hooks/useTheme";
 
 const OfferPage: React.FC = () => {
+  const { theme } = useTheme(); // 현재 테마 가져오기
+
   const [activeTab, setActiveTab] = useState<
     "region" | "model" | "carrier" | "offerType"
   >("region");
@@ -33,42 +38,96 @@ const OfferPage: React.FC = () => {
   const [carrierConditions, setCarrierConditions] = useState<Carrier[]>([]);
   const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
 
-  const [offerDatas, setOfferDatas] = useState([]);
+  // --- 무한 스크롤 상태 추가 ---
+  const [offerDatas, setOfferDatas] = useState<DisplayOffer[]>([]);
+  const [page, setPage] = useState(1); // 현재 페이지 번호
+  const [hasNextPage, setHasNextPage] = useState(true); // 다음 페이지 존재 여부
+  const [loading, setLoading] = useState(false); // 데이터 로딩 상태
+  // ---
 
   const SERVER = import.meta.env.VITE_API_URL;
 
-  const fetchOfferDatas = async () => {
-    try {
-      const params = {
-        regions: regionConditions ? transformRegions(regionConditions) : null,
-        models: modelConditions,
-        carriers: carrierConditions,
-        offerTypes: offerTypeConditions,
-      };
+  // --- 데이터 fetching 로직 수정 ---
+  const fetchOfferDatas = useCallback(
+    async (isNewSearch = false) => {
+      if (loading) return; // 이미 로딩 중이면 실행 방지
+      setLoading(true);
 
-      await fetch(`${SERVER}/api/offer/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(params),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setOfferDatas(data);
-          console.log("검색 결과:", data);
-        })
-        .catch((error) => {
-          console.error("검색 오류:", error);
+      const currentPage = isNewSearch ? 1 : page;
+
+      try {
+        const params = {
+          regions: regionConditions ? transformRegions(regionConditions) : null,
+          models: modelConditions,
+          carriers: carrierConditions,
+          offerTypes: offerTypeConditions,
+          page: currentPage,
+          limit: 20, // 백엔드와 동일하게 설정
+        };
+
+        const response = await fetch(`${SERVER}/api/offer/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(params),
         });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+
+        if (!response.ok) {
+          throw new Error("서버에서 데이터를 가져오는 데 실패했습니다.");
+        }
+
+        const data = await response.json();
+
+        // isNewSearch가 true이면 데이터를 새로 설정, 아니면 기존 데이터에 추가
+        setOfferDatas((prev) =>
+          isNewSearch ? data.offers : [...prev, ...data.offers],
+        );
+        setHasNextPage(data.hasNextPage);
+        if (data.hasNextPage) {
+          setPage(currentPage + 1);
+        }
+      } catch (error) {
+        console.error("검색 오류:", error);
+        toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setLoading(false); // 로딩 상태 해제
+      }
+    },
+    [
+      loading,
+      page,
+      regionConditions,
+      modelConditions,
+      carrierConditions,
+      offerTypeConditions,
+      SERVER,
+    ],
+  );
+  // ---
+
+  // --- Intersection Observer 설정 ---
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastOfferElementRef = useCallback(
+    (node: HTMLDivElement) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        // 마지막 요소가 보이고, 다음 페이지가 있으며, 로딩 중이 아닐 때 다음 페이지 fetch
+        if (entries[0].isIntersecting && hasNextPage && !loading) {
+          fetchOfferDatas();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, hasNextPage, fetchOfferDatas],
+  );
+  // ---
 
   useEffect(() => {
-    fetchOfferDatas();
-  }, [SERVER]);
+    // 컴포넌트 마운트 시 첫 페이지 데이터 로드
+    fetchOfferDatas(true);
+  }, [SERVER]); // 서버 주소가 변경될 일은 거의 없지만, 의존성 배열에 포함
 
   // TODO: DB에서 가져오게 처리해야되는데 일단 지금은 이렇게....ㅎㅎ
   const getManufacturerName = (manufacturerId: number): string => {
@@ -96,6 +155,7 @@ const OfferPage: React.FC = () => {
     return result;
   }
 
+  // --- 검색 핸들러 수정 ---
   const handleSearch = () => {
     if (
       regionConditions.length === 0 &&
@@ -104,27 +164,43 @@ const OfferPage: React.FC = () => {
       offerTypeConditions.length === 0
     ) {
       toast.error("검색할 조건이 없습니다.");
+      return; // 검색 조건이 없으면 fetch하지 않고 종료
     }
 
-    fetchOfferDatas();
-
-    // POST 요청으로 JSON 데이터 전송
-    //   fetch(`${SERVER}/api/offer/search`, {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({ regions: regionCondData }),
-    //   })
-    //     .then((res) => res.json())
-    //     .then((data) => {
-    //       setOfferDatas(data);
-    //       console.log("검색 결과:", data);
-    //     })
-    //     .catch((error) => {
-    //       console.error("검색 오류:", error);
-    //     });
+    setPage(1); // 페이지 1로 초기화
+    setOfferDatas([]); // 기존 데이터 초기화
+    fetchOfferDatas(true); // 새 검색 시작
   };
+  // ---
+
+  // --- 검색 조건 초기화 핸들러 ---
+  const handleResetConditions = () => {
+    Swal.fire({
+      title: "검색 조건을 초기화하시겠습니까?",
+      icon: "warning",
+      showCancelButton: true,
+      background: theme === "dark" ? "#343434" : "#fff",
+      color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+      confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+      cancelButtonColor: theme === "dark" ? "#F97171" : "#EF4444",
+      confirmButtonText: "초기화",
+      cancelButtonText: "취소",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setRegionConditions([]);
+        setModelConditions([]);
+        setCarrierConditions([]);
+        setOfferTypeConditions([]);
+      }
+    });
+  };
+  // ---
+
+  const hasConditions =
+    regionConditions.length > 0 ||
+    modelConditions.length > 0 ||
+    carrierConditions.length > 0 ||
+    offerTypeConditions.length > 0;
 
   return (
     <>
@@ -133,52 +209,49 @@ const OfferPage: React.FC = () => {
           가격 비교
         </h1>
         <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
-          <div className="flex items-center gap-2 px-6 pt-4 pb-2">
-            {/* TODO: 번호이동/기기변경, 통신사 조건 탭 추가 */}
-            <button
-              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
-              ${
-                activeTab === "region"
-                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              onClick={() => setActiveTab("region")}
-            >
-              지역
-            </button>
-            <button
-              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
-              ${
-                activeTab === "model"
-                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              onClick={() => setActiveTab("model")}
-            >
-              모델
-            </button>
-            <button
-              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
-              ${
-                activeTab === "carrier"
-                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              onClick={() => setActiveTab("carrier")}
-            >
-              통신사
-            </button>
-            <button
-              className={`px-5 py-2 rounded-full text-base font-semibold transition-colors duration-200 focus:outline-none border 
-              ${
-                activeTab === "offerType"
-                  ? "bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light border-primary-light dark:border-primary-dark"
-                  : "bg-gray-100 dark:bg-background-dark text-foreground-light dark:text-foreground-dark border-transparent hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              onClick={() => setActiveTab("offerType")}
-            >
-              개통방식
-            </button>
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "region"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("region")}
+              >
+                지역
+              </button>
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "model"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("model")}
+              >
+                모델
+              </button>
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "carrier"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("carrier")}
+              >
+                통신사
+              </button>
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "offerType"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("offerType")}
+              >
+                개통방식
+              </button>
+            </nav>
           </div>
         </div>
 
@@ -209,6 +282,24 @@ const OfferPage: React.FC = () => {
             )}
           </div>
           <div className="flex flex-col gap-3 mt-6 px-2">
+            {/* --- 검색 조건 제목 및 초기화 버튼 --- */}
+            {hasConditions && (
+              <div className="flex items-baseline gap-3 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">
+                  검색 조건
+                </h3>
+                <button
+                  onClick={handleResetConditions}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title="검색 조건 초기화"
+                >
+                  <BsArrowClockwise />
+                  <span>초기화</span>
+                </button>
+              </div>
+            )}
+            {/* --- */}
+
             {/* 지역 조건태그 */}
             {regionConditions.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -342,7 +433,7 @@ const OfferPage: React.FC = () => {
               <button
                 // TODO: 검색 기능 연결
                 onClick={handleSearch}
-                className="w-1/6 px-4 py-2 text-xl font-medium rounded-2xl bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light hover:opacity-90"
+                className="w-1/6 px-4 py-2 text-xl font-medium rounded-lg bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light hover:opacity-90"
               >
                 검색하기
               </button>
@@ -350,112 +441,140 @@ const OfferPage: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col gap-6 mt-8">
-          {offerDatas.map((data: DisplayOffer) => {
-            // 통신사별 색상 설정
-            const getCarrierBadgeColor = (carrier: string) => {
-              switch (carrier) {
-                case "KT":
-                  return "bg-[#5EDFDE] text-black";
-                case "SKT":
-                  return "bg-[#3618CE] text-white";
-                case "LGU+":
-                  return "bg-[#E2207E] text-white";
-                default:
-                  return "bg-gray-400 text-white";
-              }
-            };
+          {offerDatas.length === 0 && !loading ? (
+            <div className="flex justify-center items-center text-center min-h-[30vh]">
+              <p className="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                검색 결과가 없습니다.
+              </p>
+            </div>
+          ) : (
+            offerDatas.map((data: DisplayOffer, index) => {
+              // 마지막 요소에 ref를 할당하여 Intersection Observer가 감지하도록 함
+              const isLastElement = offerDatas.length === index + 1;
 
-            // 개통방식별 색상 설정
-            const getOfferTypeBadgeColor = (offerType: string) => {
-              return offerType === "번호이동"
-                ? "bg-emerald-500 text-white"
-                : "bg-amber-500 text-white";
-            };
+              // 통신사별 색상 설정
+              const getCarrierBadgeColor = (carrier: string) => {
+                switch (carrier) {
+                  case "KT":
+                    return "bg-[#5EDFDE] text-black";
+                  case "SKT":
+                    return "bg-[#3618CE] text-white";
+                  case "LGU+":
+                    return "bg-[#E2207E] text-white";
+                  default:
+                    return "bg-gray-400 text-white";
+                }
+              };
 
-            return (
-              <div
-                key={`offer_${data.offer_id}`}
-                className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
-              >
-                {/* 상단: 대리점명 / 지역 */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <span className="font-semibold text-gray-800 dark:text-gray-200">
-                    {data.store_name}
-                  </span>
-                  <span className="mt-1 sm:mt-0">{data.region_name}</span>
+              // 개통방식별 색상 설정
+              const getOfferTypeBadgeColor = (offerType: string) => {
+                return offerType === "번호이동"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-amber-500 text-white";
+              };
+
+              return (
+                <div
+                  ref={isLastElement ? lastOfferElementRef : null}
+                  key={`offer_${data.offer_id}_${index}`}
+                  className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
+                >
+                  {/* 상단: 대리점명 / 지역 */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">
+                      {data.store_name}
+                    </span>
+                    <span className="mt-1 sm:mt-0">{data.region_name}</span>
+                  </div>
+
+                  {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6">
+                    {/* 썸네일 */}
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center flex-shrink-0 self-center lg:self-start">
+                      <img
+                        src={`${SERVER}/${data.image_url}`}
+                        alt={data.model_name}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+
+                    {/* 모델명과 뱃지 섹션 */}
+                    <div className="flex-1 text-center lg:text-left space-y-3">
+                      {/* 뱃지들 */}
+                      <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                        {/* 통신사 뱃지 */}
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getCarrierBadgeColor(
+                            data.carrier_name,
+                          )}`}
+                        >
+                          {data.carrier_name}
+                        </span>
+
+                        {/* 개통방식 뱃지 */}
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getOfferTypeBadgeColor(
+                            data.offer_type,
+                          )}`}
+                        >
+                          {data.offer_type}
+                        </span>
+                      </div>
+
+                      {/* 모델명 */}
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                        {data.model_name}
+                      </h2>
+                    </div>
+
+                    {/* 가격 + 토글 */}
+                    <div className="flex flex-col items-center lg:items-end justify-center gap-3 w-full lg:w-auto flex-shrink-0">
+                      {/* 토글 스위치 */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          24개월로 나누기
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-300 peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark rounded-full transition-colors duration-200"></div>
+                          <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white border border-gray-300 dark:border-gray-500 rounded-full transition-transform duration-200 transform peer-checked:translate-x-5 shadow-sm"></div>
+                        </label>
+                      </div>
+
+                      {/* 가격 */}
+                      <div className="text-center lg:text-right">
+                        <p
+                          className={`text-2xl sm:text-3xl font-bold ${
+                            data.price < 0
+                              ? "text-red-500 dark:text-red-400"
+                              : "text-primary-light dark:text-primary-dark"
+                          }`}
+                        >
+                          {data.price}만원
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
-                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6">
-                  {/* 썸네일 */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center rounded-xl flex-shrink-0 self-center lg:self-start">
-                    <img
-                      src={`${SERVER}/${data.image_url}`}
-                      alt={data.model_name}
-                      className="max-w-full max-h-full object-contain"
-                    />
-                  </div>
-
-                  {/* 모델명과 뱃지 섹션 */}
-                  <div className="flex-1 text-center lg:text-left space-y-3">
-                    {/* 뱃지들 */}
-                    <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-                      {/* 통신사 뱃지 */}
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getCarrierBadgeColor(
-                          data.carrier_name,
-                        )}`}
-                      >
-                        {data.carrier_name}
-                      </span>
-
-                      {/* 개통방식 뱃지 */}
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getOfferTypeBadgeColor(
-                          data.offer_type,
-                        )}`}
-                      >
-                        {data.offer_type}
-                      </span>
-                    </div>
-
-                    {/* 모델명 */}
-                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                      {data.model_name}
-                    </h2>
-                  </div>
-
-                  {/* 가격 + 토글 */}
-                  <div className="flex flex-col items-center lg:items-end justify-center gap-3 w-full lg:w-auto flex-shrink-0">
-                    {/* 토글 스위치 */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        24개월로 나누기
-                      </span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-300 peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark rounded-full transition-colors duration-200"></div>
-                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white border border-gray-300 dark:border-gray-500 rounded-full transition-transform duration-200 transform peer-checked:translate-x-5 shadow-sm"></div>
-                      </label>
-                    </div>
-
-                    {/* 가격 */}
-                    <div className="text-center lg:text-right">
-                      <p
-                        className={`text-2xl sm:text-3xl font-bold ${
-                          data.price < 0
-                            ? "text-red-500 dark:text-red-400"
-                            : "text-primary-light dark:text-primary-dark"
-                        }`}
-                      >
-                        {data.price}만원
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
+          {/* 로딩 인디케이터 */}
+          {loading && (
+            <div className="flex justify-center items-center py-4">
+              <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+                데이터를 불러오는 중...
+              </p>
+            </div>
+          )}
+          {/* 더 이상 데이터가 없을 때 표시 */}
+          {!hasNextPage && !loading && offerDatas.length > 0 && (
+            <div className="flex justify-center items-center py-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                검색결과 끝
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>

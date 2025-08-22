@@ -47,8 +47,8 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="w-full max-w-md p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
         <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
           PhoneLink
         </h1>
@@ -65,7 +65,7 @@ const LoginPage: React.FC = () => {
               id="id"
               value={id}
               onChange={(e) => setId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               placeholder="아이디를 입력하세요"
             />
           </div>
@@ -81,23 +81,26 @@ const LoginPage: React.FC = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               placeholder="비밀번호를 입력하세요"
             />
           </div>
         </div>
-        <button
-          onClick={handleLogin}
-          className="w-full px-4 py-2 font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80"
-        >
-          로그인
-        </button>
-        <div className="text-sm text-center">
+        <div className="pt-4">
+          <button
+            onClick={handleLogin}
+            className="w-full px-4 py-2 font-bold text-white rounded-md bg-primary-light hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80 dark:text-[#292929]"
+          >
+            로그인
+          </button>
+        </div>
+        <div className="text-sm text-center text-gray-500 dark:text-gray-400">
+          <span>회원이 아니신가요? </span>
           <Link
             to="/signup"
             className="font-medium text-primary-light hover:underline dark:text-primary-dark"
           >
-            회원이 아니신가요? 회원가입
+            회원가입
           </Link>
         </div>
       </div>
@@ -106,5 +109,3 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
-
-

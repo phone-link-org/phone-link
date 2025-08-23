@@ -1,42 +1,51 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { Link } from "react-router-dom";
 
 const MyPage: React.FC = () => {
   const authContext = useContext(AuthContext);
-  const { user } = authContext || {};
+  const user = authContext?.user;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // AuthProvider가 로드되고 user 상태가 확정된 후, 비로그인 상태라면 리다이렉트
+    if (authContext !== null && !user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, navigate, authContext]);
+
+  // 리다이렉션이 실행되기 전에 컴포넌트 내용이 잠시 보이는 것을 방지
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
-      <h1 className="text-3xl font-bold mb-6">마이페이지</h1>
-      {user ? (
-        <div>
+    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="w-full max-w-lg p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
+        <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
+          마이페이지
+        </h1>
+        <div className="space-y-4 text-center">
           <p className="text-lg">
-            안녕하세요, <span className="font-bold">{user.id}</span>님!
+            안녕하세요, <span className="font-semibold">{user.nickname}</span>
+            님!
           </p>
-          <p className="text-lg">
+          <p className="text-md text-gray-600 dark:text-gray-400">
             회원님은{" "}
-            <span className="font-bold">
-              {user.userType === "seller" ? "판매자" : "일반 유저"}
+            <span className="font-semibold">
+              {user.userType === "seller"
+                ? "판매자"
+                : user.userType === "admin"
+                  ? "관리자"
+                  : "일반 사용자"}
             </span>
             입니다.
           </p>
+          {/* 추가적인 마이페이지 컨텐츠 */}
         </div>
-      ) : (
-        <div>
-          <p className="text-lg text-gray-600">
-            로그인이 필요한 서비스입니다.
-          </p>
-          <Link to="/login">
-            <button className="mt-4 px-4 py-2 rounded bg-primary-light text-white hover:bg-opacity-80">
-              로그인 페이지로 이동
-            </button>
-          </Link>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
 
 export default MyPage;
-

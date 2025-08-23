@@ -47,7 +47,8 @@ const NaverCallbackPage: React.FC = () => {
               } else {
                 // 기존 사용자 -> 로그인 처리
                 authContext.login({
-                  id: user.id,
+                  userId: user.id.toString(),
+                  nickname: user.nickname,
                   userType: user.role,
                   token,
                 });

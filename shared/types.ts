@@ -80,3 +80,47 @@ export interface PriceSubmissionData {
   priceInputs: PriceInput[];
   addons: Addon[];
 }
+
+// =================================================================
+// User Related Types
+// =================================================================
+export interface User {
+  id: number;
+  email: string;
+  password?: string;
+  name: string;
+  nickname?: string;
+  profile_image_url?: string;
+  gender?: "M" | "F";
+  birth_year?: number;
+  birthday?: string;
+  age_range?: string;
+  phone_number?: string;
+  postal_code?: string;
+  sido?: string;
+  sigungu?: string;
+  address?: string;
+  address_detail?: string;
+  role: "user" | "seller" | "admin";
+  status: "active" | "suspended" | "withdrawn";
+  last_login_at?: Date;
+  deleted_at?: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type SignupFormData = Omit<
+  User,
+  | "id"
+  | "nickname"
+  | "birth_year"
+  | "profile_image_url"
+  | "age_range"
+  | "status"
+  | "last_login_at"
+  | "deleted_at"
+  | "created_at"
+  | "updated_at"
+>;
+
+export type LoginFormData = Pick<Required<User>, "email" | "password">;

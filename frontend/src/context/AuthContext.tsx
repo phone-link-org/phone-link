@@ -1,12 +1,13 @@
-import { createContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import Cookies from "js-cookie";
 
 interface User {
-  id: string;
+  userId: string; // id -> userId 로 변경
+  nickname: string; // email -> nickname 으로 변경
   userType: string;
 }
 
-interface LoginData extends User {
+interface LoginData extends Omit<User, "email"> {
   token: string;
 }
 
@@ -16,12 +17,15 @@ interface AuthContextType {
   logout: () => void;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(
-  undefined,
-);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [user, setUser] = useState<User | null>(() => {
+    const userCookie = Cookies.get("user");
+    return userCookie ? JSON.parse(userCookie) : null;
+  });
 
   useEffect(() => {
     const userCookie = Cookies.get("user");
@@ -33,7 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = (data: LoginData) => {
     const { token, ...userData } = data;
     setUser(userData);
-    Cookies.set("user", JSON.stringify(userData), { expires: 7 }); // 7일 동안 쿠키 저장
+    Cookies.set("user", JSON.stringify(userData), { expires: 7 });
     Cookies.set("token", token, { expires: 7 });
   };
 

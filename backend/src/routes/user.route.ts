@@ -319,7 +319,7 @@ router.post("/auth/callback/:provider", async (req, res) => {
     const socialAccount = await socialAccountRepo.findOne({
       where: {
         provider: provider,
-        provider_user_id: userProfile.id,
+        provider_user_id: userProfile.sso_id,
       },
       relations: ["user"],
     });
@@ -327,9 +327,9 @@ router.post("/auth/callback/:provider", async (req, res) => {
     let user = socialAccount?.user;
 
     // 2. 소셜 계정이 없으면, 전화번호로 기존 사용자를 찾아 연동
-    if (!user && userProfile.mobile) {
+    if (!user && userProfile.phone_number) {
       const userRepo = AppDataSource.getRepository(User);
-      let formattedPhoneNumber = userProfile.mobile.replace("+82 ", "0");
+      let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
       formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
       if (formattedPhoneNumber.length === 11) {
         formattedPhoneNumber = formattedPhoneNumber.replace(
@@ -349,7 +349,7 @@ router.post("/auth/callback/:provider", async (req, res) => {
           const newSocialAccount = new SocialAccount();
           newSocialAccount.user = existingUserByPhone;
           newSocialAccount.provider = provider;
-          newSocialAccount.provider_user_id = userProfile.id;
+          newSocialAccount.provider_user_id = userProfile.sso_id;
           await socialAccountRepo.save(newSocialAccount);
           user = existingUserByPhone;
         }
@@ -378,12 +378,12 @@ router.post("/auth/callback/:provider", async (req, res) => {
     } else {
       // 신규 가입 처리
       const ssoData = {
-        provider_user_id: userProfile.id,
+        provider_user_id: userProfile.sso_id,
         provider: provider,
         email: userProfile.email,
         name: userProfile.name,
         gender: userProfile.gender,
-        phone_number: userProfile.mobile,
+        phone_number: userProfile.phone_number,
         birth_year: userProfile.birthyear,
         birthday: userProfile.birthday,
         role: "user",
@@ -410,46 +410,122 @@ router.post("/auth/callback/:provider", async (req, res) => {
 
 // 네이버 사용자 프로필을 가져오는 함수
 async function getNaverUserProfile(code: string) {
-  const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
-    ssoConfig.naver;
+  try {
+    const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
+      ssoConfig.naver;
 
-  const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}&state=test`;
+    const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}&state=test`;
 
-  const tokenResponse = await axios.get(tokenApiUrl);
-  const accessToken = tokenResponse.data.access_token;
-  if (!accessToken) throw new Error("네이버 Access Token 발급 실패");
+    const tokenResponse = await axios.get(tokenApiUrl);
+    const accessToken = tokenResponse.data.access_token;
+    if (!accessToken) {
+      console.error(
+        "Naver Access Token response does not contain access_token.",
+      );
+      return null;
+    }
 
-  const profileResponse = await axios.get(userInfoUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+    const profileResponse = await axios.get(userInfoUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-  return profileResponse.data.response;
+    // 응답 데이터와 그 안의 response 객체가 존재하는지 확인
+    if (profileResponse?.data?.response) {
+      const naverProfile = profileResponse.data.response;
+      const userProfile = {
+        sso_id: naverProfile.id,
+        name: naverProfile.name,
+        email: naverProfile.email,
+        phone_number: naverProfile.mobile,
+        birthyear: naverProfile.birthyear,
+        birthday: naverProfile.birthday,
+        gender: naverProfile.gender,
+      };
+      return userProfile;
+    } else {
+      console.error(
+        "Invalid Naver user profile response structure:",
+        profileResponse.data,
+      );
+      return null;
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(
+        "Axios error while getting Naver user profile:",
+        error.response?.status,
+        error.response?.data,
+      );
+    } else {
+      console.error("Unknown error in getNaverUserProfile:", error);
+    }
+    return null;
+  }
 }
 
 async function getKakaoUserProfile(code: string) {
-  const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
-    ssoConfig.kakao;
+  try {
+    const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
+      ssoConfig.kakao;
 
-  const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
+    const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
 
-  const tokenResponse = await axios.get(tokenApiUrl, {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-    },
-  });
+    const tokenResponse = await axios.get(tokenApiUrl, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+      },
+    });
 
-  const accessToken = tokenResponse.data.access_token;
+    const accessToken = tokenResponse.data.access_token;
 
-  if (!accessToken) throw new Error("카카오 Access Token 발급 실패");
+    if (!accessToken) throw new Error("카카오 Access Token 발급 실패");
 
-  const profileResponse = await axios.get(userInfoUrl, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-    },
-  });
-  console.log(profileResponse.data);
-  return profileResponse.data;
+    const profileResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+      },
+    });
+
+    // 응답 데이터와 그 안의 response 객체가 존재하는지 확인
+    if (profileResponse?.data) {
+      const kakaoProfile = profileResponse.data;
+      console.log(kakaoProfile);
+      const userProfile = {
+        sso_id: kakaoProfile.id,
+        name: kakaoProfile.kakao_account.name,
+        email: kakaoProfile.kakao_account.email,
+        phone_number: kakaoProfile.kakao_account.phone_number.replace(
+          "+82 ",
+          "0",
+        ),
+        birthyear: kakaoProfile.kakao_account.birthyear,
+        birthday: kakaoProfile.kakao_account.birthday.replace(
+          /(\d{2})(\d{2})/,
+          "$1-$2",
+        ),
+        gender: kakaoProfile.kakao_account.gender === "male" ? "M" : "F",
+      };
+      return userProfile;
+    } else {
+      console.error(
+        "Invalid Kakao user profile response structure:",
+        profileResponse.data,
+      );
+      return null;
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(
+        "Axios error while getting Kakao user profile:",
+        error.response?.status,
+        error.response?.data,
+      );
+    } else {
+      console.error("Unknown error in getKakaoUserProfile:", error);
+    }
+    return null;
+  }
 }
 
 export default router;

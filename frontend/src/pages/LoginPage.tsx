@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import { toast } from "sonner";
+import { ssoConfig } from "../config/sso-config";
 
 import appleLogo from "../assets/images/apple.png";
 import googleLogo from "../assets/images/google.png";
@@ -10,10 +11,10 @@ import kakaoLogo from "../assets/images/kakao.png";
 import naverLogo from "../assets/images/naver.png";
 
 const ssoProviders = [
-  { name: "Apple", logo: appleLogo, alt: "Apple 로그인" },
-  { name: "Google", logo: googleLogo, alt: "Google 로그인" },
-  { name: "Kakao", logo: kakaoLogo, alt: "Kakao 로그인" },
-  { name: "Naver", logo: naverLogo, alt: "Naver 로그인" },
+  { name: "apple", logo: appleLogo, alt: "Apple 로그인" },
+  { name: "google", logo: googleLogo, alt: "Google 로그인" },
+  { name: "kakao", logo: kakaoLogo, alt: "Kakao 로그인" },
+  { name: "naver", logo: naverLogo, alt: "Naver 로그인" },
 ];
 
 const LoginPage: React.FC = () => {
@@ -39,22 +40,6 @@ const LoginPage: React.FC = () => {
     if (errorMessage) {
       setErrorMessage("");
     }
-  };
-
-  const handleNaverLogin = () => {
-    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-    const redirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI;
-
-    // CSRF 공격 방지를 위한 state 값 생성
-    const array = new Uint8Array(16);
-    window.crypto.getRandomValues(array);
-    const state = Array.from(array, (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
-    sessionStorage.setItem("naver_oauth_state", state);
-
-    const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&state=${state}&redirect_uri=${redirectUri}`;
-    window.location.href = naverAuthUrl;
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -123,6 +108,33 @@ const LoginPage: React.FC = () => {
         toast.error("알 수 없는 오류가 발생했습니다.");
       }
     }
+  };
+
+  // CSRF 공격 방지를 위한 state 값 생성
+  const getState = () => {
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    const state = Array.from(array, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    return state;
+  };
+
+  const handleSsoLogin = (provider: string) => {
+    if (provider === "naver") {
+      const { clientId, redirectUri, authUrl } = ssoConfig.naver;
+      const state = getState();
+      sessionStorage.setItem("naver_oauth_state", state);
+      const naverAuthUrl = `${authUrl}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+      window.location.href = naverAuthUrl;
+    } else if (provider === "kakao") {
+      const { clientId, redirectUri, authUrl } = ssoConfig.kakao;
+      const state = getState();
+      sessionStorage.setItem("kakao_oauth_state", state);
+      const kakaoAuthUrl = `${authUrl}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+      window.location.href = kakaoAuthUrl;
+    }
+    // TODO: google, apple 프로바이더 추가
   };
 
   return (
@@ -218,7 +230,7 @@ const LoginPage: React.FC = () => {
           {ssoProviders.map((provider) => (
             <button
               key={provider.name}
-              onClick={provider.name === "Naver" ? handleNaverLogin : undefined}
+              onClick={() => handleSsoLogin(provider.name)}
               className="w-14 h-14 flex items-center justify-center border-2 border-none dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <img src={provider.logo} alt={provider.alt} className="w-8 h-8" />

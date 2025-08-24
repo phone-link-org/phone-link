@@ -26,6 +26,8 @@ const LoginPage: React.FC = () => {
   const authContext = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const SERVER = import.meta.env.VITE_API_URL;
+
   // 미입력 시 포커스를 주기 위한 ref
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -76,13 +78,10 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      const response = await axios.post(
-        "http://localhost:4000/api/user/login",
-        {
-          email,
-          password,
-        },
-      );
+      const response = await axios.post(`${SERVER}/api/user/login`, {
+        email,
+        password,
+      });
 
       if (response.status === 200) {
         const { user, token } = response.data;

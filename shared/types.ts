@@ -4,6 +4,16 @@ export interface Region {
   name: string;
 }
 
+export interface Store {
+  store_id: number;
+  region_id: number;
+  store_name: string;
+  address: string;
+  contect: string;
+  owner: string;
+  created_at: Date;
+}
+
 export interface RegionCondition {
   parent: Region;
   child: Region;

@@ -9,12 +9,13 @@ const getEnv = (key: string): string => {
 
 // SSO 프로바이더별 공개 설정 객체
 export const ssoConfig = {
-  // 가이드: https://developers.naver.com/docs/login/devguide/devguide.md
+  // 네이버 공식문서: https://developers.naver.com/docs/login/devguide/devguide.md
   naver: {
     clientId: getEnv("VITE_NAVER_CLIENT_ID"),
     redirectUri: getEnv("VITE_NAVER_REDIRECT_URI"),
     authUrl: "https://nid.naver.com/oauth2.0/authorize",
   },
+  // 카카오 공식문서: https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api
   kakao: {
     clientId: getEnv("VITE_KAKAO_CLIENT_ID"),
     redirectUri: getEnv("VITE_KAKAO_REDIRECT_URI"),

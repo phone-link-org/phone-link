@@ -55,6 +55,7 @@ npm run build
   VITE_API_URL=http://localhost:4000
   ```
 - 백엔드: `backend/.env`
+
   ```env
   PORT=4000
 
@@ -69,7 +70,6 @@ npm run build
 ---
 
 ## 주요 기능 및 예제
-
 
 ---
 

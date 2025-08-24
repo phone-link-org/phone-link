@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import type { SignupFormData } from "../../../shared/types";
+import type { SignupFormData, Store } from "../../../shared/types";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState<SignupFormData>({
@@ -22,9 +22,13 @@ const SignupPage: React.FC = () => {
   >({});
   const [isSsoSignup, setIsSsoSignup] = useState(false);
   const [signupToken, setSignupToken] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState(""); // 소속 대리점 상태 추가
+  const [stores, setStores] = useState<Store[]>([]); // 대리점 목록 상태 추가
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const SERVER = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (location.state?.ssoData) {
@@ -47,12 +51,33 @@ const SignupPage: React.FC = () => {
     }
   }, [location.state]);
 
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const response = await axios.get(`${SERVER}/api/store/stores`);
+        setStores(response.data);
+      } catch (error) {
+        console.error("Error fetching stores:", error);
+        toast.error("매장 목록을 불러오는데 실패했습니다.");
+      }
+    };
+
+    fetchStores();
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    const target = e.target as HTMLInputElement; // type, checked 속성 접근을 위함
 
-    if (name === "phone_number") {
+    if (name === "role" && target.type === "checkbox") {
+      const isChecked = target.checked;
+      setFormData((prev) => ({
+        ...prev,
+        role: isChecked ? "seller" : "user",
+      }));
+    } else if (name === "phone_number") {
       const formattedPhoneNumber = value
         .replace(/[^0-9]/g, "") // 숫자 이외의 문자 제거
         .replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/, "$1-$2-$3") // 하이픈 추가
@@ -178,7 +203,7 @@ const SignupPage: React.FC = () => {
         ...(isSsoSignup && { signupToken }),
       };
 
-      await axios.post("http://localhost:4000/api/user/signup", payload);
+      await axios.post(`${SERVER}/api/user/signup`, payload);
 
       toast.success("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.");
       navigate("/login");
@@ -196,7 +221,7 @@ const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark pt-[63px]">
+    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark pt-[63px] pb-6">
       <div className="w-full max-w-lg p-8 space-y-4 rounded-lg shadow-md bg-white dark:bg-[#292929]">
         <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
           {isSsoSignup ? "추가 정보 입력" : "회원가입"}
@@ -219,7 +244,7 @@ const SignupPage: React.FC = () => {
                 value={formData.email}
                 onChange={handleChange}
                 onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">{errors.email || " "}</p>
             </div>
@@ -242,7 +267,7 @@ const SignupPage: React.FC = () => {
                     onChange={handleChange}
                     onBlur={validatePassword}
                     placeholder="영어 / 숫자 / 특수문자 포함 10자 이상"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                   />
                   <p className="h-4 text-xs text-red-500">
                     {errors.password || " "}
@@ -263,7 +288,7 @@ const SignupPage: React.FC = () => {
                     onChange={(e) => setPasswordConfirm(e.target.value)}
                     onBlur={validatePasswordConfirm}
                     placeholder="비밀번호 확인"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                   />
                   <p className="h-4 text-xs text-red-500">
                     {errors.passwordConfirm || " "}
@@ -288,18 +313,19 @@ const SignupPage: React.FC = () => {
                 onChange={handleChange}
                 onFocus={handleFocus}
                 disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">{errors.name || " "}</p>
             </div>
 
             {/* Gender */}
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 성별
               </label>
-              <div className="flex items-center justify-evenly h-10 border border-gray-300 rounded-md dark:border-gray-600">
-                <label className="flex items-center space-x-2">
+              <div className="grid grid-cols-2">
+                {/* 남성 버튼 */}
+                <label>
                   <input
                     type="radio"
                     name="gender"
@@ -308,11 +334,21 @@ const SignupPage: React.FC = () => {
                     onChange={handleChange}
                     onFocus={handleFocus}
                     disabled={isSsoSignup}
-                    className="text-primary-light focus:ring-primary-light dark:text-primary-dark dark:focus:ring-primary-dark"
+                    className="sr-only"
                   />
-                  <span>남성</span>
+                  <span
+                    className={`w-full h-10 flex items-center justify-center text-sm border rounded-l-md cursor-pointer transition-colors duration-200 ${
+                      formData.gender === "M"
+                        ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
+                        : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    } ${isSsoSignup ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    남성
+                  </span>
                 </label>
-                <label className="flex items-center space-x-2">
+
+                {/* 여성 버튼 */}
+                <label>
                   <input
                     type="radio"
                     name="gender"
@@ -321,12 +357,22 @@ const SignupPage: React.FC = () => {
                     onChange={handleChange}
                     onFocus={handleFocus}
                     disabled={isSsoSignup}
-                    className="text-primary-light focus:ring-primary-light dark:text-primary-dark dark:focus:ring-primary-dark"
+                    className="sr-only"
                   />
-                  <span>여성</span>
+                  <span
+                    className={`w-full h-10 flex items-center justify-center text-sm border rounded-r-md cursor-pointer transition-colors duration-200 ${
+                      formData.gender === "F"
+                        ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
+                        : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    } ${isSsoSignup ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    여성
+                  </span>
                 </label>
               </div>
-              <p className="h-4 text-xs text-red-500">{errors.gender || " "}</p>
+              <p className="h-4 mt-1 text-xs text-red-500">
+                {errors.gender ? errors.gender : <span>&nbsp;</span>}
+              </p>
             </div>
 
             {/* Birthday */}
@@ -345,7 +391,7 @@ const SignupPage: React.FC = () => {
                 onChange={handleChange}
                 onFocus={handleFocus}
                 disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">
                 {errors.birthday || " "}
@@ -370,7 +416,7 @@ const SignupPage: React.FC = () => {
                 maxLength={13}
                 placeholder="010-1234-5678"
                 disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">
                 {errors.phone_number || " "}
@@ -392,7 +438,7 @@ const SignupPage: React.FC = () => {
                 value={formData.address}
                 onChange={handleChange}
                 onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">
                 {errors.address || " "}
@@ -414,7 +460,7 @@ const SignupPage: React.FC = () => {
                 value={formData.address_detail}
                 onChange={handleChange}
                 onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
               <p className="h-4 text-xs text-red-500">
                 {errors.address_detail || " "}
@@ -423,23 +469,73 @@ const SignupPage: React.FC = () => {
 
             {/* Role */}
             <div className="md:col-span-2">
-              <label
-                htmlFor="role"
-                className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                역할
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              >
-                <option value="user">일반 사용자</option>
-                <option value="seller">판매자</option>
-              </select>
+              <div className="flex items-center justify-center">
+                <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                  판매자 계정으로 가입을 원할 경우 체크해주세요.
+                </span>
+                <label htmlFor="role" className="relative cursor-pointer">
+                  <input
+                    id="role"
+                    name="role"
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData.role === "seller"}
+                    onChange={handleChange}
+                  />
+                  <div className="w-5 h-5 transition-colors duration-200 border-2 border-gray-300 rounded peer-checked:border-primary-light peer-checked:bg-primary-light dark:border-gray-600 dark:peer-checked:border-primary-dark dark:peer-checked:bg-primary-dark"></div>
+                  <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 pointer-events-none peer-checked:opacity-100 transition-opacity duration-200">
+                    <svg
+                      className="w-3 h-3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                </label>
+              </div>
             </div>
+
+            {/* Store Selector (Conditional) */}
+            {formData.role === "seller" && (
+              <>
+                <p className="md:col-span-2 text-[13.5px] text-red-500 text-center">
+                  판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자
+                  권한이 부여됩니다.
+                </p>
+                <div className="md:col-span-2 transition-all duration-300 ease-in-out">
+                  <label
+                    htmlFor="storeId"
+                    className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    소속 매장 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="storeId"
+                    name="storeId"
+                    value={storeId}
+                    onChange={(e) => setStoreId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
+                  >
+                    <option value="">소속 매장을 선택하세요</option>
+                    {stores.map((store) => (
+                      <option key={store.store_id} value={store.store_id}>
+                        {store.store_name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="h-4 mt-1 text-xs text-red-500">
+                    {/* {errors.storeId ? errors.storeId : <span>&nbsp;</span>} */}
+                    <span>&nbsp;</span>
+                  </p>
+                </div>
+              </>
+            )}
           </div>
           <button
             type="submit"

@@ -7,6 +7,7 @@ import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { LoginFormData, SignupFormData } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
+import { nanoid } from "nanoid";
 
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
@@ -24,7 +25,7 @@ const router = Router();
 
 router.post("/signup", async (req, res) => {
   const {
-    signupToken,
+    signupToken, //있으면 SSO 회원가입, 없으면 일반 회원가입
     ...signupData
   }: SignupFormData & { signupToken?: string } = req.body;
 
@@ -77,11 +78,28 @@ router.post("/signup", async (req, res) => {
           }
         }
 
+        const userRepo = AppDataSource.getRepository(User);
+
         // 3. Users 테이블에 새로운 사용자 생성
         const newUser = new User();
         newUser.email = decoded.email;
         newUser.name = decoded.name;
-        newUser.nickname = `user_${Math.floor(100000 + Math.random() * 900000)}`;
+
+        // 닉네임 자동 생성 (user_{nanoid}) - 중복 확인 포함
+        let isNicknameUnique = false;
+        let generatedNickname = "";
+        while (!isNicknameUnique) {
+          // 'user_' 접두사와 10자리 nanoid 결합
+          generatedNickname = nanoid(10);
+          const existingNickname = await userRepo.findOne({
+            where: { nickname: generatedNickname },
+          });
+
+          if (!existingNickname) {
+            isNicknameUnique = true;
+          }
+        }
+        newUser.nickname = generatedNickname;
 
         // SSO 정보 + 사용자가 추가 입력한 정보
         newUser.gender = signupData.gender || decoded.gender;
@@ -194,7 +212,22 @@ router.post("/signup", async (req, res) => {
       newUser.email = signupData.email;
       newUser.password = hashedPassword;
       newUser.name = signupData.name;
-      newUser.nickname = `user_${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // 닉네임 자동 생성 (user_{nanoid}) - 중복 확인 포함
+      let isNicknameUnique = false;
+      let generatedNickname = "";
+      while (!isNicknameUnique) {
+        // 'user_' 접두사와 10자리 nanoid 결합
+        generatedNickname = nanoid(10);
+        const existingNickname = await userRepo.findOne({
+          where: { nickname: generatedNickname },
+        });
+
+        if (!existingNickname) {
+          isNicknameUnique = true;
+        }
+      }
+      newUser.nickname = generatedNickname;
 
       // 선택 정보
       newUser.gender = signupData.gender;

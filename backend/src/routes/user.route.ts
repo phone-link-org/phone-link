@@ -6,6 +6,7 @@ import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { LoginFormData, SignupFormData } from "../../../shared/types";
 import axios from "axios";
+import { ssoConfig } from "../config/sso-config";
 
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
@@ -279,68 +280,64 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.post("/auth/naver/callback", async (req, res) => {
+// 기존 /auth/naver/callback 라우트를 범용 라우트로 변경
+router.post("/auth/callback/:provider", async (req, res) => {
+  const { provider } = req.params;
   const { code } = req.body;
 
   if (!code) {
     return res.status(400).json({ message: "Authorization code is missing." });
   }
 
-  const clientId = process.env.NAVER_CLIENT_ID;
-  const clientSecret = process.env.NAVER_CLIENT_SECRET;
-  const tokenApiUrl = `https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&state=test`;
-
   try {
-    // 1. 네이버에 Access Token 요청
-    const tokenResponse = await axios.get(tokenApiUrl);
-    const accessToken = tokenResponse.data.access_token;
+    let userProfile;
 
-    if (!accessToken) {
-      return res.status(400).json({ message: "Failed to get access token." });
+    switch (provider) {
+      case "naver":
+        userProfile = await getNaverUserProfile(code);
+        break;
+      case "kakao":
+        userProfile = await getKakaoUserProfile(code);
+        break;
+      // TODO: case "kakao": ... 등 다른 프로바이더 추가
+      default:
+        return res
+          .status(400)
+          .json({ message: "지원하지 않는 SSO 프로바이더입니다." });
     }
 
-    // 2. Access Token으로 사용자 프로필 정보 요청
-    const profileResponse = await axios.get(
-      "https://openapi.naver.com/v1/nid/me",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    );
-
-    const naverUser = profileResponse.data.response;
-    if (!naverUser) {
-      return res.status(400).json({ message: "Failed to get user profile." });
+    if (!userProfile) {
+      return res
+        .status(500)
+        .json({ message: "SSO 사용자 프로필을 가져오는데 실패했습니다." });
     }
+
+    // --- 여기부터는 기존의 사용자 조회/연동/생성 로직과 거의 동일 ---
 
     // 1. 소셜 계정 정보로 기존 사용자 찾기
     const socialAccountRepo = AppDataSource.getRepository(SocialAccount);
     const socialAccount = await socialAccountRepo.findOne({
       where: {
-        provider: "naver",
-        provider_user_id: naverUser.id,
+        provider: provider,
+        provider_user_id: userProfile.id,
       },
-      relations: ["user"], // user 정보도 함께 로드
+      relations: ["user"],
     });
 
     let user = socialAccount?.user;
 
     // 2. 소셜 계정이 없으면, 전화번호로 기존 사용자를 찾아 연동
-    if (!user && naverUser.mobile) {
+    if (!user && userProfile.mobile) {
       const userRepo = AppDataSource.getRepository(User);
-
-      // Naver에서 받은 전화번호 정규화 (e.g., +82 10-1234-5678 -> 010-1234-5678)
-      let formattedPhoneNumber = naverUser.mobile.replace("+82 ", "0");
+      let formattedPhoneNumber = userProfile.mobile.replace("+82 ", "0");
       formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
-
       if (formattedPhoneNumber.length === 11) {
         formattedPhoneNumber = formattedPhoneNumber.replace(
           /^(\d{3})(\d{4})(\d{4})$/,
           "$1-$2-$3",
         );
       } else {
-        formattedPhoneNumber = ""; // 유효하지 않은 형식이면 연동 시도 안함
+        formattedPhoneNumber = "";
       }
 
       if (formattedPhoneNumber) {
@@ -349,11 +346,10 @@ router.post("/auth/naver/callback", async (req, res) => {
         });
 
         if (existingUserByPhone) {
-          // 전화번호가 같은 기존 계정이 있으면, 새 소셜 계정을 연동
           const newSocialAccount = new SocialAccount();
           newSocialAccount.user = existingUserByPhone;
-          newSocialAccount.provider = "naver";
-          newSocialAccount.provider_user_id = naverUser.id;
+          newSocialAccount.provider = provider;
+          newSocialAccount.provider_user_id = userProfile.id;
           await socialAccountRepo.save(newSocialAccount);
           user = existingUserByPhone;
         }
@@ -362,17 +358,12 @@ router.post("/auth/naver/callback", async (req, res) => {
 
     // 3. 최종 분기 처리
     if (user) {
-      // 로그인 처리 (기존 사용자를 찾았거나, 성공적으로 연동한 경우)
+      // 로그인 처리
       const token = jwt.sign(
-        {
-          user_id: user.id,
-          email: user.email,
-          role: user.role,
-        },
+        { user_id: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET!,
         { expiresIn: "1h" },
       );
-
       return res.status(200).json({
         message: "SSO login successful.",
         user: {
@@ -385,26 +376,23 @@ router.post("/auth/naver/callback", async (req, res) => {
         isNewUser: false,
       });
     } else {
-      // 신규 가입 처리 (연동할 기존 계정도 없는 새로운 사용자)
+      // 신규 가입 처리
       const ssoData = {
-        provider_user_id: naverUser.id,
-        provider: "naver",
-        email: naverUser.email,
-        name: naverUser.name,
-        gender: naverUser.gender, // "M" or "F"
-        phone_number: naverUser.mobile,
-        birth_year: naverUser.birthyear,
-        birthday: naverUser.birthday,
+        provider_user_id: userProfile.id,
+        provider: provider,
+        email: userProfile.email,
+        name: userProfile.name,
+        gender: userProfile.gender,
+        phone_number: userProfile.mobile,
+        birth_year: userProfile.birthyear,
+        birthday: userProfile.birthday,
         role: "user",
       };
-
-      // 임시 회원가입 토큰 생성 (유효시간 10분)
       const signupToken = jwt.sign(
         ssoData,
         process.env.JWT_SIGNUP_SECRET || "default_signup_secret",
         { expiresIn: "10m" },
       );
-
       return res.status(200).json({
         message: "New SSO user. Additional info required.",
         ssoData,
@@ -413,9 +401,55 @@ router.post("/auth/naver/callback", async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Naver callback error:", error);
+    console.error(`${provider} callback error:`, error);
     res.status(500).json({ message: "Internal server error." });
   }
 });
+
+// --- Helper Functions ---
+
+// 네이버 사용자 프로필을 가져오는 함수
+async function getNaverUserProfile(code: string) {
+  const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
+    ssoConfig.naver;
+
+  const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}&state=test`;
+
+  const tokenResponse = await axios.get(tokenApiUrl);
+  const accessToken = tokenResponse.data.access_token;
+  if (!accessToken) throw new Error("네이버 Access Token 발급 실패");
+
+  const profileResponse = await axios.get(userInfoUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return profileResponse.data.response;
+}
+
+async function getKakaoUserProfile(code: string) {
+  const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
+    ssoConfig.kakao;
+
+  const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
+
+  const tokenResponse = await axios.get(tokenApiUrl, {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+    },
+  });
+
+  const accessToken = tokenResponse.data.access_token;
+
+  if (!accessToken) throw new Error("카카오 Access Token 발급 실패");
+
+  const profileResponse = await axios.get(userInfoUrl, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+    },
+  });
+  console.log(profileResponse.data);
+  return profileResponse.data;
+}
 
 export default router;

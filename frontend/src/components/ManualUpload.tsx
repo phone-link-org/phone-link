@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import type {
   PriceInput,
   Addon,
   PriceSubmissionData,
 } from "../../../shared/types";
-import axios from "axios";
+import apiClient from "../api/axios";
+import { toast } from "sonner";
 
 const CARRIERS = {
   "1": "SKT",
@@ -17,29 +18,20 @@ const BUYING_TYPES = {
   CHG: "기기변경",
 };
 
-const BRANDS = {
-  GALAXY: 1,
-  APPLE: 2,
-};
 
-const apiBaseURL = import.meta.env.VITE_API_URL as string;
-
-interface PhoneModel {
-  name_ko: string;
-  manufacturer_id: number;
+interface Device {
+  modelName: string;
+  capacity: string;
 }
 
-interface Storages {
-  storage: string;
+interface TableRowData {
+  modelName: string;
+  capacity: string;
 }
 
 const ManualUpload: React.FC = () => {
-  const [allModels, setAllModels] = useState<PhoneModel[]>([]);
-  const [allStorages, setAllStorages] = useState<Storages[]>([]);
-  const [models, setModels] = useState<{ name: string; capacity: string }[]>(
-    [],
-  );
-  const [brand, setBrand] = useState(BRANDS.GALAXY);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [tableRows, setTableRows] = useState<TableRowData[]>([]);
   const [prices, setPrices] = useState<
     Record<string, Record<string, number | "">>
   >({});
@@ -53,99 +45,38 @@ const ManualUpload: React.FC = () => {
     },
   ]);
 
-  const sortedStorages = useMemo(() => {
-    const getStorageValue = (storageString: string): number => {
-      if (!storageString) return 0;
-      const lowerCaseStorage = storageString.toLowerCase().trim();
-      const value = parseFloat(lowerCaseStorage);
-      if (isNaN(value)) return 0;
-
-      if (lowerCaseStorage.endsWith("t") || lowerCaseStorage.endsWith("tb")) {
-        return value * 1024;
-      }
-      return value;
-    };
-
-    return [...allStorages].sort((a, b) => {
-      const valueA = getStorageValue(a.storage);
-      const valueB = getStorageValue(b.storage);
-      return valueA - valueB;
-    });
-  }, [allStorages]);
-
   useEffect(() => {
-    const fetchModels = async () => {
+    const fetchDevices = async () => {
       try {
-        const response = await axios.get(
-          `${apiBaseURL}/api/price-input/list-models`,
-        );
-        setAllModels(response.data);
+        const response = await apiClient.get<Device[]>("/price-input/devices");
+        setDevices(response.data);
+        setTableRows(response.data); 
       } catch (error) {
-        console.error("Error fetching models:", error);
+        toast.error("기기 정보를 불러오는 데 실패했습니다.");
+        console.error("Error fetching devices:", error);
       }
     };
+    fetchDevices();
+    }, []);
 
-    const fetchStorages = async () => {
-      try {
-        const response = await axios.get(
-          `${apiBaseURL}/api/price-input/list-storages`,
-        );
-        setAllStorages(response.data);
-      } catch (error) {
-        console.error("Error fetching storages:", error);
-      }
-    };
-    fetchModels();
-    fetchStorages();
-  }, []);
-
-  const filteredModels = useMemo(() => {
-    return allModels
-      .filter((model) => model.manufacturer_id === brand)
-      .map((model) => model.name_ko);
-  }, [allModels, brand]);
-
-  const handleModelNameChange = (index: number, value: string) => {
-    const newModels = [...models];
-    newModels[index].name = value;
-    setModels(newModels);
+  const handleRemoveRow = (index: number) => {
+    setTableRows(tableRows.filter((_, i) => i !== index));
   };
 
-  const handleModelCapacityChange = (index: number, value: string) => {
-    const newModels = [...models];
-    newModels[index].capacity = value;
-    setModels(newModels);
-  };
-
-  const addModel = () => {
-    setModels([...models, { name: "", capacity: "" }]);
-  };
-
-  const removeModel = (index: number) => {
-    const modelToRemove = models[index];
-    const newModels = models.filter((_, i) => i !== index);
-    setModels(newModels);
-
-    if (modelToRemove?.name) {
-      setPrices((prev) => {
-        const newPrices = { ...prev };
-        delete newPrices[modelToRemove.name];
-        return newPrices;
-      });
-    }
-  };
 
   const handlePriceChange = (
-    model: string,
+    modelName: string,
+    capacity: string,
     carrier: string,
     buyingType: string,
     value: string,
   ) => {
     const price = value === "" ? "" : Number(value);
+    const key = `${modelName}-${capacity}`;
     setPrices((prev) => ({
       ...prev,
-      [model]: {
-        ...prev[model],
+      [key]: {
+        ...prev[key],
         [`${carrier}-${buyingType}`]: price,
       },
     }));
@@ -153,19 +84,15 @@ const ManualUpload: React.FC = () => {
 
   const handleAddonChange = (
     index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
-
-    if (name === "carrier") {
-      const carrierKey = Object.keys(CARRIERS).find(
-        (key) => CARRIERS[key as keyof typeof CARRIERS] === value,
-      );
-      newAddons[index] = { ...newAddons[index], carrier: carrierKey || value };
-    } else {
-      newAddons[index] = { ...newAddons[index], [name]: value };
-    }
+    const numValue =
+      ["monthlyFee", "requiredDuration", "penaltyFee"].includes(name) && value
+        ? parseInt(value)
+        : value;
+    newAddons[index] = { ...newAddons[index], [name]: numValue };
     setAddons(newAddons);
   };
 
@@ -183,50 +110,43 @@ const ManualUpload: React.FC = () => {
   };
 
   const removeAddon = (index: number) => {
-    const newAddons = addons.filter((_, i) => i !== index);
-    setAddons(newAddons);
+    setAddons(addons.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleSubmit called");
     const priceInputs: PriceInput[] = [];
-    models.forEach((model) => {
-      if (!model.name) return; // Don't submit empty model names
-      Object.keys(CARRIERS).forEach((carrier) => {
-        Object.keys(BUYING_TYPES).forEach((buyingType) => {
-          const price = prices[model.name]?.[`${carrier}-${buyingType}`];
-          if (price !== undefined && price !== "") {
-            priceInputs.push({
-              storeId: 1,
-              model: model.name,
-              capacity: model.capacity,
-              carrier: carrier,
-              buyingType: buyingType as "MNP" | "CHG",
-              typePrice: price,
-            });
-          }
-        });
+    Object.entries(prices).forEach(([modelCapKey, carrierPrices]) => {
+      const [model, capacity] = modelCapKey.split("-");
+      Object.entries(carrierPrices).forEach(([carrierTypeKey, typePrice]) => {
+        if (typePrice !== "" && typePrice !== undefined) {
+          const [carrier, buyingType] = carrierTypeKey.split("-");
+          priceInputs.push({
+            storeId: 1, // TODO: Replace with actual store ID from auth
+            model,
+            capacity,
+            carrier,
+            buyingType: buyingType as "MNP" | "CHG",
+            typePrice: Number(typePrice),
+          });
+        }
       });
     });
 
-    const submissionData: PriceSubmissionData = {
-      priceInputs,
-      addons: addons,
-    };
+    if (priceInputs.length === 0) {
+      toast.error("입력된 가격 정보가 없습니다.");
+      return;
+    }
 
-    console.log("Submitting Data:", submissionData);
+    const submissionData: PriceSubmissionData = { priceInputs, addons };
+
     try {
-      const response = await axios.post(
-        `${apiBaseURL}/api/price-input`,
-        submissionData,
-      );
-      if (response.data) {
-        alert("Data submisson success");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Data submission failed !");
+      await apiClient.post("/price-input", submissionData);
+      toast.success("가격 정보가 성공적으로 등록되었습니다.");
+      setPrices({}); // Reset prices after submission
+    } catch (error) {
+      toast.error("데이터 제출에 실패했습니다.");
+      console.error(error);
     }
   };
 
@@ -235,154 +155,93 @@ const ManualUpload: React.FC = () => {
       onSubmit={handleSubmit}
       className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"
     >
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          브랜드
-        </label>
-        <div className="flex gap-4 mt-2">
-          <button
-            type="button"
-            onClick={() => setBrand(BRANDS.GALAXY)}
-            className={`px-4 py-2 rounded-md ${brand === BRANDS.GALAXY ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Galaxy
-          </button>
-          <button
-            type="button"
-            onClick={() => setBrand(BRANDS.APPLE)}
-            className={`px-4 py-2 rounded-md ${brand === BRANDS.APPLE ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Apple
-          </button>
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          모델
-        </label>
-        {models.map((model, index) => (
-          <div key={index} className="flex items-center gap-2 mt-2">
-            <input
-              type="text"
-              value={model.name}
-              onChange={(e) => handleModelNameChange(index, e.target.value)}
-              placeholder="모델명 (예: Z플립5)"
-              list="model-options"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
-            />
-            <datalist id="model-options">
-              {filteredModels.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-            <input
-              type="text"
-              value={model.capacity}
-              onChange={(e) => handleModelCapacityChange(index, e.target.value)}
-              placeholder="용량 (예: 256GB)"
-              list="storage-options"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
-            />
-            <datalist id="storage-options">
-              {sortedStorages.map((storage) => (
-                <option key={storage.storage} value={storage.storage} />
-              ))}
-            </datalist>
-            <button
-              type="button"
-              onClick={() => removeModel(index)}
-              className="px-3 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
-            >
-              -
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={addModel}
-          className="mt-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          + 모델 추가
-        </button>
-      </div>
 
-      {models.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                >
-                  모델
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                >
-                  용량
-                </th>
-                {Object.entries(CARRIERS).map(([carrierKey, carrierName]) =>
-                  Object.entries(BUYING_TYPES).map(
-                    ([buyingTypeKey, buyingTypeName]) => (
-                      <th
-                        key={`${carrierKey}-${buyingTypeKey}`}
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                      >
-                        {carrierName} {buyingTypeName}
-                      </th>
-                    ),
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {models.map(
-                (model, index) =>
-                  model.name && (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {model.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {model.capacity}
-                      </td>
-                      {Object.keys(CARRIERS).map((carrierKey) =>
-                        Object.keys(BUYING_TYPES).map((buyingTypeKey) => (
-                          <td
-                            key={`${carrierKey}-${buyingTypeKey}`}
-                            className="px-6 py-4 whitespace-nowrap"
-                          >
-                            <input
-                              type="number"
-                              className="w-full px-2 py-1 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
-                              placeholder="단위: 만원"
-                              value={
-                                prices[model.name]?.[
-                                  `${carrierKey}-${buyingTypeKey}`
-                                ] ?? ""
-                              }
-                              onChange={(e) =>
-                                handlePriceChange(
-                                  model.name,
-                                  carrierKey,
-                                  buyingTypeKey,
-                                  e.target.value,
-                                )
-                              }
-                            />
-                          </td>
-                        )),
-                      )}
-                    </tr>
-                  ),
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
+                모델
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
+                용량
+              </th>
+              {Object.values(CARRIERS).map((carrierName) =>
+                Object.values(BUYING_TYPES).map((buyingTypeName) => (
+                  <th
+                    key={`${carrierName}-${buyingTypeName}`}
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                  >
+                    {carrierName} {buyingTypeName}
+                  </th>
+                )),
               )}
-            </tbody>
-          </table>
-        </div>
-      )}
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
+                삭제
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {tableRows.map(({ modelName, capacity }, index) => (
+              <tr key={index}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  {modelName}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  {capacity}
+                </td>
+                {Object.keys(CARRIERS).map((carrierKey) =>
+                  Object.keys(BUYING_TYPES).map((buyingTypeKey) => (
+                    <td
+                      key={`${carrierKey}-${buyingTypeKey}`}
+                      className="px-6 py-4 whitespace-nowrap"
+                    >
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
+                        placeholder="단위: 만원"
+                        value={
+                          prices[`${modelName}-${capacity}`]?.[
+                            `${carrierKey}-${buyingTypeKey}`
+                          ] ?? ""
+                        }
+                        onChange={(e) =>
+                          handlePriceChange(
+                            modelName,
+                            capacity,
+                            carrierKey,
+                            buyingTypeKey,
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </td>
+                  )),
+                )}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRow(index)}
+                    className="px-3 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
+                  >
+                    -
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -396,32 +255,27 @@ const ManualUpload: React.FC = () => {
               value={addon.name}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="부가서비스명"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
             />
-            <input
-              type="text"
+            <select
               name="carrier"
-              value={
-                CARRIERS[addon.carrier as keyof typeof CARRIERS] ||
-                addon.carrier
-              }
+              value={addon.carrier}
               onChange={(e) => handleAddonChange(index, e)}
-              list="carrier-options"
-              placeholder="통신사 선택 또는 입력"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
-            />
-            <datalist id="carrier-options">
-              {Object.values(CARRIERS).map((name) => (
-                <option key={name} value={name} />
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
+            >
+              {Object.entries(CARRIERS).map(([key, name]) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
               ))}
-            </datalist>
+            </select>
             <input
               type="number"
               name="monthlyFee"
               value={addon.monthlyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="월 요금"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
             />
             <input
               type="number"
@@ -429,7 +283,7 @@ const ManualUpload: React.FC = () => {
               value={addon.requiredDuration}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="유지 기간 (개월)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
             />
             <input
               type="number"
@@ -437,7 +291,7 @@ const ManualUpload: React.FC = () => {
               value={addon.penaltyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="미가입시 발생 요금(만원)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary-light focus:border-primary-light sm:text-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
             />
             <button
               type="button"
@@ -451,7 +305,7 @@ const ManualUpload: React.FC = () => {
         <button
           type="button"
           onClick={addAddon}
-          className="mt-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="mt-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
         >
           + 부가서비스 추가
         </button>
@@ -460,7 +314,7 @@ const ManualUpload: React.FC = () => {
       <div>
         <button
           type="submit"
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light"
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark"
         >
           등록
         </button>

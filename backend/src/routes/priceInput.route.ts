@@ -98,7 +98,7 @@ router.get("/list-storages", async (_, res) => {
     });
     res.status(200).json(storages);
   } catch (e) {
-    console.error("Error during fetch storages");
+    console.error("Error during fetch storages", e);
     res.status(500).json({ message: "Failed to fetch storages" });
   }
 });
@@ -108,9 +108,9 @@ router.get("/devices", async (_, res) => {
     const devices = await AppDataSource.getRepository(PhoneDevice)
       .createQueryBuilder("device")
       .select([
-        "model.name_ko AS \"modelName\"",
+        'model.name_ko AS "modelName"',
         "storage.storage AS capacity",
-        "manufacturer.id AS \"manufacturerId\"",
+        'manufacturer.id AS "manufacturerId"',
       ])
       .innerJoin("device.model", "model")
       .innerJoin("model.manufacturer", "manufacturer")

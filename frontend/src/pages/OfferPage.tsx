@@ -548,7 +548,7 @@ const OfferPage: React.FC = () => {
                       {/* 썸네일 */}
                       <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center flex-shrink-0 self-center sm:self-start">
                         <img
-                          src={`${SERVER}/${data.image_url}`}
+                          src={`${SERVER}${data.image_url}`}
                           alt={data.model_name}
                           className="max-w-full max-h-full object-contain"
                         />

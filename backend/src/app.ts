@@ -6,11 +6,11 @@ import path from "path";
 import offerRoutes from "./routes/offer.routes";
 import priceInputRoutes from "./routes/priceInput.route";
 import userRoutes from "./routes/user.route";
+import storeRoutes from "./routes/store.routes";
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 4000;
 
 // JSON 파싱 미들웨어 설정
 app.use(express.json());
@@ -29,5 +29,6 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/offer", offerRoutes);
 app.use("/api/price-input", priceInputRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/store", storeRoutes);
 
 export default app;

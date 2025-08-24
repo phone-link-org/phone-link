@@ -103,4 +103,27 @@ router.get("/list-storages", async (_, res) => {
   }
 });
 
+router.get("/devices", async (_, res) => {
+  try {
+    const devices = await AppDataSource.getRepository(PhoneDevice)
+      .createQueryBuilder("device")
+      .select([
+        "model.name_ko AS \"modelName\"",
+        "storage.storage AS capacity",
+        "manufacturer.id AS \"manufacturerId\"",
+      ])
+      .innerJoin("device.model", "model")
+      .innerJoin("model.manufacturer", "manufacturer")
+      .innerJoin("device.storage", "storage")
+      .orderBy("model.name_ko")
+      .addOrderBy("storage.id")
+      .getRawMany();
+
+    res.status(200).json(devices);
+  } catch (error) {
+    console.error("Error fetching devices", error);
+    res.status(500).json({ message: "Failed to fetch devices." });
+  }
+});
+
 export default router;

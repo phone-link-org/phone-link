@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { Region, RegionCondition } from "../../../../shared/types";
+import type { RegionCondition, Region } from "../../../../shared/types";
 import CustomCheckbox from "../CustomCheckbox";
 
 interface RegionSelectorProps {
@@ -22,7 +22,6 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
     fetch(`${SERVER}/api/offer/regions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parentId: null }),
     })
       .then((res) => res.json())
       .then(setRegions);
@@ -31,64 +30,67 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
   // 시/도 지역 선택 시 구/군(하위 지역) 지역 데이터 GET
   useEffect(() => {
     if (selectedRegion !== null) {
-      const parentId = selectedRegion?.region_id;
+      const sidoCode = selectedRegion?.code.substring(
+        0,
+        selectedRegion.code.substring(0, 2) === "36" ? 4 : 2, // 세종(36)은 다른 지역과 다르게 고유코드가 4임
+      );
+
       fetch(`${SERVER}/api/offer/regions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentId }),
+        body: JSON.stringify({ sidoCode }),
       })
         .then((res) => res.json())
         .then((data) => {
-          const all = {
-            region_id: -parentId,
-            parent_id: parentId,
+          const all: Region = {
+            code: "-" + selectedRegion?.code,
             name: "전체",
+            is_active: true,
+            latitude: 0,
+            longitude: 0,
           };
           setSubRegions([all, ...data]);
         });
     }
   }, [selectedRegion, SERVER]);
 
-  const handleSubRegionChange = (child: Region) => {
+  const handleSubRegionChange = (selectedChild: Region) => {
     if (!selectedRegion) return;
 
-    const parentId = selectedRegion.region_id;
-    const isAllSelected = child.region_id === -parentId;
+    const parentCode = selectedRegion.code;
+    const isAllSelected = selectedChild.code === "-" + parentCode;
+    const alreadyExists = regionConditions.some(
+      (item) => item.child.code === selectedChild.code,
+    );
 
     if (isAllSelected) {
-      // 같은 parent_id를 가진 기존 항목들을 모두 제거하고 '전체'만 추가
-      const filtered = regionConditions.filter(
-        (item) => item.parent.region_id !== parentId,
+      // '전체'를 선택한 경우, 같은 부모를 가진 다른 하위 지역들을 모두 제거하고 '전체'만 추가합니다.
+      const others = regionConditions.filter(
+        (item) => item.parent.code !== parentCode,
       );
       onRegionConditionsChange([
-        ...filtered,
-        { parent: selectedRegion, child },
+        ...others,
+        { parent: selectedRegion, child: selectedChild },
       ]);
+    } else if (alreadyExists) {
+      // 이미 선택된 항목을 다시 클릭한 경우, 해당 항목을 제거합니다.
+      // '전체' 항목도 함께 제거합니다.
+      onRegionConditionsChange(
+        regionConditions.filter(
+          (item) =>
+            item.child.code !== selectedChild.code &&
+            item.child.code !== "-" + parentCode,
+        ),
+      );
     } else {
-      const filtered = regionConditions.filter(
-        (item) =>
-          !(
-            item.parent.region_id === parentId &&
-            item.child.region_id === -parentId
-          ),
+      // 새로운 하위 지역을 선택한 경우, '전체' 항목을 제거하고 새 항목을 추가합니다.
+      const others = regionConditions.filter(
+        (item) => item.child.code !== "-" + parentCode,
       );
-
-      const alreadySelected = filtered.find(
-        (item) => item.child.region_id === child.region_id,
-      );
-
-      if (alreadySelected) {
-        // 이미 선택된 항목이면 제거
-        onRegionConditionsChange(
-          filtered.filter((item) => item.child.region_id !== child.region_id),
-        );
-      } else {
-        // 새로운 항목 추가
-        onRegionConditionsChange([
-          ...filtered,
-          { parent: selectedRegion, child },
-        ]);
-      }
+      onRegionConditionsChange([
+        ...others,
+        { parent: selectedRegion, child: selectedChild },
+      ]);
     }
   };
   return (
@@ -127,7 +129,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
                 <CustomCheckbox
                   label={sub.name}
                   checked={regionConditions.some(
-                    (item) => item.child.region_id === sub.region_id,
+                    (item) => item.child.code === sub.code,
                   )}
                   onChange={() => handleSubRegionChange(sub)}
                   customStyle="text-sm w-[81px]"

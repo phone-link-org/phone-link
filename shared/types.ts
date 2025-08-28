@@ -1,7 +1,9 @@
 export interface Region {
-  region_id: number;
-  parent_id: number;
+  code: string;
   name: string;
+  is_active: boolean;
+  latitude: number;
+  longitude: number;
 }
 
 export interface Store {

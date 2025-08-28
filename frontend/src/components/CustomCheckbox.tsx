@@ -17,7 +17,7 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
     <button
       onClick={onChange}
       className={`
-        px-4 py-1 rounded-lg border transition ${
+        px-2 py-1 rounded-lg border transition ${
           customStyle || "text-sm w-full"
         }
         ${

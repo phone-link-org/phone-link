@@ -1,7 +1,6 @@
 // server/src/routes/offer.routes.ts
 import { Router } from "express";
 import { AppDataSource } from "../db";
-import { IsNull } from "typeorm";
 import { Region } from "../typeorm/regions.entity";
 import { Carrier } from "../typeorm/carriers.entity";
 import { PhoneManufacturer } from "../typeorm/phoneManufacturers.entity";
@@ -13,15 +12,50 @@ const router = Router();
 
 router.post("/regions", async (req, res) => {
   try {
-    const { parentId } = req.body;
+    const { sidoCode = null } = req.body;
 
     const regionRepo = AppDataSource.getRepository(Region);
+    const qb = regionRepo.createQueryBuilder("regions");
 
-    const rows = await regionRepo.find({
-      where:
-        parentId === null ? { parent_id: IsNull() } : { parent_id: parentId },
-      order: { name: "ASC" },
-    });
+    qb.where("regions.is_active = :isActive", { isActive: true }); // 폐지되지 않은, 현존하는 지역만 조회
+
+    const selectFields = [
+      "regions.code as code",
+      "regions.is_active as is_active",
+      "regions.latitude as latitude",
+      "regions.longitude as longitude",
+      "regions.last_synced_at as last_synced_at",
+      "regions.created_at as created_at",
+      "regions.updated_at as updated_at",
+    ];
+
+    if (sidoCode === null) {
+      // 최상위 지역 (시/도) 조회: 이름에 공백이 없는 지역
+      const nameCaseExpression = `CASE 
+          WHEN regions.name IN ('충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도') 
+          THEN CONCAT(SUBSTRING(regions.name, 1, 1), SUBSTRING(regions.name, 3, 1)) 
+          ELSE SUBSTRING(regions.name, 1, 2) 
+        END`;
+
+      qb.select([...selectFields, `${nameCaseExpression} as name`]);
+      qb.andWhere(
+        "(CHAR_LENGTH(regions.name) - CHAR_LENGTH(REPLACE(regions.name, ' ', ''))) = 0",
+      );
+    } else {
+      // 시/군/구 조회: 이름에 공백이 1개 있고, 코드가 sidoCode로 시작하는 지역
+      qb.select([
+        ...selectFields,
+        "SUBSTRING_INDEX(regions.name, ' ', -1) as name",
+      ]);
+      qb.andWhere(
+        "(CHAR_LENGTH(regions.name) - CHAR_LENGTH(REPLACE(regions.name, ' ', ''))) = 1",
+      ).andWhere("regions.code LIKE :sidoCode", {
+        sidoCode: `${sidoCode}%`,
+      });
+    }
+
+    const rows = await qb.getRawMany();
+
     res.json(rows);
   } catch (err) {
     console.error("Error fetching regions:", err);
@@ -87,12 +121,20 @@ router.post("/search", async (req, res) => {
     const regionParams: any = {};
 
     if (regions?.allRegion?.length) {
-      regionClauses.push(`r.parent_id IN (:...allRegionIds)`);
-      regionParams.allRegionIds = regions.allRegion.map(Number);
+      const parentCodeClauses = regions.allRegion.map(
+        (_: string, index: number) => `r.code LIKE :parentCode${index}`,
+      );
+
+      regionClauses.push(`(${parentCodeClauses.join(" OR ")})`);
+
+      regions.allRegion.forEach((sidoCode: string, index: number) => {
+        regionParams[`parentCode${index}`] = `${sidoCode}%`;
+      });
     }
+
     if (regions?.region?.length) {
-      regionClauses.push(`r.region_id IN (:...regionIds)`);
-      regionParams.regionIds = regions.region.map(Number);
+      regionClauses.push(`r.code IN (:...codes)`);
+      regionParams.codes = regions.region.map(Number);
     }
 
     // 모델 조건
@@ -174,7 +216,7 @@ router.post("/search", async (req, res) => {
       .select([
         "o.offer_id AS offer_id",
         "s.store_name AS store_name",
-        "CONCAT_WS(' ', r2.name, r.name) as region_name",
+        "r.name as region_name",
         "c.carrier_name AS carrier_name",
         "CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name",
         "CASE WHEN o.offer_type = 'MNP' THEN '번호이동' WHEN o.offer_type = 'CHG' THEN '기기변경' ELSE o.offer_type END AS offer_type",
@@ -183,7 +225,6 @@ router.post("/search", async (req, res) => {
       ])
       .innerJoin("o.store", "s")
       .innerJoin("s.region", "r")
-      .innerJoin(Region, "r2", "r.parent_id = r2.region_id")
       .innerJoin("o.device", "pd")
       .innerJoin("pd.model", "pm")
       .innerJoin("pd.storage", "ps")

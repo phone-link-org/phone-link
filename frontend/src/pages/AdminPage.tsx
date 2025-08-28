@@ -51,31 +51,8 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
-      <h1 className="text-3xl font-bold mb-6">관리자 페이지</h1>
-      <p className="text-lg text-gray-600 mb-8">
-        아래 버튼을 눌러 법정동(지역) 데이터를 가져옵니다.
-      </p>
-
-      <button
-        onClick={fetchRegionData}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        disabled={loading}
-      >
-        {loading ? "불러오는 중..." : "법정동(지역)데이터 API 호출"}
-      </button>
-
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-
-      {regionData && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">API 응답 데이터</h2>
-          <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-            {JSON.stringify(regionData, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      <div className="mt-8 border-t pt-8">
+      {/* 내 허락없이 사용금지! */}
+      {/* <div className="mt-8 border-t pt-8">
         <h2 className="text-2xl font-bold mb-4">데이터베이스 동기화</h2>
         <p className="text-lg text-gray-600 mb-8">
           공공 API의 모든 법정동 데이터를 가져와 DB에 저장합니다. (시간이 오래
@@ -93,7 +70,7 @@ const AdminPage: React.FC = () => {
           <p className="text-blue-500 mt-4 font-bold">{syncResult}</p>
         )}
         {syncError && <p className="text-red-500 mt-4">{syncError}</p>}
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -1,8 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import type { SignupFormData, Store } from "../../../shared/types";
+import AddressSearchButton from "../components/AddressSearchButton";
+import StoreSearchableSelect from "../components/StoreSearchableSelect";
+
+interface DaumPostcodeData {
+  address: string;
+  addressType: "R" | "J";
+  bname: string;
+  buildingName: string;
+  zonecode: string;
+  sido: string;
+  sigungu: string;
+}
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState<SignupFormData>({
@@ -22,11 +34,12 @@ const SignupPage: React.FC = () => {
   >({});
   const [isSsoSignup, setIsSsoSignup] = useState(false);
   const [signupToken, setSignupToken] = useState<string | null>(null);
-  const [storeId, setStoreId] = useState(""); // 소속 대리점 상태 추가
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [stores, setStores] = useState<Store[]>([]); // 대리점 목록 상태 추가
 
   const navigate = useNavigate();
   const location = useLocation();
+  const addressDetailRef = useRef<HTMLInputElement>(null);
 
   const SERVER = import.meta.env.VITE_API_URL;
 
@@ -92,6 +105,33 @@ const SignupPage: React.FC = () => {
         [name]: name === "birth_year" ? Number(value) || undefined : value,
       }));
     }
+  };
+
+  const handleAddressComplete = (data: DaumPostcodeData) => {
+    let fullAddress = data.address;
+    let extraAddress = "";
+
+    if (data.addressType === "R") {
+      if (data.bname !== "") {
+        extraAddress += data.bname;
+      }
+      if (data.buildingName !== "") {
+        extraAddress +=
+          extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
+      }
+      fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      postal_code: data.zonecode,
+      sido: data.sido,
+      sigungu: data.sigungu,
+      address: fullAddress,
+    }));
+    console.log(formData);
+    // 상세 주소 필드로 포커스 이동
+    addressDetailRef.current?.focus();
   };
 
   const validatePassword = () => {
@@ -197,10 +237,16 @@ const SignupPage: React.FC = () => {
       return;
     }
 
+    if (formData.role === "seller" && !selectedStore) {
+      toast.error("판매자 가입 시 소속 매장을 선택해야 합니다.");
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
         ...(isSsoSignup && { signupToken }),
+        ...(formData.role === "seller" && { storeId: selectedStore?.store_id }),
       };
 
       await axios.post(`${SERVER}/api/user/signup`, payload);
@@ -222,324 +268,348 @@ const SignupPage: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark pt-[63px] pb-6">
-      <div className="w-full max-w-lg p-8 space-y-4 rounded-lg shadow-md bg-white dark:bg-[#292929]">
+      <div className="w-full max-w-4xl p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
         <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
           {isSsoSignup ? "추가 정보 입력" : "회원가입"}
         </h1>
         <form onSubmit={handleSignup} noValidate>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Email */}
-            <div className="md:col-span-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                이메일 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="phonelink@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">{errors.email || " "}</p>
-            </div>
-
-            {/* Password */}
-            {!isSsoSignup && (
-              <>
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    비밀번호 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    value={formData.password || ""}
-                    onChange={handleChange}
-                    onBlur={validatePassword}
-                    placeholder="영어 / 숫자 / 특수문자 포함 10자 이상"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-                  />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.password || " "}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="passwordConfirm"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    비밀번호 확인 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    id="passwordConfirm"
-                    name="passwordConfirm"
-                    value={passwordConfirm}
-                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                    onBlur={validatePasswordConfirm}
-                    placeholder="비밀번호 확인"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-                  />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.passwordConfirm || " "}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Name */}
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                이름 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">{errors.name || " "}</p>
-            </div>
-
-            {/* Gender */}
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                성별
-              </label>
-              <div className="grid grid-cols-2">
-                {/* 남성 버튼 */}
-                <label>
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="M"
-                    checked={formData.gender === "M"}
-                    onChange={handleChange}
-                    onFocus={handleFocus}
-                    disabled={isSsoSignup}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`w-full h-10 flex items-center justify-center text-sm border rounded-l-md cursor-pointer transition-colors duration-200 ${
-                      formData.gender === "M"
-                        ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
-                        : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    } ${isSsoSignup ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    남성
-                  </span>
+          <div className="grid grid-cols-1 gap-y-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-x-8">
+            {/* --- Left Column --- */}
+            <div className="space-y-4">
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  이메일 <span className="text-red-500">*</span>
                 </label>
-
-                {/* 여성 버튼 */}
-                <label>
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="F"
-                    checked={formData.gender === "F"}
-                    onChange={handleChange}
-                    onFocus={handleFocus}
-                    disabled={isSsoSignup}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`w-full h-10 flex items-center justify-center text-sm border rounded-r-md cursor-pointer transition-colors duration-200 ${
-                      formData.gender === "F"
-                        ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
-                        : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    } ${isSsoSignup ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    여성
-                  </span>
-                </label>
-              </div>
-              <p className="h-4 mt-1 text-xs text-red-500">
-                {errors.gender ? errors.gender : <span>&nbsp;</span>}
-              </p>
-            </div>
-
-            {/* Birthday */}
-            <div>
-              <label
-                htmlFor="birthday"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                생년월일
-              </label>
-              <input
-                type="date"
-                id="birthday"
-                name="birthday"
-                value={formData.birthday || ""}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">
-                {errors.birthday || " "}
-              </p>
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label
-                htmlFor="phone_number"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                전화번호 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                id="phone_number"
-                name="phone_number"
-                value={formData.phone_number || ""}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                maxLength={13}
-                placeholder="010-1234-5678"
-                disabled={isSsoSignup}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">
-                {errors.phone_number || " "}
-              </p>
-            </div>
-
-            {/* Address */}
-            <div>
-              <label
-                htmlFor="address"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                기본 주소
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">
-                {errors.address || " "}
-              </p>
-            </div>
-
-            {/* Address Detail */}
-            <div>
-              <label
-                htmlFor="address_detail"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                상세 주소
-              </label>
-              <input
-                type="text"
-                id="address_detail"
-                name="address_detail"
-                value={formData.address_detail}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-              />
-              <p className="h-4 text-xs text-red-500">
-                {errors.address_detail || " "}
-              </p>
-            </div>
-
-            {/* Role */}
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-center">
-                <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
-                  판매자 계정으로 가입을 원할 경우 체크해주세요.
-                </span>
-                <label htmlFor="role" className="relative cursor-pointer">
-                  <input
-                    id="role"
-                    name="role"
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={formData.role === "seller"}
-                    onChange={handleChange}
-                  />
-                  <div className="w-5 h-5 transition-colors duration-200 border-2 border-gray-300 rounded peer-checked:border-primary-light peer-checked:bg-primary-light dark:border-gray-600 dark:peer-checked:border-primary-dark dark:peer-checked:bg-primary-dark"></div>
-                  <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 pointer-events-none peer-checked:opacity-100 transition-opacity duration-200">
-                    <svg
-                      className="w-3 h-3"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Store Selector (Conditional) */}
-            {formData.role === "seller" && (
-              <>
-                <p className="md:col-span-2 text-[13.5px] text-red-500 text-center">
-                  판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자
-                  권한이 부여됩니다.
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="phonelink@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={handleFocus}
+                  disabled={isSsoSignup}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
+                />
+                <p className="h-4 text-xs text-red-500">
+                  {errors.email || " "}
                 </p>
-                <div className="md:col-span-2 transition-all duration-300 ease-in-out">
+              </div>
+
+              {/* Password */}
+              {!isSsoSignup && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      비밀번호 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={formData.password || ""}
+                      onChange={handleChange}
+                      onBlur={validatePassword}
+                      placeholder="영어 / 숫자 / 특수문자 포함 10자 이상"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
+                    />
+                    <p className="h-4 text-xs text-red-500">
+                      {errors.password || " "}
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="passwordConfirm"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      비밀번호 확인 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      id="passwordConfirm"
+                      name="passwordConfirm"
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      onBlur={validatePasswordConfirm}
+                      placeholder="비밀번호 확인"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
+                    />
+                    <p className="h-4 text-xs text-red-500">
+                      {errors.passwordConfirm || " "}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Name */}
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    이름 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    disabled={isSsoSignup}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
+                  />
+                  <p className="h-4 text-xs text-red-500">
+                    {errors.name || " "}
+                  </p>
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    성별
+                  </label>
+                  <div className="grid grid-cols-2">
+                    {/* 남성 버튼 */}
+                    <label>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="M"
+                        checked={formData.gender === "M"}
+                        onChange={handleChange}
+                        onFocus={handleFocus}
+                        disabled={isSsoSignup}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`w-full h-10 flex items-center justify-center text-sm border rounded-l-md transition-colors duration-200 ${
+                          isSsoSignup
+                            ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-700 cursor-not-allowed"
+                            : formData.gender === "M"
+                              ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark cursor-pointer"
+                              : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                        }`}
+                      >
+                        남성
+                      </span>
+                    </label>
+
+                    {/* 여성 버튼 */}
+                    <label>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="F"
+                        checked={formData.gender === "F"}
+                        onChange={handleChange}
+                        onFocus={handleFocus}
+                        disabled={isSsoSignup}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`w-full h-10 flex items-center justify-center text-sm border rounded-r-md transition-colors duration-200 ${
+                          isSsoSignup
+                            ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-700 cursor-not-allowed"
+                            : formData.gender === "F"
+                              ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark cursor-pointer"
+                              : "bg-white text-gray-700 border-gray-300 dark:bg-transparent dark:text-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                        }`}
+                      >
+                        여성
+                      </span>
+                    </label>
+                  </div>
+                  <p className="h-4 mt-1 text-xs text-red-500">
+                    {errors.gender ? errors.gender : <span>&nbsp;</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* --- Divider --- */}
+            <div className="hidden lg:block w-px bg-background-light dark:bg-background-dark" />
+
+            {/* --- Right Column --- */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Birthday */}
+                <div>
+                  <label
+                    htmlFor="birthday"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    생년월일
+                  </label>
+                  <input
+                    type="date"
+                    id="birthday"
+                    name="birthday"
+                    value={formData.birthday || ""}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    disabled={isSsoSignup}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
+                  />
+                  <p className="h-4 text-xs text-red-500">
+                    {errors.birthday || " "}
+                  </p>
+                </div>
+
+                {/* Phone Number */}
+                <div>
+                  <label
+                    htmlFor="phone_number"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    전화번호 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone_number"
+                    name="phone_number"
+                    value={formData.phone_number || ""}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    maxLength={13}
+                    placeholder="010-1234-5678"
+                    disabled={isSsoSignup}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
+                  />
+                  <p className="h-4 text-xs text-red-500">
+                    {errors.phone_number || " "}
+                  </p>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label
+                  htmlFor="address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  기본 주소
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
+                  />
+                  <AddressSearchButton
+                    onAddressComplete={handleAddressComplete}
+                  />
+                </div>
+                <p className="h-4 text-xs text-red-500">
+                  {errors.address || " "}
+                </p>
+              </div>
+
+              {/* Address Detail */}
+              <div>
+                <label
+                  htmlFor="address_detail"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  상세 주소
+                </label>
+                <input
+                  type="text"
+                  id="address_detail"
+                  name="address_detail"
+                  value={formData.address_detail}
+                  onChange={handleChange}
+                  onFocus={handleFocus}
+                  ref={addressDetailRef}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
+                />
+                <p className="h-4 text-xs text-red-500">
+                  {errors.address_detail || " "}
+                </p>
+              </div>
+
+              {/* Store Selector (Conditional) */}
+              {formData.role === "seller" && (
+                <div className="transition-all duration-300 ease-in-out">
                   <label
                     htmlFor="storeId"
-                    className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     소속 매장 <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="storeId"
-                    name="storeId"
-                    value={storeId}
-                    onChange={(e) => setStoreId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
-                  >
-                    <option value="">소속 매장을 선택하세요</option>
-                    {stores.map((store) => (
-                      <option key={store.store_id} value={store.store_id}>
-                        {store.store_name}
-                      </option>
-                    ))}
-                  </select>
+                  <StoreSearchableSelect
+                    stores={stores}
+                    selectedStore={selectedStore}
+                    onStoreSelect={setSelectedStore}
+                  />
                   <p className="h-4 mt-1 text-xs text-red-500">
                     {/* {errors.storeId ? errors.storeId : <span>&nbsp;</span>} */}
                     <span>&nbsp;</span>
                   </p>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Role */}
+          <div className="mt-6">
+            <div className="flex items-center justify-center">
+              <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                판매자 계정으로 가입을 원할 경우 체크해주세요.
+              </span>
+              <label htmlFor="role" className="relative cursor-pointer">
+                <input
+                  id="role"
+                  name="role"
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={formData.role === "seller"}
+                  onChange={handleChange}
+                />
+                <div className="w-5 h-5 transition-colors duration-200 border-2 border-gray-300 rounded peer-checked:border-primary-light peer-checked:bg-primary-light dark:border-gray-600 dark:peer-checked:border-primary-dark dark:peer-checked:bg-primary-dark"></div>
+                <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 pointer-events-none peer-checked:opacity-100 transition-opacity duration-200">
+                  <svg
+                    className="w-3 h-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {formData.role === "seller" && (
+            <p className="mt-2 text-center text-[13.5px] text-red-500">
+              판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자
+              권한이 부여됩니다.
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full px-4 py-2 mt-4 font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80"
+            className={`w-full px-4 py-2 ${
+              formData.role === "seller" ? "mt-2" : "mt-4"
+            } font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80`}
           >
             {isSsoSignup ? "가입 완료" : "가입하기"}
           </button>

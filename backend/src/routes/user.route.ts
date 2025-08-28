@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { AppDataSource } from "../db";
 import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
+import { Seller } from "../typeorm/sellers.entity";
 import { LoginFormData, SignupFormData } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
@@ -26,8 +27,9 @@ const router = Router();
 router.post("/signup", async (req, res) => {
   const {
     signupToken, //있으면 SSO 회원가입, 없으면 일반 회원가입
+    storeId,
     ...signupData
-  }: SignupFormData & { signupToken?: string } = req.body;
+  }: SignupFormData & { signupToken?: string; storeId?: number } = req.body;
 
   if (signupToken) {
     // --- SSO 회원가입 ---
@@ -134,9 +136,25 @@ router.post("/signup", async (req, res) => {
         }
 
         newUser.role = signupData.role;
+        newUser.address = signupData.address;
+        newUser.address_detail = signupData.address_detail;
+        newUser.postal_code = signupData.postal_code;
+        newUser.sido = signupData.sido;
+        newUser.sigungu = signupData.sigungu;
         // SSO 가입 시 password는 null
 
         const savedUser = await transactionalEntityManager.save(newUser);
+
+        // 판매자일 경우 sellers 테이블에 추가
+        if (savedUser.role === "seller") {
+          if (!storeId) {
+            throw new Error("STORE_ID_REQUIRED");
+          }
+          const newSeller = new Seller();
+          newSeller.user_id = savedUser.id;
+          newSeller.store_id = storeId;
+          await transactionalEntityManager.save(newSeller);
+        }
 
         // 3. SocialAccounts 테이블에 데이터 생성
         const newSocialAccount = new SocialAccount();
@@ -170,6 +188,11 @@ router.post("/signup", async (req, res) => {
           .status(409)
           .json({ message: "이미 사용 중인 전화번호입니다." });
       }
+      if (error.message === "STORE_ID_REQUIRED") {
+        return res
+          .status(400)
+          .json({ message: "판매자 가입 시 소속 매장을 선택해야 합니다." });
+      }
       console.error("SSO Signup Error:", error);
       return res
         .status(500)
@@ -178,86 +201,114 @@ router.post("/signup", async (req, res) => {
   } else {
     // --- 일반 회원가입 ---
     try {
-      const userRepo = AppDataSource.getRepository(User);
+      await AppDataSource.transaction(async (transactionalEntityManager) => {
+        const userRepo = transactionalEntityManager.getRepository(User);
 
-      // 1. 이메일 중복 확인
-      const existingUserByEmail = await userRepo.findOne({
-        where: { email: signupData.email },
+        // 1. 이메일 중복 확인
+        const existingUserByEmail = await userRepo.findOne({
+          where: { email: signupData.email },
+        });
+        if (existingUserByEmail) {
+          throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+
+        // 2. 전화번호 중복 확인 (입력된 경우)
+        if (signupData.phone_number) {
+          const existingUserByPhone = await userRepo.findOne({
+            where: { phone_number: signupData.phone_number },
+          });
+          if (existingUserByPhone) {
+            throw new Error("PHONE_ALREADY_EXISTS");
+          }
+        }
+
+        // 3. 비밀번호 해싱
+        if (!signupData.password) {
+          throw new Error("PASSWORD_REQUIRED");
+        }
+        const hashedPassword = await bcrypt.hash(signupData.password, 10);
+
+        // 4. 새로운 사용자 생성
+        const newUser = new User();
+        newUser.email = signupData.email;
+        newUser.password = hashedPassword;
+        newUser.name = signupData.name;
+
+        // 닉네임 자동 생성 (user_{nanoid}) - 중복 확인 포함
+        let isNicknameUnique = false;
+        let generatedNickname = "";
+        while (!isNicknameUnique) {
+          // 'user_' 접두사와 10자리 nanoid 결합
+          generatedNickname = nanoid(10);
+          const existingNickname = await userRepo.findOne({
+            where: { nickname: generatedNickname },
+          });
+
+          if (!existingNickname) {
+            isNicknameUnique = true;
+          }
+        }
+        newUser.nickname = generatedNickname;
+
+        // 선택 정보
+        newUser.gender = signupData.gender;
+        newUser.phone_number = signupData.phone_number;
+        const birthDate = signupData.birthday; // YYYY-MM-DD
+        if (birthDate) {
+          const birthYear = Number(birthDate.split("-")[0]);
+          newUser.birth_year = birthYear;
+          newUser.birthday = `${birthDate.split("-")[1]}-${
+            birthDate.split("-")[2]
+          }`;
+
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYear;
+          if (age >= 0) {
+            const startOfRange = Math.floor(age / 10) * 10;
+            newUser.age_range = `${startOfRange}-${startOfRange + 9}`;
+          }
+        }
+        newUser.role = signupData.role;
+        newUser.address = signupData.address;
+        newUser.address_detail = signupData.address_detail;
+        newUser.postal_code = signupData.postal_code;
+        newUser.sido = signupData.sido;
+        newUser.sigungu = signupData.sigungu;
+
+        const savedUser = await userRepo.save(newUser);
+
+        // 판매자일 경우 sellers 테이블에 추가
+        if (savedUser.role === "seller") {
+          if (!storeId) {
+            throw new Error("STORE_ID_REQUIRED");
+          }
+          const sellerRepo = transactionalEntityManager.getRepository(Seller);
+          const newSeller = new Seller();
+          newSeller.user_id = savedUser.id;
+          newSeller.store_id = storeId;
+          await sellerRepo.save(newSeller);
+        }
       });
 
-      if (existingUserByEmail) {
+      res.status(201).json({ message: "성공적으로 가입되었습니다!" });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error.message === "EMAIL_ALREADY_EXISTS") {
         return res.status(409).json({ message: "이미 가입된 이메일입니다." });
       }
-
-      // 2. 전화번호 중복 확인 (입력된 경우)
-      if (signupData.phone_number) {
-        const existingUserByPhone = await userRepo.findOne({
-          where: { phone_number: signupData.phone_number },
-        });
-        if (existingUserByPhone) {
-          return res
-            .status(409)
-            .json({ message: "이미 사용 중인 전화번호입니다." });
-        }
+      if (error.message === "PHONE_ALREADY_EXISTS") {
+        return res
+          .status(409)
+          .json({ message: "이미 사용 중인 전화번호입니다." });
       }
-
-      // 3. 비밀번호 해싱
-      if (!signupData.password) {
+      if (error.message === "PASSWORD_REQUIRED") {
         return res.status(400).json({ message: "비밀번호를 입력해주세요." });
       }
-      const hashedPassword = await bcrypt.hash(signupData.password, 10);
-
-      // 4. 새로운 사용자 생성
-      const newUser = new User();
-      newUser.email = signupData.email;
-      newUser.password = hashedPassword;
-      newUser.name = signupData.name;
-
-      // 닉네임 자동 생성 (user_{nanoid}) - 중복 확인 포함
-      let isNicknameUnique = false;
-      let generatedNickname = "";
-      while (!isNicknameUnique) {
-        // 'user_' 접두사와 10자리 nanoid 결합
-        generatedNickname = nanoid(10);
-        const existingNickname = await userRepo.findOne({
-          where: { nickname: generatedNickname },
-        });
-
-        if (!existingNickname) {
-          isNicknameUnique = true;
-        }
+      if (error.message === "STORE_ID_REQUIRED") {
+        return res
+          .status(400)
+          .json({ message: "판매자 가입 시 소속 매장을 선택해야 합니다." });
       }
-      newUser.nickname = generatedNickname;
-
-      // 선택 정보
-      newUser.gender = signupData.gender;
-      newUser.phone_number = signupData.phone_number;
-      const birthDate = signupData.birthday; // YYYY-MM-DD
-      if (birthDate) {
-        const birthYear = Number(birthDate.split("-")[0]);
-        newUser.birth_year = birthYear;
-        newUser.birthday = `${birthDate.split("-")[1]}-${
-          birthDate.split("-")[2]
-        }`;
-
-        const currentYear = new Date().getFullYear();
-        const age = currentYear - birthYear;
-        if (age >= 0) {
-          const startOfRange = Math.floor(age / 10) * 10;
-          newUser.age_range = `${startOfRange}-${startOfRange + 9}`;
-        }
-      }
-      newUser.role = signupData.role;
-      newUser.address = signupData.address;
-      newUser.address_detail = signupData.address_detail;
-      // newUser.postal_code = signupData.postal_code;
-      // newUser.sido = signupData.sido;
-      // newUser.sigungu = signupData.sigungu;
-
-      await userRepo.save(newUser);
-
-      res.status(201).json({ message: "성공적으로 가입되었습니다!" });
-    } catch (error) {
       console.error("Traditional Signup Error:", error);
       res.status(500).json({ message: "회원가입 중 오류가 발생했습니다." });
     }

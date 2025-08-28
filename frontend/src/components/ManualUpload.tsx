@@ -5,6 +5,7 @@ import type {
   PriceSubmissionData,
 } from "../../../shared/types";
 import apiClient from "../api/axios";
+import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 
 const CARRIERS = {
@@ -18,19 +19,19 @@ const BUYING_TYPES = {
   CHG: "기기변경",
 };
 
-
 interface Device {
+  manufacturerId: string;
   modelName: string;
   capacity: string;
 }
 
 interface TableRowData {
+  manufacturerId: string;
   modelName: string;
   capacity: string;
 }
 
 const ManualUpload: React.FC = () => {
-  const [devices, setDevices] = useState<Device[]>([]);
   const [tableRows, setTableRows] = useState<TableRowData[]>([]);
   const [prices, setPrices] = useState<
     Record<string, Record<string, number | "">>
@@ -49,20 +50,19 @@ const ManualUpload: React.FC = () => {
     const fetchDevices = async () => {
       try {
         const response = await apiClient.get<Device[]>("/price-input/devices");
-        setDevices(response.data);
-        setTableRows(response.data); 
+        console.log(response.data);
+        setTableRows(response.data);
       } catch (error) {
         toast.error("기기 정보를 불러오는 데 실패했습니다.");
         console.error("Error fetching devices:", error);
       }
     };
     fetchDevices();
-    }, []);
+  }, []);
 
   const handleRemoveRow = (index: number) => {
     setTableRows(tableRows.filter((_, i) => i !== index));
   };
-
 
   const handlePriceChange = (
     modelName: string,
@@ -71,6 +71,7 @@ const ManualUpload: React.FC = () => {
     buyingType: string,
     value: string,
   ) => {
+    if (value.length > 3) return;
     const price = value === "" ? "" : Number(value);
     const key = `${modelName}-${capacity}`;
     setPrices((prev) => ({
@@ -87,6 +88,12 @@ const ManualUpload: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    if (
+      ["monthlyFee", "requiredDuration", "penaltyFee"].includes(name) &&
+      value.length > 3
+    ) {
+      return;
+    }
     const newAddons = [...addons];
     const numValue =
       ["monthlyFee", "requiredDuration", "penaltyFee"].includes(name) && value
@@ -153,22 +160,21 @@ const ManualUpload: React.FC = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"
+      className="space-y-6 p-6 bg-white dark:bg-[#292929] rounded-b-lg"
     >
-
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
+        <table className="min-w-full table-fixed">
+          <thead className="bg-primary-light dark:bg-primary-dark">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                className="w-48 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
               >
                 모델
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                className="w-24 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
               >
                 용량
               </th>
@@ -177,68 +183,99 @@ const ManualUpload: React.FC = () => {
                   <th
                     key={`${carrierName}-${buyingTypeName}`}
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                    className="w-32 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
                   >
-                    {carrierName} {buyingTypeName}
+                    {carrierName}
+                    <br />
+                    {buyingTypeName}
                   </th>
                 )),
               )}
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                className="w-20 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
               >
                 삭제
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {tableRows.map(({ modelName, capacity }, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                  {modelName}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                  {capacity}
-                </td>
-                {Object.keys(CARRIERS).map((carrierKey) =>
-                  Object.keys(BUYING_TYPES).map((buyingTypeKey) => (
-                    <td
-                      key={`${carrierKey}-${buyingTypeKey}`}
-                      className="px-6 py-4 whitespace-nowrap"
-                    >
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white"
-                        placeholder="단위: 만원"
-                        value={
-                          prices[`${modelName}-${capacity}`]?.[
-                            `${carrierKey}-${buyingTypeKey}`
-                          ] ?? ""
-                        }
-                        onChange={(e) =>
-                          handlePriceChange(
-                            modelName,
-                            capacity,
-                            carrierKey,
-                            buyingTypeKey,
-                            e.target.value,
-                          )
-                        }
-                      />
+          <tbody className="bg-white dark:bg-[#292929]">
+            {tableRows.map(
+              ({ modelName, capacity, manufacturerId }, rowIndex) => {
+                const showSeparator =
+                  rowIndex > 0 &&
+                  manufacturerId !== tableRows[rowIndex - 1].manufacturerId;
+
+                const borderClass = showSeparator
+                  ? "border-t-[2px] border-black dark:border-white"
+                  : rowIndex > 0
+                    ? "border-t border-gray-200 dark:border-gray-600"
+                    : "";
+
+                return (
+                  <tr key={rowIndex} className={borderClass}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {modelName}
                     </td>
-                  )),
-                )}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRow(index)}
-                    className="px-3 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
-                  >
-                    -
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {capacity}
+                    </td>
+                    {Object.keys(CARRIERS).map((carrierKey, carrierIndex) =>
+                      Object.keys(BUYING_TYPES).map(
+                        (buyingTypeKey, buyingTypeIndex) => {
+                          const numInputColsPerRow =
+                            Object.keys(CARRIERS).length *
+                            Object.keys(BUYING_TYPES).length;
+                          const tabIndex =
+                            rowIndex * numInputColsPerRow +
+                            carrierIndex * Object.keys(BUYING_TYPES).length +
+                            buyingTypeIndex +
+                            1;
+
+                          return (
+                            <td
+                              key={`${carrierKey}-${buyingTypeKey}`}
+                              className="px-4 py-4 whitespace-nowrap"
+                            >
+                              <input
+                                type="number"
+                                tabIndex={tabIndex}
+                                className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                placeholder="단위: 만원"
+                                value={
+                                  prices[`${modelName}-${capacity}`]?.[
+                                    `${carrierKey}-${buyingTypeKey}`
+                                  ] ?? ""
+                                }
+                                onChange={(e) =>
+                                  handlePriceChange(
+                                    modelName,
+                                    capacity,
+                                    carrierKey,
+                                    buyingTypeKey,
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </td>
+                          );
+                        },
+                      ),
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRow(rowIndex)}
+                        tabIndex={-1}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              },
+            )}
           </tbody>
         </table>
       </div>
@@ -275,7 +312,7 @@ const ManualUpload: React.FC = () => {
               value={addon.monthlyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="월 요금"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
             />
             <input
               type="number"
@@ -283,7 +320,7 @@ const ManualUpload: React.FC = () => {
               value={addon.requiredDuration}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="유지 기간 (개월)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
             />
             <input
               type="number"
@@ -291,14 +328,14 @@ const ManualUpload: React.FC = () => {
               value={addon.penaltyFee}
               onChange={(e) => handleAddonChange(index, e)}
               placeholder="미가입시 발생 요금(만원)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
+              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
             />
             <button
               type="button"
               onClick={() => removeAddon(index)}
-              className="px-3 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
+              className="text-gray-400 hover:text-red-500 transition-colors"
             >
-              -
+              <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
             </button>
           </div>
         ))}

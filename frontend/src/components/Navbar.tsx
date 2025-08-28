@@ -59,6 +59,15 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
+          <li>
+            <Link to="/admin">
+              <button
+                className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
+              >
+                관리자
+              </button>
+            </Link>
+          </li>
         </ul>
       </div>
       <div className="flex items-center gap-4">

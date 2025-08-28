@@ -146,15 +146,20 @@ const OfferPage: React.FC = () => {
 
   function transformRegions(data: RegionCondition[]) {
     const result = {
-      allRegion: [] as number[],
-      region: [] as number[],
+      allRegion: [] as string[],
+      region: [] as string[],
     };
 
     data.forEach((item) => {
-      if (item.child.region_id < 0) {
-        result.allRegion.push(item.parent.region_id);
+      if (item.child.code.startsWith("-")) {
+        result.allRegion.push(
+          item.parent.code.substring(
+            0,
+            item.parent.code.substring(0, 2) === "36" ? 4 : 2,
+          ),
+        );
       } else {
-        result.region.push(item.child.region_id);
+        result.region.push(item.child.code);
       }
     });
 
@@ -346,16 +351,14 @@ const OfferPage: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 {regionConditions.map(({ parent, child }) => (
                   <span
-                    key={child.region_id}
+                    key={child.code}
                     className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
                   >
                     {parent.name} {child.name}
                     <button
                       onClick={() =>
                         setRegionConditions((prev) =>
-                          prev.filter(
-                            (item) => item.child.region_id !== child.region_id,
-                          ),
+                          prev.filter((item) => item.child.code !== child.code),
                         )
                       }
                       className="ml-2 text-gray-500 hover:text-red-500"

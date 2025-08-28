@@ -13,6 +13,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import SsoCallbackPage from "./pages/SsoCallbackPage";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
   const themeContext = useContext(ThemeContext);
@@ -27,6 +28,7 @@ function App() {
           <Route path="/offer" element={<OfferPage />} />
           <Route path="/price-input" element={<PriceInputOfferPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/mypage" element={<MyPage />} />

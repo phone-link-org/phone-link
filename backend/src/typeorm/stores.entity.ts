@@ -19,9 +19,9 @@ export class Store {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   store_id: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "varchar", length: 10 })
   @Index()
-  region_id: number;
+  region_code: string;
 
   @Column({ type: "varchar", length: 255 })
   store_name: string;
@@ -39,7 +39,7 @@ export class Store {
   created_at: Date;
 
   @ManyToOne(() => Region, (region) => region.stores)
-  @JoinColumn({ name: "region_id" })
+  @JoinColumn({ name: "region_code" })
   region: Region;
 
   @OneToMany(() => Addon, (addon) => addon.store)

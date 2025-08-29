@@ -95,6 +95,18 @@ const LoginPage: React.FC = () => {
           toast.success("로그인에 성공했습니다!");
           navigate("/");
         }
+      } else if (response.status === 202) {
+        const { user, token } = response.data;
+        if (authContext) {
+          authContext.login({
+            userId: user.id.toString(),
+            nickname: user.nickname,
+            userType: user.role,
+            token,
+          });
+          toast.warning(response.data.message);
+          navigate("/store/register");
+        }
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {

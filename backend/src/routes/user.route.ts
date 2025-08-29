@@ -146,7 +146,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await transactionalEntityManager.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "seller") {
+        if (savedUser.role === "seller" && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -278,7 +278,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await userRepo.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "seller") {
+        if (savedUser.role === "seller" && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -347,6 +347,24 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET!, // .env 파일에 SECRET KEY를 설정하는 것이 안전합니다.
       { expiresIn: "1h" }, // 토큰 유효 기간
     );
+
+    if (user.role === "seller") {
+      const seller = await AppDataSource.getRepository(Seller).findOne({
+        where: { user_id: user.id },
+      });
+      if (!seller) {
+        return res.status(202).json({
+          message: `매장 등록 페이지로 이동합니다.`,
+          user: {
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+          },
+          token, // 생성된 토큰을 응답에 추가
+        });
+      }
+    }
 
     res.status(200).json({
       message: `${user.email} logged in.`,

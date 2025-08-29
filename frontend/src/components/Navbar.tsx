@@ -34,7 +34,7 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
           <li>
-            <Link to="/my-store">
+            <Link to="/store">
               <button
                 className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
               >

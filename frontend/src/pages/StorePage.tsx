@@ -2,13 +2,15 @@ import { useState } from "react";
 import ExcelUpload from "../components/ExcelUpload";
 import ManualUpload from "../components/ManualUpload";
 
-const MyStorePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"manual" | "excel">("manual");
+const StorePage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<"manual" | "excel" | "addon">(
+    "manual",
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
       <h1 className="text-3xl font-bold mb-8 text-foreground-light dark:text-foreground-dark">
-        내 매장 관리
+        매장 관리
       </h1>
 
       {/* 매장 정보 섹션 */}
@@ -46,10 +48,10 @@ const MyStorePage: React.FC = () => {
 
       {/* 가격 입력 섹션 */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">
-          가격 정보 입력
-        </h2>
         <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
+          <h2 className="text-2xl font-semibold p-6 text-foreground-light dark:text-foreground-dark">
+            판매 정보
+          </h2>
           <div className="border-b border-gray-200 dark:border-background-dark">
             <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
               <button
@@ -60,7 +62,17 @@ const MyStorePage: React.FC = () => {
                 }`}
                 onClick={() => setActiveTab("manual")}
               >
-                직접 입력
+                시세표
+              </button>
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "addon"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("addon")}
+              >
+                부가서비스
               </button>
               <button
                 className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
@@ -86,4 +98,4 @@ const MyStorePage: React.FC = () => {
   );
 };
 
-export default MyStorePage;
+export default StorePage;

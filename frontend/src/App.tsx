@@ -8,7 +8,8 @@ import OfferPage from "./pages/OfferPage";
 import NotFound from "./pages/NotFound";
 import MainPage from "./pages/MainPage";
 import CommunityPage from "./pages/CommunityPage";
-import MyStorePage from "./pages/MyStorePage";
+import StorePage from "./pages/StorePage";
+import StoreRegisterPage from "./pages/StoreRegisterPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
@@ -26,7 +27,8 @@ function App() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/offer" element={<OfferPage />} />
-          <Route path="/my-store" element={<MyStorePage />} />
+          <Route path="/store" element={<StorePage />} />
+          <Route path="/store/register" element={<StoreRegisterPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/login" element={<LoginPage />} />

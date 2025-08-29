@@ -26,11 +26,20 @@ export class Store {
   @Column({ type: "varchar", length: 255 })
   store_name: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   address: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  address_detail: string;
 
   @Column({ type: "varchar", length: 20, nullable: true })
   contact: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  social_account_1: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  social_account_2: string;
 
   @Column({ type: "varchar", length: 10, nullable: true })
   owner: string;

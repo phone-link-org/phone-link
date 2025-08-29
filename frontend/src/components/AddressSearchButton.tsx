@@ -10,6 +10,7 @@ interface DaumPostcodeData {
   zonecode: string;
   sido: string;
   sigungu: string;
+  sigunguCode: string;
 }
 
 interface AddressSearchButtonProps {

@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   Index,
   JoinColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Region } from "./regions.entity";
 import { Addon } from "./addons.entity";
@@ -17,14 +18,17 @@ import { Offer } from "./offers.entity";
 @Entity("stores")
 export class Store {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  store_id: number;
+  id: number;
+
+  @Column({ type: "varchar", length: 255 })
+  name: string;
+
+  @Column({ type: "text", nullable: true })
+  description: string;
 
   @Column({ type: "varchar", length: 10 })
   @Index()
   region_code: string;
-
-  @Column({ type: "varchar", length: 255 })
-  store_name: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   address: string;
@@ -32,20 +36,51 @@ export class Store {
   @Column({ type: "varchar", length: 255, nullable: true })
   address_detail: string;
 
+  @Column({ type: "decimal", precision: 10, scale: 7, nullable: true })
+  latitude: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 7, nullable: true })
+  longitude: number;
+
   @Column({ type: "varchar", length: 20, nullable: true })
   contact: string;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
-  social_account_1: string;
+  @Column({ type: "varchar", length: 2048, nullable: true })
+  thumbnail_url: string;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
-  social_account_2: string;
+  @Column({ type: "varchar", length: 2048, nullable: true })
+  link_1: string;
+
+  @Column({ type: "varchar", length: 2048, nullable: true })
+  link_2: string;
 
   @Column({ type: "varchar", length: 10, nullable: true })
-  owner: string;
+  owner_name: string;
 
-  @CreateDateColumn()
+  @Column({ type: "boolean", default: false })
+  is_featured: boolean;
+
+  @Column({ type: "enum", enum: ["OPEN", "CLOSED"], default: "OPEN" })
+  status: "OPEN" | "CLOSED";
+
+  @Column({
+    type: "enum",
+    enum: ["PENDING", "APPROVED", "REJECTED"],
+    default: "PENDING",
+  })
+  approval_status: "PENDING" | "APPROVED" | "REJECTED";
+
+  @Column({ type: "bigint" })
+  created_by: number;
+
+  @Column({ type: "bigint", nullable: true })
+  updated_by: number;
+
+  @CreateDateColumn({ type: "datetime" })
   created_at: Date;
+
+  @UpdateDateColumn({ type: "datetime" })
+  updated_at: Date;
 
   @ManyToOne(() => Region, (region) => region.stores)
   @JoinColumn({ name: "region_code" })

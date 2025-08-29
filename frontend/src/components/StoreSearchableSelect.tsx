@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Combobox } from "@headlessui/react";
-import type { Store } from "../../../shared/types";
+import type { StoreDto } from "../../../shared/types";
 import { HiChevronUpDown, HiCheck, HiPlus } from "react-icons/hi2";
 
 interface StoreSearchableSelectProps {
-  stores: Store[];
-  selectedStore: Store | null;
-  onStoreSelect: (store: Store | null) => void;
+  stores: StoreDto[];
+  selectedStore: StoreDto | null;
+  onStoreSelect: (store: StoreDto | null) => void;
   onNewStoreClick?: () => void; // 신규 등록 클릭 시 호출될 함수
 }
 
@@ -26,11 +26,11 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
     query === ""
       ? stores
       : stores.filter((store) => {
-          return store.store_name.toLowerCase().includes(query.toLowerCase());
+          return store.name.toLowerCase().includes(query.toLowerCase());
         });
 
   // 신규 등록 옵션을 위한 특별한 객체
-  const newStoreOption = { store_id: -8574, store_name: "신규 등록 요청" };
+  const newStoreOption = { id: -8574, name: "신규 등록 요청" };
 
   return (
     <Combobox as="div" value={selectedStore} onChange={onStoreSelect}>
@@ -38,7 +38,7 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
         <Combobox.Input
           className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 shadow-sm focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white sm:text-sm"
           onChange={(event) => setQuery(event.target.value)}
-          displayValue={(store: Store) => store?.store_name || ""}
+          displayValue={(store: StoreDto) => store?.name || ""}
           placeholder="매장명 검색"
         />
         <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
@@ -79,7 +79,7 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
 
             {filteredStores.map((store) => (
               <Combobox.Option
-                key={store.store_id}
+                key={store.id}
                 value={store}
                 className={({ active }) =>
                   classNames(
@@ -98,7 +98,7 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
                         selected ? "font-semibold" : "",
                       )}
                     >
-                      {store.store_name}
+                      {store.name}
                     </span>
                     {selected && (
                       <span

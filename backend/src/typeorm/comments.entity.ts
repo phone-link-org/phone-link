@@ -14,29 +14,31 @@ import { User } from "./users.entity";
 @Entity("comments")
 export class Comment {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  comment_id: number;
+  id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   post_id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   user_id: number;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: false })
   content: string;
 
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn({ nullable: true })
-  updated_at: Date;
-
-  @Column({ type: "tinyint", default: 0 })
+  @Column({ type: "boolean", nullable: false, default: false })
   is_deleted: boolean;
 
-  @ManyToOne(() => Post, (post) => post.comments)
+  @CreateDateColumn({ type: "datetime" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "datetime" })
+  updated_at: Date;
+
+  @ManyToOne(() => Post, (post) => post.comments, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "post_id" })
   post: Post;
 

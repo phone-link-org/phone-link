@@ -18,28 +18,28 @@ import { PostCategory } from "./postCategories.entity";
 @Entity("posts")
 export class Post {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  post_id: number;
+  id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   user_id: number;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, nullable: false })
   title: string;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: false })
   content: string;
 
-  @Column({ type: "int", default: 0 })
+  @Column({ type: "int", nullable: false, default: 0 })
   view_count: number;
 
-  @Column({ type: "tinyint", default: 0 })
+  @Column({ type: "boolean", nullable: false, default: false })
   is_deleted: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "datetime" })
   created_at: Date;
 
-  @UpdateDateColumn({ nullable: true })
+  @UpdateDateColumn({ type: "datetime" })
   updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.posts)

@@ -21,14 +21,10 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
   }, [SERVER]);
 
   const handleCarrierChange = (carrier: Carrier) => {
-    const isSelected = carrierConditions.some(
-      (c) => c.carrier_id === carrier.carrier_id,
-    );
+    const isSelected = carrierConditions.some((c) => c.id === carrier.id);
 
     if (isSelected) {
-      onCarriersChange(
-        carrierConditions.filter((c) => c.carrier_id !== carrier.carrier_id),
-      );
+      onCarriersChange(carrierConditions.filter((c) => c.id !== carrier.id));
     } else {
       onCarriersChange([...carrierConditions, carrier]);
     }
@@ -60,13 +56,11 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
         }`}
       >
         {carriers.map((carrier) => {
-          const isSelected = carrierConditions.some(
-            (c) => c.carrier_id === carrier.carrier_id,
-          );
+          const isSelected = carrierConditions.some((c) => c.id === carrier.id);
 
           return (
             <button
-              key={carrier.carrier_id}
+              key={carrier.id}
               type="button"
               onClick={() => handleCarrierChange(carrier)}
               className={`flex flex-col items-center justify-center gap-3 w-full h-full max-h-44 rounded-lg border transition-all shadow-sm hover:shadow-md cursor-pointer
@@ -79,13 +73,13 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
             >
               <div className="flex items-center justify-center w-16 h-16">
                 <img
-                  src={getCarrierImageUrl(carrier.carrier_name)}
-                  alt={carrier.carrier_name}
+                  src={getCarrierImageUrl(carrier.name)}
+                  alt={carrier.name}
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {carrier.carrier_name}
+                {carrier.name}
               </span>
             </button>
           );

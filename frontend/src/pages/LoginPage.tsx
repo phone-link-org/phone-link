@@ -4,11 +4,13 @@ import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import { toast } from "sonner";
 import { ssoConfig } from "../config/sso-config";
+import apiClient from "../api/axios";
 
 import appleLogo from "../assets/images/apple.png";
 import googleLogo from "../assets/images/google.png";
 import kakaoLogo from "../assets/images/kakao.png";
 import naverLogo from "../assets/images/naver.png";
+import type { LoginFormData } from "../../../shared/types";
 
 const ssoProviders = [
   { name: "apple", logo: appleLogo, alt: "Apple 로그인" },
@@ -18,15 +20,15 @@ const ssoProviders = [
 ];
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginData, setLoginData] = useState<LoginFormData>({
+    email: "",
+    password: "",
+  });
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const authContext = useContext(AuthContext);
   const navigate = useNavigate();
-
-  const SERVER = import.meta.env.VITE_API_URL;
 
   // 미입력 시 포커스를 주기 위한 ref
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -46,8 +48,8 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
-    const isEmailEmpty = !email;
-    const isPasswordEmpty = !password;
+    const isEmailEmpty = !loginData.email;
+    const isPasswordEmpty = !loginData.password;
 
     // 애니메이션과 에러 메시지를 위해 상태 초기화
     if (isEmailEmpty) setEmailError(false);
@@ -78,10 +80,7 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      const response = await axios.post(`${SERVER}/api/user/login`, {
-        email,
-        password,
-      });
+      const response = await apiClient.post(`/user/login`, loginData);
 
       if (response.status === 200) {
         const { user, token } = response.data;
@@ -168,9 +167,9 @@ const LoginPage: React.FC = () => {
                 type="email"
                 id="email"
                 name="email"
-                value={email}
+                value={loginData.email}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setLoginData({ ...loginData, email: e.target.value });
                   clearInputErrors("email");
                 }}
                 onFocus={() => clearInputErrors("email")}
@@ -192,9 +191,9 @@ const LoginPage: React.FC = () => {
                 type="password"
                 id="password"
                 name="password"
-                value={password}
+                value={loginData.password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
+                  setLoginData({ ...loginData, password: e.target.value });
                   clearInputErrors("password");
                 }}
                 onFocus={() => clearInputErrors("password")}

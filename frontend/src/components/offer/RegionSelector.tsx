@@ -1,111 +1,113 @@
 import React, { useState, useEffect } from "react";
-import type { RegionCondition, Region } from "../../../../shared/types";
+import type { OfferRegionDto } from "../../../../shared/types";
 import CustomCheckbox from "../CustomCheckbox";
+import apiClient from "../../api/axios";
 
 interface RegionSelectorProps {
-  regionConditions: RegionCondition[];
-  onRegionConditionsChange: (conditions: RegionCondition[]) => void;
+  selectedRegions: OfferRegionDto[];
+  onRegionsChange: (regions: OfferRegionDto[]) => void;
+  lastSelectedSido: OfferRegionDto | null;
+  setLastSelectedSido: (sido: OfferRegionDto | null) => void;
 }
 
 const RegionSelector: React.FC<RegionSelectorProps> = ({
-  regionConditions,
-  onRegionConditionsChange,
+  selectedRegions,
+  onRegionsChange,
+  lastSelectedSido,
+  setLastSelectedSido,
 }) => {
-  const [regions, setRegions] = useState<Region[]>([]);
-  const [subRegions, setSubRegions] = useState<Region[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-
-  const SERVER = import.meta.env.VITE_API_URL;
+  const [sidoOptions, setSidoOptions] = useState<OfferRegionDto[]>([]);
+  const [sigunguOptions, setSigunguOptions] = useState<OfferRegionDto[]>([]);
 
   // 시/도 지역 데이터 GET
   useEffect(() => {
-    fetch(`${SERVER}/api/offer/regions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    })
-      .then((res) => res.json())
-      .then(setRegions);
-  }, [SERVER]);
+    const fetchSidos = async () => {
+      const response = await apiClient.get<OfferRegionDto[]>(`/region/sidos`);
+      const data = response.data;
+      setSidoOptions(data);
+    };
+    fetchSidos();
+  }, []);
 
   // 시/도 지역 선택 시 구/군(하위 지역) 지역 데이터 GET
   useEffect(() => {
-    if (selectedRegion !== null) {
-      const sidoCode = selectedRegion?.code.substring(
-        0,
-        selectedRegion.code.substring(0, 2) === "36" ? 4 : 2, // 세종(36)은 다른 지역과 다르게 고유코드가 4임
-      );
+    const fetchSigungus = async () => {
+      if (lastSelectedSido) {
+        const sidoCode = lastSelectedSido?.code.substring(
+          0,
+          lastSelectedSido.code.substring(0, 2) === "36" ? 4 : 2, // 세종(36)은 다른 지역과 다르게 고유코드가 4임
+        );
+        const response = await apiClient.get<OfferRegionDto[]>(
+          `/region/sigungus`,
+          {
+            params: {
+              sidoCode,
+            },
+          },
+        );
+        const data = response.data;
+        const allOption: OfferRegionDto = {
+          code: "-" + lastSelectedSido?.code,
+          name: "전체",
+        };
+        setSigunguOptions([allOption, ...data]);
+      }
+    };
+    fetchSigungus();
+  }, [lastSelectedSido]);
 
-      fetch(`${SERVER}/api/offer/regions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sidoCode }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          const all: Region = {
-            code: "-" + selectedRegion?.code,
-            name: "전체",
-            is_active: true,
-            latitude: 0,
-            longitude: 0,
-          };
-          setSubRegions([all, ...data]);
-        });
-    }
-  }, [selectedRegion, SERVER]);
+  const handleSubRegionChange = (clickedSigungu: OfferRegionDto) => {
+    if (!lastSelectedSido) return;
 
-  const handleSubRegionChange = (selectedChild: Region) => {
-    if (!selectedRegion) return;
+    const sidoCode = lastSelectedSido.code;
+    const isAll = clickedSigungu.code === "-" + sidoCode;
 
-    const parentCode = selectedRegion.code;
-    const isAllSelected = selectedChild.code === "-" + parentCode;
-    const alreadyExists = regionConditions.some(
-      (item) => item.child.code === selectedChild.code,
+    const alreadyExists = selectedRegions.some(
+      (item) => item.code === clickedSigungu.code,
     );
 
-    if (isAllSelected) {
+    const trimmedSidoCode = sidoCode.substring(
+      0,
+      lastSelectedSido.code.substring(0, 2) === "36" ? 4 : 2, // 세종(36)은 다른 지역과 다르게 고유코드가 4임
+    );
+
+    if (isAll) {
       // '전체'를 선택한 경우, 같은 부모를 가진 다른 하위 지역들을 모두 제거하고 '전체'만 추가합니다.
-      const others = regionConditions.filter(
-        (item) => item.parent.code !== parentCode,
+      const others = selectedRegions.filter(
+        (item) => !item.code.startsWith(trimmedSidoCode),
       );
-      onRegionConditionsChange([
-        ...others,
-        { parent: selectedRegion, child: selectedChild },
-      ]);
+      onRegionsChange([...others, clickedSigungu]);
     } else if (alreadyExists) {
       // 이미 선택된 항목을 다시 클릭한 경우, 해당 항목을 제거합니다.
       // '전체' 항목도 함께 제거합니다.
-      onRegionConditionsChange(
-        regionConditions.filter(
+      onRegionsChange(
+        selectedRegions.filter(
           (item) =>
-            item.child.code !== selectedChild.code &&
-            item.child.code !== "-" + parentCode,
+            item.code !== clickedSigungu.code && item.code !== "-" + sidoCode,
         ),
       );
     } else {
       // 새로운 하위 지역을 선택한 경우, '전체' 항목을 제거하고 새 항목을 추가합니다.
-      const others = regionConditions.filter(
-        (item) => item.child.code !== "-" + parentCode,
+      const others = selectedRegions.filter(
+        (item) => item.code !== "-" + sidoCode,
       );
-      onRegionConditionsChange([
-        ...others,
-        { parent: selectedRegion, child: selectedChild },
-      ]);
+      onRegionsChange([...others, clickedSigungu]);
     }
   };
+
   return (
     <div className="flex flex-col md:flex-row gap-4">
       <div className="w-full md:w-1/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-3 md:grid-cols-2 gap-2">
-          {regions.map((region) => (
+          {sidoOptions.map((sido) => (
             <label
-              key={region.name}
+              key={sido.name}
               className="flex justify-center items-center cursor-pointer"
             >
               <CustomCheckbox
-                label={region.name}
-                checked={selectedRegion?.name === region.name}
-                onChange={() => setSelectedRegion(region)}
+                label={sido.name}
+                checked={lastSelectedSido?.name === sido.name}
+                onChange={() => setLastSelectedSido(sido)}
                 customStyle="text-sm w-[81px]"
               />
             </label>
@@ -114,24 +116,24 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       </div>
       <div className="w-full md:w-3/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {selectedRegion === null ? (
+          {!lastSelectedSido ? (
             <div className="text-gray-400 text-xs">
               시/도를 먼저 선택하세요.
             </div>
-          ) : subRegions?.length === 0 ? (
+          ) : !sigunguOptions ? (
             <span className="text-gray-400 text-xs">구/군 데이터 없음</span>
           ) : (
-            subRegions?.map((sub) => (
+            sigunguOptions?.map((sigungu) => (
               <label
-                key={sub.name}
+                key={sigungu.name}
                 className="flex justify-center items-center cursor-pointer"
               >
                 <CustomCheckbox
-                  label={sub.name}
-                  checked={regionConditions.some(
-                    (item) => item.child.code === sub.code,
+                  label={sigungu.name}
+                  checked={selectedRegions.some(
+                    (item) => sigungu.code === item.code,
                   )}
-                  onChange={() => handleSubRegionChange(sub)}
+                  onChange={() => handleSubRegionChange(sigungu)}
                   customStyle="text-sm w-[81px]"
                 />
               </label>

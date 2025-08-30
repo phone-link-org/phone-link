@@ -8,6 +8,7 @@ import priceInputRoutes from "./routes/priceInput.route";
 import userRoutes from "./routes/user.route";
 import storeRoutes from "./routes/store.routes";
 import adminRoutes from "./routes/admin.routes";
+import regionRoutes from "./routes/region.routes";
 
 dotenv.config();
 
@@ -32,5 +33,6 @@ app.use("/api/price-input", priceInputRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/store", storeRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/region", regionRoutes);
 
 export default app;

@@ -1,15 +1,22 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Unique,
+} from "typeorm";
 import { PostCategory } from "./postCategories.entity";
 
 @Entity("categories")
+@Unique("uk_name", ["name"])
 export class Category {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  category_id: number;
+  id: number;
 
-  @Column({ type: "varchar", length: 100 })
+  @Column({ type: "varchar", length: 100, nullable: false })
   name: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: "text" })
   description: string;
 
   @OneToMany(() => PostCategory, (postCategory) => postCategory.category)

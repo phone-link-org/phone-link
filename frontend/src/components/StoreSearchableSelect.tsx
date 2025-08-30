@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Combobox } from "@headlessui/react";
-import type { StoreDto } from "../../../shared/types";
+import type { StoreDto } from "../../../shared/index";
 import { HiChevronUpDown, HiCheck, HiPlus } from "react-icons/hi2";
 
 interface StoreSearchableSelectProps {

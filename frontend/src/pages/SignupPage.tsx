@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import type { SignupFormData, StoreDto } from "../../../shared/types";
+import type { SignupFormData, StoreDto } from "../../../shared/index";
 import AddressSearchButton from "../components/AddressSearchButton";
 import StoreSearchableSelect from "../components/StoreSearchableSelect";
 
@@ -24,7 +24,7 @@ const SignupPage: React.FC = () => {
     birthday: "",
     phone_number: "",
     gender: "M",
-    role: "user",
+    role: "USER",
     address: "",
     address_detail: "",
   });
@@ -88,7 +88,7 @@ const SignupPage: React.FC = () => {
       const isChecked = target.checked;
       setFormData((prev) => ({
         ...prev,
-        role: isChecked ? "seller" : "user",
+        role: isChecked ? "SELLER" : "USER",
       }));
     } else if (name === "phone_number") {
       const formattedPhoneNumber = value
@@ -237,7 +237,7 @@ const SignupPage: React.FC = () => {
       return;
     }
 
-    if (formData.role === "seller" && !selectedStore) {
+    if (formData.role === "SELLER" && !selectedStore) {
       toast.error("판매자 가입 시 소속 매장을 선택해야 합니다.");
       return;
     }
@@ -246,7 +246,7 @@ const SignupPage: React.FC = () => {
       const payload = {
         ...formData,
         ...(isSsoSignup && { signupToken }),
-        ...(formData.role === "seller" && { storeId: selectedStore?.id }),
+        ...(formData.role === "SELLER" && { storeId: selectedStore?.id }),
       };
 
       await axios.post(`${SERVER}/api/user/signup`, payload);
@@ -542,7 +542,7 @@ const SignupPage: React.FC = () => {
               </div>
 
               {/* Store Selector (Conditional) */}
-              {formData.role === "seller" && (
+              {formData.role === "SELLER" && (
                 <div className="transition-all duration-300 ease-in-out">
                   <label
                     htmlFor="storeId"
@@ -576,7 +576,7 @@ const SignupPage: React.FC = () => {
                   name="role"
                   type="checkbox"
                   className="sr-only peer"
-                  checked={formData.role === "seller"}
+                  checked={formData.role === "SELLER"}
                   onChange={handleChange}
                 />
                 <div className="w-5 h-5 transition-colors duration-200 border-2 border-gray-300 rounded peer-checked:border-primary-light peer-checked:bg-primary-light dark:border-gray-600 dark:peer-checked:border-primary-dark dark:peer-checked:bg-primary-dark"></div>
@@ -598,7 +598,7 @@ const SignupPage: React.FC = () => {
             </div>
           </div>
 
-          {formData.role === "seller" && (
+          {formData.role === "SELLER" && (
             <p className="mt-2 text-center text-[13.5px] text-red-500">
               판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자
               권한이 부여됩니다.
@@ -608,7 +608,7 @@ const SignupPage: React.FC = () => {
           <button
             type="submit"
             className={`w-full px-4 py-2 ${
-              formData.role === "seller" ? "mt-2" : "mt-4"
+              formData.role === "SELLER" ? "mt-2" : "mt-4"
             } font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80`}
           >
             {isSsoSignup ? "가입 완료" : "가입하기"}

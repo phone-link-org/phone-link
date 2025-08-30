@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import apiClient from "../api/axios";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
 import CarrierSelector from "../components/offer/CarrierSelector";
@@ -10,10 +11,11 @@ import { FaSort, FaSortAmountDownAlt, FaSortAmountDown } from "react-icons/fa";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 import type {
-  RegionCondition,
   ModelCondition,
   DisplayOffer,
-  Carrier,
+  CarrierDto,
+  OfferRegionDto,
+  OfferSearchResult,
 } from "../../../shared/types";
 
 const OfferPage: React.FC = () => {
@@ -23,11 +25,12 @@ const OfferPage: React.FC = () => {
     "region" | "model" | "carrier" | "offerType"
   >("region");
 
-  const [regionConditions, setRegionConditions] = useState<RegionCondition[]>(
-    [],
-  );
+  const [lastSelectedSido, setLastSelectedSido] =
+    useState<OfferRegionDto | null>(null);
+  const [selectedRegions, setSelectedRegions] = useState<OfferRegionDto[]>([]);
+
   const [modelConditions, setModelConditions] = useState<ModelCondition[]>([]);
-  const [carrierConditions, setCarrierConditions] = useState<Carrier[]>([]);
+  const [carrierConditions, setCarrierConditions] = useState<CarrierDto[]>([]);
   const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
 
   // --- 무한 스크롤 상태 추가 ---
@@ -52,7 +55,7 @@ const OfferPage: React.FC = () => {
 
       try {
         const params = {
-          regions: regionConditions ? transformRegions(regionConditions) : null,
+          regions: selectedRegions,
           models: modelConditions,
           carriers: carrierConditions,
           offerTypes: offerTypeConditions,
@@ -61,13 +64,10 @@ const OfferPage: React.FC = () => {
           sortOrder: sortOrder, // 정렬 순서 추가
         };
 
-        const response = await fetch(`${SERVER}/api/offer/search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(params),
-        });
+        const response = await apiClient.post<OfferSearchResult[]>(
+          `/offer/search`,
+          params,
+        );
 
         if (!response.ok) {
           throw new Error("서버에서 데이터를 가져오는 데 실패했습니다.");
@@ -92,7 +92,7 @@ const OfferPage: React.FC = () => {
     // page state를 제거하여 불필요한 재실행 방지
     [
       loading,
-      regionConditions,
+      selectedRegions,
       modelConditions,
       carrierConditions,
       offerTypeConditions,
@@ -144,32 +144,32 @@ const OfferPage: React.FC = () => {
     return manufacturers[manufacturerId] || "알 수 없음";
   };
 
-  function transformRegions(data: RegionCondition[]) {
-    const result = {
-      allRegion: [] as string[],
-      region: [] as string[],
-    };
+  // function transformRegions(data: RegionCondition[]) {
+  //   const result = {
+  //     allRegion: [] as string[],
+  //     region: [] as string[],
+  //   };
 
-    data.forEach((item) => {
-      if (item.child.code.startsWith("-")) {
-        result.allRegion.push(
-          item.parent.code.substring(
-            0,
-            item.parent.code.substring(0, 2) === "36" ? 4 : 2,
-          ),
-        );
-      } else {
-        result.region.push(item.child.code);
-      }
-    });
+  //   data.forEach((item) => {
+  //     if (item.child.code.startsWith("-")) {
+  //       result.allRegion.push(
+  //         item.parent.code.substring(
+  //           0,
+  //           item.parent.code.substring(0, 2) === "36" ? 4 : 2,
+  //         ),
+  //       );
+  //     } else {
+  //       result.region.push(item.child.code);
+  //     }
+  //   });
 
-    return result;
-  }
+  //   return result;
+  // }
 
   // --- 검색 핸들러 수정 ---
   const handleSearch = () => {
     if (
-      regionConditions.length === 0 &&
+      selectedRegions.length === 0 &&
       modelConditions.length === 0 &&
       carrierConditions.length === 0 &&
       offerTypeConditions.length === 0
@@ -215,7 +215,7 @@ const OfferPage: React.FC = () => {
       cancelButtonText: "취소",
     }).then((result) => {
       if (result.isConfirmed) {
-        setRegionConditions([]);
+        setSelectedRegions([]);
         setModelConditions([]);
         setCarrierConditions([]);
         setOfferTypeConditions([]);
@@ -243,7 +243,7 @@ const OfferPage: React.FC = () => {
   // ---
 
   const hasConditions =
-    regionConditions.length > 0 ||
+    selectedRegions.length > 0 ||
     modelConditions.length > 0 ||
     carrierConditions.length > 0 ||
     offerTypeConditions.length > 0;
@@ -305,8 +305,10 @@ const OfferPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-6">
             {activeTab === "region" ? (
               <RegionSelector
-                regionConditions={regionConditions}
-                onRegionConditionsChange={setRegionConditions}
+                selectedRegions={selectedRegions}
+                onRegionsChange={setSelectedRegions}
+                lastSelectedSido={lastSelectedSido}
+                setLastSelectedSido={setLastSelectedSido}
               />
             ) : activeTab === "carrier" ? (
               <CarrierSelector
@@ -347,18 +349,18 @@ const OfferPage: React.FC = () => {
             {/* --- */}
 
             {/* 지역 조건태그 */}
-            {regionConditions.length > 0 && (
+            {selectedRegions.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {regionConditions.map(({ parent, child }) => (
+                {selectedRegions.map((item) => (
                   <span
-                    key={child.code}
+                    key={item.code}
                     className="flex items-center text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
                   >
-                    {parent.name} {child.name}
+                    {lastSelectedSido?.name} {item.name}
                     <button
                       onClick={() =>
-                        setRegionConditions((prev) =>
-                          prev.filter((item) => item.child.code !== child.code),
+                        setSelectedRegions((prev) =>
+                          prev.filter((item) => item.code !== item.code),
                         )
                       }
                       className="ml-2 text-gray-500 hover:text-red-500"
@@ -431,10 +433,10 @@ const OfferPage: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 {carrierConditions.map((carrier) => (
                   <span
-                    key={carrier.carrier_id}
+                    key={carrier.id}
                     className="flex items-center text-sm bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200 px-3 py-1 rounded-full"
                   >
-                    {carrier.carrier_name}
+                    {carrier.name}
                     <button
                       onClick={() =>
                         setCarrierConditions((prev) =>

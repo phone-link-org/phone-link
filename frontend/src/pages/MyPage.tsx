@@ -33,7 +33,7 @@ const MyPage: React.FC = () => {
           <p className="text-md text-gray-600 dark:text-gray-400">
             회원님은{" "}
             <span className="font-semibold">
-              {user.userType === "seller"
+              {user.userType === "SELLER"
                 ? "판매자"
                 : user.userType === "admin"
                   ? "관리자"

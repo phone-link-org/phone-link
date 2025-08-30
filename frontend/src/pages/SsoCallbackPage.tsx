@@ -72,6 +72,20 @@ const SsoCallbackPage: React.FC = () => {
                 navigate("/");
               }
             }
+          } else if (response.status === 202) {
+            // seller role이지만 매장 등록이 안된 경우
+            const { user, token } = response.data;
+
+            if (authContext) {
+              authContext.login({
+                userId: user.id.toString(),
+                nickname: user.nickname,
+                userType: user.role,
+                token,
+              });
+              toast.info("매장 등록이 필요합니다.");
+              navigate("/store/register");
+            }
           }
         } catch (error) {
           console.error(`${provider} 로그인 중 오류가 발생했습니다.`, error);

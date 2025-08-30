@@ -6,14 +6,27 @@ export interface Region {
   longitude: number;
 }
 
-export interface Store {
-  store_id: number;
-  region_id: number;
-  store_name: string;
+export interface StoreDto {
+  readonly id: number;
+  name: string;
+  description?: string;
+  region_code: string;
   address: string;
-  contect: string;
-  owner: string;
-  created_at: Date;
+  address_detail: string;
+  latitude?: number;
+  longitude?: number;
+  contact: string;
+  thumbnail_url?: string;
+  link_1?: string;
+  link_2?: string;
+  owner_name?: string;
+  is_featured: boolean;
+  status: "OPEN" | "CLOSED";
+  approval_status: "PENDING" | "APPROVED" | "REJECTED";
+  created_by: number;
+  updated_by?: number;
+  readonly created_at: string;
+  readonly updated_at: string;
 }
 
 export interface RegionCondition {

@@ -215,7 +215,7 @@ router.post("/search", async (req, res) => {
       .createQueryBuilder("o")
       .select([
         "o.offer_id AS offer_id",
-        "s.store_name AS store_name",
+        "s.name AS store_name",
         "r.name as region_name",
         "c.carrier_name AS carrier_name",
         "CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name",

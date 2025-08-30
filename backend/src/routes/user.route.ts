@@ -348,6 +348,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1h" }, // 토큰 유효 기간
     );
 
+    //user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
     if (user.role === "seller") {
       const seller = await AppDataSource.getRepository(Seller).findOne({
         where: { user_id: user.id },
@@ -466,6 +467,26 @@ router.post("/auth/callback/:provider", async (req, res) => {
         process.env.JWT_SECRET!,
         { expiresIn: "1h" },
       );
+
+      // user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
+      if (user.role === "seller") {
+        const seller = await AppDataSource.getRepository(Seller).findOne({
+          where: { user_id: user.id },
+        });
+        if (!seller) {
+          return res.status(202).json({
+            message: `매장 등록 페이지로 이동합니다.`,
+            user: {
+              id: user.id,
+              email: user.email,
+              nickname: user.nickname,
+              role: user.role,
+            },
+            token, // 생성된 토큰을 응답에 추가
+          });
+        }
+      }
+
       return res.status(200).json({
         message: "SSO login successful.",
         user: {

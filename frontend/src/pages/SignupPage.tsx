@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import type { SignupFormData, Store } from "../../../shared/types";
+import type { SignupFormData, StoreDto } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import StoreSearchableSelect from "../components/StoreSearchableSelect";
 
@@ -34,8 +34,8 @@ const SignupPage: React.FC = () => {
   >({});
   const [isSsoSignup, setIsSsoSignup] = useState(false);
   const [signupToken, setSignupToken] = useState<string | null>(null);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [stores, setStores] = useState<Store[]>([]); // 대리점 목록 상태 추가
+  const [selectedStore, setSelectedStore] = useState<StoreDto | null>(null);
+  const [stores, setStores] = useState<StoreDto[]>([]); // 대리점 목록 상태 추가
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -246,7 +246,7 @@ const SignupPage: React.FC = () => {
       const payload = {
         ...formData,
         ...(isSsoSignup && { signupToken }),
-        ...(formData.role === "seller" && { storeId: selectedStore?.store_id }),
+        ...(formData.role === "seller" && { storeId: selectedStore?.id }),
       };
 
       await axios.post(`${SERVER}/api/user/signup`, payload);

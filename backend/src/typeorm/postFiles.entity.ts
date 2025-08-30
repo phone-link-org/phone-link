@@ -12,25 +12,27 @@ import { Post } from "./posts.entity";
 @Entity("post_files")
 export class PostFile {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  file_id: number;
+  id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   post_id: number;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, nullable: false })
   file_name: string;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: false })
   file_url: string;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: false })
   file_size: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "datetime" })
   uploaded_at: Date;
 
-  @ManyToOne(() => Post, (post) => post.files)
+  @ManyToOne(() => Post, (post) => post.files, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "post_id" })
   post: Post;
 }

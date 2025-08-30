@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { AppDataSource } from "../db";
 import { Store } from "../typeorm/stores.entity";
+import { PendingStoreDto } from "../../../shared/store.types";
 
 const router = Router();
 
@@ -46,7 +47,11 @@ const upload = multer({
 router.get("/stores", async (req, res) => {
   try {
     const storeRepo = AppDataSource.getRepository(Store);
-    const stores = await storeRepo.find();
+    const stores = await storeRepo.find({
+      where: {
+        approval_status: "APPROVED",
+      },
+    });
     res.status(200).json(stores);
   } catch (e) {
     console.error("Error during fetching stores", e);
@@ -237,6 +242,41 @@ router.post("/register", async (req, res) => {
     console.error("Error during store registration", error);
     res.status(500).json({
       message: "매장 등록 요청 중 오류가 발생했습니다.",
+    });
+  }
+});
+
+// 승인 대기 상태인 매장 데이터 조회 엔드포인트
+router.get("/pending-stores", async (req, res) => {
+  try {
+    const storeRepo = AppDataSource.getRepository(Store);
+
+    // 승인 대기 상태인 매장 데이터 조회
+    const pendingStores = await storeRepo
+      .createQueryBuilder("s")
+      .leftJoin("regions", "r", "s.region_code = r.code")
+      .leftJoin("users", "u", "s.created_by = u.id")
+      .select([
+        "s.id as id",
+        "s.name as name",
+        "s.contact as contact",
+        "s.created_at as created_at",
+        "s.created_by as created_by",
+        "s.region_code as region_code",
+        "r.name as region_name",
+        "u.email as user_email",
+      ])
+      .where("s.approval_status = :status", { status: "PENDING" })
+      .getRawMany<PendingStoreDto>();
+
+    res.status(200).json({
+      message: "승인 대기 매장 목록을 성공적으로 조회했습니다.",
+      stores: pendingStores,
+    });
+  } catch (error) {
+    console.error("Error during fetching pending stores", error);
+    res.status(500).json({
+      message: "승인 대기 매장 목록 조회 중 오류가 발생했습니다.",
     });
   }
 });

@@ -12,17 +12,17 @@ import { Carrier } from "./carriers.entity";
 @Entity("req_plans")
 export class ReqPlan {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  req_plan_id: number;
+  id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   store_id: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: false })
   @Index()
   carrier_id: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: false })
   monthly_fee: number;
 
   @ManyToOne(() => Store, (store) => store.reqPlans)

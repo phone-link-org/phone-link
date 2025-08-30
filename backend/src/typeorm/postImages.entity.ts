@@ -12,19 +12,21 @@ import { Post } from "./posts.entity";
 @Entity("post_images")
 export class PostImage {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  image_id: number;
+  id: number;
 
-  @Column({ type: "bigint" })
+  @Column({ type: "bigint", nullable: false })
   @Index()
   post_id: number;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: false })
   image_url: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "datetime" })
   uploaded_at: Date;
 
-  @ManyToOne(() => Post, (post) => post.images)
+  @ManyToOne(() => Post, (post) => post.images, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "post_id" })
   post: Post;
 }

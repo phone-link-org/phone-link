@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const CARRIERS = {
   "1": "SKT",
   "2": "KT",
-  "3": "LGU+",
+  "3": "LG U+",
 };
 
 const BUYING_TYPES = {

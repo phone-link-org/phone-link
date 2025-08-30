@@ -11,7 +11,7 @@ import {
   HiPhoto,
   HiMiniInformationCircle,
 } from "react-icons/hi2";
-import type { StoreDto } from "../../../shared/types";
+import type { StoreDto } from "../../../shared/index";
 import AddressSearchButton from "../components/AddressSearchButton";
 import Swal from "sweetalert2";
 import { useTheme } from "../hooks/useTheme";

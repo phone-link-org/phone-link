@@ -16,7 +16,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-8 shadow-sm bg-background-light dark:bg-background-dark">
+    <nav className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-8 shadow-sm bg-background-light dark:shadow-[#404040] dark:shadow-sm  dark:bg-background-dark">
       <div className="flex items-center">
         <Link to="/">
           <button className="text-2xl font-bold mr-8 text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity">

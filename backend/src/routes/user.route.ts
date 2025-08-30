@@ -146,7 +146,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await transactionalEntityManager.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "seller" && storeId !== -8574) {
+        if (savedUser.role === "SELLER" && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -278,7 +278,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await userRepo.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "seller" && storeId !== -8574) {
+        if (savedUser.role === "SELLER" && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -349,7 +349,7 @@ router.post("/login", async (req, res) => {
     );
 
     //user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
-    if (user.role === "seller") {
+    if (user.role === "SELLER") {
       const seller = await AppDataSource.getRepository(Seller).findOne({
         where: { user_id: user.id },
       });
@@ -469,7 +469,7 @@ router.post("/auth/callback/:provider", async (req, res) => {
       );
 
       // user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
-      if (user.role === "seller") {
+      if (user.role === "SELLER") {
         const seller = await AppDataSource.getRepository(Seller).findOne({
           where: { user_id: user.id },
         });

@@ -37,10 +37,17 @@ router.get("/sidos", async (req, res) => {
 
     const rows = await qb.getRawMany<OfferRegionDto[]>();
 
-    res.json(rows);
+    res.status(200).json({
+      success: true,
+      data: rows,
+    });
   } catch (err) {
     console.error("Error fetching regions(sido):", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "시/도 지역 데이터를 불러오는 중 오류가 발생했습니다.",
+    });
   }
 });
 
@@ -51,6 +58,7 @@ router.get("/sigungus", async (req: RegionRequest, res) => {
     // sidoCode 파라미터 검증 (타입 가드)
     if (!sidoCode) {
       return res.status(400).json({
+        success: false,
         error: "Bad Request",
         message: "sidoCode 파라미터가 필요합니다.",
       });
@@ -59,6 +67,7 @@ router.get("/sigungus", async (req: RegionRequest, res) => {
     // sidoCode 형식 검증 (숫자로만 구성되어야 함)
     if (!/^\d+$/.test(sidoCode)) {
       return res.status(400).json({
+        success: false,
         error: "Bad Request",
         message: "sidoCode는 숫자로만 구성되어야 합니다.",
       });
@@ -76,10 +85,17 @@ router.get("/sigungus", async (req: RegionRequest, res) => {
     );
 
     const rows = await qb.getRawMany<OfferRegionDto[]>();
-    res.json(rows);
+    res.status(200).json({
+      success: true,
+      data: rows,
+    });
   } catch (err) {
     console.error("Error fetching regions(sigungu):", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "시/군/구 지역 데이터를 불러오는 중 오류가 발생했습니다.",
+    });
   }
 });
 

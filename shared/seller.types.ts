@@ -1,4 +1,4 @@
-import { StoreDto, UserDto } from "./types";
+import type { StoreDto, UserDto } from "./types";
 
 export interface SellerDto {
   readonly id: number;

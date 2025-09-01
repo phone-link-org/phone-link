@@ -1,10 +1,12 @@
-import { Router } from "express";
-import multer from "multer";
+import { NextFunction, Router, Request, Response } from "express";
+import multer, { MulterError } from "multer";
 import path from "path";
 import fs from "fs";
 import { AppDataSource } from "../db";
 import { Store } from "../typeorm/stores.entity";
 import { PendingStoreDto } from "../../../shared/store.types";
+import { Addon } from "../typeorm/addons.entity";
+import { AddonFormData } from "shared/addon.types";
 
 const router = Router();
 
@@ -44,6 +46,37 @@ const upload = multer({
   },
 });
 
+const handleUploadErrors = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (err instanceof MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        // 이제 이 부분에서 에러가 발생하지 않습니다.
+        success: false,
+        message: "이미지 파일 크기는 5MB를 초과할 수 없습니다.",
+        error: "File Too Large",
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: `파일 업로드 중 오류 발생: ${err.message}`,
+      error: "Bad Request",
+    });
+  } else if (err) {
+    // fileFilter에서 발생한 에러 처리
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      error: "Bad Request",
+    });
+  }
+  next();
+};
+
 router.get("/stores", async (req, res) => {
   try {
     const storeRepo = AppDataSource.getRepository(Store);
@@ -52,10 +85,17 @@ router.get("/stores", async (req, res) => {
         approval_status: "APPROVED",
       },
     });
-    res.status(200).json(stores);
+    res.status(200).json({
+      success: true,
+      data: stores,
+    });
   } catch (e) {
     console.error("Error during fetching stores", e);
-    res.status(500).json({ message: "Error fetching stores" });
+    res.status(500).json({
+      success: false,
+      message: "매장 목록을 불러오는 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
   }
 });
 
@@ -66,8 +106,9 @@ router.get("/check-name", async (req, res) => {
 
     if (!inputStoreName || typeof inputStoreName !== "string") {
       return res.status(400).json({
+        success: false,
         message: "매장명을 입력해주세요.",
-        isDuplicate: false,
+        error: "Bad Request",
       });
     }
 
@@ -86,48 +127,65 @@ router.get("/check-name", async (req, res) => {
 
     if (existingStore) {
       return res.status(200).json({
-        message: "이미 존재하는 매장명입니다.",
-        isDuplicate: true,
+        success: true,
+        data: {
+          isDuplicate: true,
+          message: "이미 존재하는 매장명입니다.",
+        },
       });
     } else {
       return res.status(200).json({
-        message: "사용 가능한 매장명입니다.",
-        isDuplicate: false,
+        success: true,
+        data: {
+          isDuplicate: false,
+          message: "사용 가능한 매장명입니다.",
+        },
       });
     }
   } catch (e) {
     console.error("Error during checking store name", e);
     res.status(500).json({
+      success: false,
       message: "매장명 확인 중 오류가 발생했습니다.",
-      isDuplicate: false,
+      error: "Internal Server Error",
     });
   }
 });
 
 // 매장 이미지 업로드 엔드포인트
-router.post("/upload-image", upload.single("thumbnail"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        message: "이미지 파일을 선택해주세요.",
+router.post(
+  "/upload-image",
+  upload.single("thumbnail"),
+  handleUploadErrors,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "이미지 파일을 선택해주세요.",
+          error: "Bad Request",
+        });
+      }
+
+      // 상대 경로 반환 (프론트엔드에서 접근 가능한 경로)
+      const relativePath = `/uploads/images/store/${req.file.filename}`;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          thumbnail_url: relativePath,
+        },
+      });
+    } catch (error) {
+      console.error("Error during image upload", error);
+      res.status(500).json({
+        success: false,
+        message: "이미지 업로드 중 오류가 발생했습니다.",
+        error: "Internal Server Error",
       });
     }
-
-    // 상대 경로 반환 (프론트엔드에서 접근 가능한 경로)
-    const relativePath = `/uploads/images/store/${req.file.filename}`;
-
-    res.status(200).json({
-      message: "이미지 업로드 성공",
-      thumbnail_url: relativePath,
-      filename: req.file.filename,
-    });
-  } catch (error) {
-    console.error("Error during image upload", error);
-    res.status(500).json({
-      message: "이미지 업로드 중 오류가 발생했습니다.",
-    });
-  }
-});
+  },
+);
 
 // 매장 이미지 삭제 엔드포인트
 router.post("/delete-image", async (req, res) => {
@@ -136,7 +194,9 @@ router.post("/delete-image", async (req, res) => {
 
     if (!filename || typeof filename !== "string") {
       return res.status(400).json({
-        message: "파일명을 제공해주세요.",
+        success: false,
+        message: "삭제할 파일명을 확인할 수 없습니다. 다시 시도하세요.",
+        error: "Bad Request",
       });
     }
 
@@ -145,7 +205,9 @@ router.post("/delete-image", async (req, res) => {
     // 파일이 존재하는지 확인
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
-        message: "파일을 찾을 수 없습니다.",
+        success: false,
+        message: "삭제할 파일을 찾을 수 없습니다.",
+        error: "Not Found",
       });
     }
 
@@ -153,12 +215,15 @@ router.post("/delete-image", async (req, res) => {
     fs.unlinkSync(filePath);
 
     res.status(200).json({
+      success: true,
       message: "이미지가 성공적으로 삭제되었습니다.",
     });
   } catch (error) {
     console.error("Error during image deletion", error);
     res.status(500).json({
+      success: false,
       message: "이미지 삭제 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
     });
   }
 });
@@ -182,16 +247,11 @@ router.post("/register", async (req, res) => {
     } = req.body;
 
     // 필수 필드 검증
-    if (!name || !address || !contact) {
+    if (!name || !address || !contact || !region_code) {
       return res.status(400).json({
-        message: "필수 정보가 누락되었습니다.",
-      });
-    }
-
-    // region_code 필수 검증
-    if (!region_code) {
-      return res.status(500).json({
-        message: "매장 등록 요청 중 오류가 발생했습니다.",
+        success: false,
+        message: "필수 정보(매장명, 주소, 연락처)가 누락되었습니다.",
+        error: "Bad Request",
       });
     }
 
@@ -205,8 +265,10 @@ router.post("/register", async (req, res) => {
     );
 
     if (existingStore) {
-      return res.status(400).json({
+      return res.status(409).json({
+        success: false,
         message: "이미 존재하는 매장명입니다.",
+        error: "Conflict",
       });
     }
 
@@ -231,8 +293,9 @@ router.post("/register", async (req, res) => {
     await storeRepo.save(newStore);
 
     res.status(201).json({
+      success: true,
       message: "매장 등록 요청이 성공적으로 제출되었습니다.",
-      store: {
+      data: {
         id: newStore.id,
         name: newStore.name,
         approval_status: newStore.approval_status,
@@ -241,7 +304,9 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     console.error("Error during store registration", error);
     res.status(500).json({
+      success: false,
       message: "매장 등록 요청 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
     });
   }
 });
@@ -270,13 +335,99 @@ router.get("/pending-stores", async (req, res) => {
       .getRawMany<PendingStoreDto>();
 
     res.status(200).json({
-      message: "승인 대기 매장 목록을 성공적으로 조회했습니다.",
-      stores: pendingStores,
+      success: true,
+      data: pendingStores,
     });
   } catch (error) {
     console.error("Error during fetching pending stores", error);
     res.status(500).json({
+      success: false,
       message: "승인 대기 매장 목록 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/:storeId/addons", async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const addonRepo = AppDataSource.getRepository(Addon);
+    const result = await addonRepo.find({
+      where: { store_id: parseInt(storeId) },
+    });
+
+    const parsedResult: AddonFormData[] = result.map((addon) => ({
+      ...addon,
+      carrierId: addon.carrier_id,
+      monthlyFee: addon.monthly_fee,
+      durationMonths: addon.duration_months,
+      penaltyFee: addon.penalty_fee,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: parsedResult,
+    });
+  } catch (error) {
+    console.error("Error during fetching addons", error);
+    res.status(500).json({
+      success: false,
+      message: "부가서비스 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.post("/:storeId/addon-save", async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { addons } = req.body;
+
+    // 트랜잭션을 사용하여 데이터 무결성을 보장
+    const result = await AppDataSource.transaction(
+      async (transactionalEntityManager) => {
+        const storeIdNumber = parseInt(storeId);
+
+        // 기존 데이터 삭제
+        await transactionalEntityManager.delete(Addon, {
+          store_id: storeIdNumber,
+        });
+
+        if (addons.length === 0) {
+          return []; // 저장할 것이 없으므로 빈 배열 반환
+        }
+
+        // 새로운 데이터를 저장할 객체 배열 생성
+        const newAddons = addons.map((addon: AddonFormData) => ({
+          store_id: storeIdNumber,
+          carrier_id: addon.carrierId,
+          name: addon.name,
+          monthly_fee: addon.monthlyFee,
+          duration_months: addon.durationMonths,
+          penalty_fee: addon.penaltyFee,
+        }));
+
+        // 새로운 데이터 저장
+        const savedAddons = await transactionalEntityManager.save(
+          Addon,
+          newAddons,
+        );
+
+        return savedAddons;
+      },
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "부가서비스가 성공적으로 저장되었습니다.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error during saving addons", error);
+    res.status(500).json({
+      success: false,
+      message: "부가서비스 저장 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
     });
   }
 });

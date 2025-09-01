@@ -1,6 +1,6 @@
 import React, { useState, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import apiClient from "../api/axios";
+import { api } from "../api/axios";
 import { toast } from "sonner";
 import {
   HiBuildingStorefront,
@@ -11,11 +11,12 @@ import {
   HiPhoto,
   HiMiniInformationCircle,
 } from "react-icons/hi2";
-import type { StoreDto } from "../../../shared/index";
+import type { StoreRegisterFormData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import Swal from "sweetalert2";
 import { useTheme } from "../hooks/useTheme";
 import { AuthContext } from "../context/AuthContext";
+import axios from "axios";
 
 interface DaumPostcodeData {
   address: string;
@@ -26,23 +27,6 @@ interface DaumPostcodeData {
   sido: string;
   sigunguCode: string;
 }
-
-// 폼에서 사용할 필드만 선택
-type StoreRegisterFormData = Pick<
-  StoreDto,
-  | "name"
-  | "description"
-  | "region_code"
-  | "address"
-  | "address_detail"
-  | "contact"
-  | "thumbnail_url"
-  | "link_1"
-  | "link_2"
-  | "owner_name"
-  | "approval_status"
-  | "created_by"
->;
 
 const StoreRegisterPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
@@ -168,26 +152,32 @@ const StoreRegisterPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 프론트엔드에서 사용
   // 이미지 업로드 함수
   const uploadImage = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append("thumbnail", file);
 
-      const response = await apiClient.post("/store/upload-image", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const response = await api.post<{ thumbnail_url: string }>(
+        "/store/upload-image",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
-      if (response.status === 200) {
-        return response.data.thumbnail_url;
-      } else {
-        throw new Error("이미지 업로드 실패");
-      }
+      return response.thumbnail_url;
     } catch (error) {
-      toast.error("이미지 업로드 중 오류가 발생했습니다.");
+      if (axios.isAxiosError(error) && error.response) {
+        toast.error(
+          error.response.data.message ||
+            "이미지 업로드 중 오류가 발생했습니다.",
+        );
+      } else {
+        toast.error("이미지 업로드 중 알 수 없는 오류가 발생했습니다.");
+      }
       throw error;
     }
   };
@@ -201,18 +191,17 @@ const StoreRegisterPage: React.FC = () => {
         throw new Error("파일명을 찾을 수 없습니다.");
       }
 
-      const response = await apiClient.post("/store/delete-image", {
-        filename,
-      });
+      await api.post("/store/delete-image", { filename });
 
-      if (response.status === 200) {
-        toast.success("이미지가 성공적으로 삭제되었습니다.");
-      } else {
-        throw new Error("이미지 삭제 실패");
-      }
+      toast.success("이미지가 성공적으로 삭제되었습니다.");
     } catch (error) {
-      console.error("이미지 삭제 실패:", error);
-      toast.error("이미지 삭제 중 오류가 발생했습니다.");
+      if (axios.isAxiosError(error) && error.response) {
+        toast.error(
+          error.response.data.message || "이미지 삭제 중 오류가 발생했습니다.",
+        );
+      } else {
+        toast.error("이미지 삭제 중 알 수 없는 오류가 발생했습니다.");
+      }
       throw error;
     }
   };
@@ -231,39 +220,30 @@ const StoreRegisterPage: React.FC = () => {
         return;
       }
 
-      const response = await apiClient.get(`/store/check-name`, {
-        params: { inputStoreName: storeName },
-      });
+      const response = await api.get<{ isDuplicate: boolean; message: string }>(
+        `/store/check-name`,
+        {
+          params: { inputStoreName: storeName },
+        },
+      );
 
-      const data = response.data;
-
-      // HTTP 상태 코드가 200이 아니면 에러 처리
-      if (response.status !== 200) {
-        toast.error(data.message || "중복 확인 중 오류가 발생했습니다.");
-        // 매장명 필드로 포커스 이동 및 텍스트 전체 선택
-        if (nameInput) {
-          nameInput.focus();
-          nameInput.select();
-        }
-        return;
-      }
-
-      // 성공적인 응답에서만 isDuplicate 값에 따라 처리
-      if (data.isDuplicate === false) {
+      if (response.isDuplicate === false) {
         toast.success("사용 가능한 매장명입니다.");
         setIsNameChecked(true);
       } else {
-        toast.error(data.message);
+        toast.error(response.message);
         setIsNameChecked(false);
-        // 매장명 필드로 포커스 이동 및 텍스트 전체 선택
-        if (nameInput) {
-          nameInput.focus();
-          nameInput.select();
-        }
+        nameInput?.focus();
+        nameInput?.select();
       }
     } catch (error) {
-      toast.error("매장명 확인 중 오류가 발생했습니다.");
-      throw error;
+      if (axios.isAxiosError(error) && error.response) {
+        toast.error(
+          error.response.data.message || "매장명 확인 중 오류가 발생했습니다.",
+        );
+      } else {
+        toast.error("매장명 확인 중 알 수 없는 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -301,29 +281,27 @@ const StoreRegisterPage: React.FC = () => {
         ...formData,
         created_by: currentUser ? parseInt(currentUser.userId) : 0,
       };
-      const response = await apiClient.post(`/store/register`, requestData);
+      await api.post(`/store/register`, requestData);
 
-      if (response.status === 201) {
-        Swal.fire({
-          title: "매장 등록 요청 완료",
-          html: "관리자 승인 후 판매자 전용 메뉴 접근이 허용됩니다.<br>잠시 후 메인 페이지로 이동합니다.",
-          icon: "success",
-          timer: 5000,
-          showConfirmButton: false,
-          background: theme === "dark" ? "#343434" : "#fff",
-          color: theme === "dark" ? "#e5e7eb" : "#1f2937",
-        });
+      Swal.fire({
+        title: "매장 등록 요청 완료",
+        html: "관리자 승인 후 판매자 전용 메뉴 접근이 허용됩니다.<br>잠시 후 메인 페이지로 이동합니다.",
+        icon: "success",
+        timer: 5000,
+        showConfirmButton: false,
+        background: theme === "dark" ? "#343434" : "#fff",
+        color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+      });
 
-        // 잠시 후 메인 페이지로 이동
-        setTimeout(() => {
-          navigate("/");
-        }, 5000);
-      } else {
-        throw new Error("매장 등록 요청 실패");
-      }
+      // 잠시 후 메인 페이지로 이동
+      setTimeout(() => {
+        navigate("/");
+      }, 5000);
     } catch (error) {
       console.error("매장 등록 요청 실패:", error);
-      toast.error("매장 등록 요청에 실패했습니다. 다시 시도해주세요.");
+      toast.error(
+        "매장 등록 요청 과정에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import apiClient from "../api/axios";
+import { api } from "../api/axios";
 import { useTheme } from "../hooks/useTheme";
 import { TbReload } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
@@ -61,10 +61,8 @@ const AdminPage: React.FC = () => {
     setSyncResult(null);
     setSyncError(null);
     try {
-      const response = await apiClient.post("/region/sync-db");
-      setSyncResult(
-        `${response.data.message} (총 ${response.data.totalFetched}건 처리)`,
-      );
+      const response = await api.post("/admin/regions-sync-db");
+      setSyncResult(`${response.message} (총 ${response.totalFetched}건 처리)`);
     } catch (err) {
       setSyncError("DB 동기화 중 오류가 발생했습니다.");
       console.error(err);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import apiClient from "../api/axios";
+import { api } from "../api/axios";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
 import CarrierSelector from "../components/offer/CarrierSelector";
@@ -11,11 +11,12 @@ import { FaSort, FaSortAmountDownAlt, FaSortAmountDown } from "react-icons/fa";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 import type {
-  ModelCondition,
-  DisplayOffer,
   CarrierDto,
+  OfferModelDto,
   OfferRegionDto,
   OfferSearchResult,
+  PhoneStorageDto,
+  OfferSearchRequest,
 } from "../../../shared/types";
 
 const OfferPage: React.FC = () => {
@@ -29,78 +30,67 @@ const OfferPage: React.FC = () => {
     useState<OfferRegionDto | null>(null);
   const [selectedRegions, setSelectedRegions] = useState<OfferRegionDto[]>([]);
 
-  const [modelConditions, setModelConditions] = useState<ModelCondition[]>([]);
-  const [carrierConditions, setCarrierConditions] = useState<CarrierDto[]>([]);
-  const [offerTypeConditions, setOfferTypeConditions] = useState<string[]>([]);
+  const [selectedModels, setSelectedModels] = useState<OfferModelDto[]>([]);
+  const [selectedCarriers, setSelectedCarriers] = useState<CarrierDto[]>([]);
+  const [selectedOfferTypes, setSelectedOfferTypes] = useState<
+    ("MNP" | "CHG")[]
+  >([]);
 
-  // --- 무한 스크롤 상태 추가 ---
-  const [offerDatas, setOfferDatas] = useState<DisplayOffer[]>([]);
+  const [offerDatas, setOfferDatas] = useState<OfferSearchResult[]>([]);
   const pageRef = useRef(1); // 페이지 번호를 ref로 관리
   const [hasNextPage, setHasNextPage] = useState(true); // 다음 페이지 존재 여부
   const [loading, setLoading] = useState(false); // 데이터 로딩 상태
-  const [sortOrder, setSortOrder] = useState("default"); // 정렬 순서 상태
-  // ---
-
+  const [sortOrder, setSortOrder] = useState<
+    "default" | "price_asc" | "price_desc"
+  >("default"); // 정렬 순서 상태
   const SERVER = import.meta.env.VITE_API_URL;
 
-  // --- 데이터 fetching 로직 수정 ---
   const fetchOfferDatas = useCallback(
     async (isNewSearch = false) => {
       if (loading) return; // 이미 로딩 중이면 실행 방지
       setLoading(true);
 
-      if (isNewSearch) {
-        pageRef.current = 1; // 새 검색 시 페이지 번호 1로 초기화
-      }
+      if (isNewSearch) pageRef.current = 1; // 새 검색 시 페이지 번호 1로 초기화
 
       try {
-        const params = {
+        const params: OfferSearchRequest = {
           regions: selectedRegions,
-          models: modelConditions,
-          carriers: carrierConditions,
-          offerTypes: offerTypeConditions,
+          models: selectedModels,
+          carriers: selectedCarriers,
+          offerTypes: selectedOfferTypes,
           page: pageRef.current, // ref에서 현재 페이지 번호 가져오기
           limit: 20,
           sortOrder: sortOrder, // 정렬 순서 추가
         };
 
-        const response = await apiClient.post<OfferSearchResult[]>(
-          `/offer/search`,
-          params,
-        );
-
-        if (!response.ok) {
-          throw new Error("서버에서 데이터를 가져오는 데 실패했습니다.");
-        }
-
-        const data = await response.json();
+        const response = await api.post<{
+          offers: OfferSearchResult[];
+          hasNextPage: boolean;
+        }>(`/offer/search`, params);
 
         setOfferDatas((prev) =>
-          isNewSearch ? data.offers : [...prev, ...data.offers],
+          isNewSearch ? response.offers : [...prev, ...response.offers],
         );
-        setHasNextPage(data.hasNextPage);
-        if (data.hasNextPage) {
+        setHasNextPage(response.hasNextPage);
+        if (response.hasNextPage) {
           pageRef.current += 1; // 다음 페이지 번호 증가
         }
       } catch (error) {
-        console.error("검색 오류:", error);
-        toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
+        console.error("Error searching offer datas:", error);
+        toast.error("검색 과정에서 에러가 발생했습니다.");
       } finally {
         setLoading(false);
       }
     },
-    // page state를 제거하여 불필요한 재실행 방지
     [
       loading,
       selectedRegions,
-      modelConditions,
-      carrierConditions,
-      offerTypeConditions,
+      selectedModels,
+      selectedCarriers,
+      selectedOfferTypes,
       sortOrder,
-      SERVER,
     ],
   );
-  // ---
 
   // --- Intersection Observer 설정 ---
   const observer = useRef<IntersectionObserver | null>(null);
@@ -135,44 +125,12 @@ const OfferPage: React.FC = () => {
     fetchOfferDatas(true);
   }, [sortOrder]);
 
-  // TODO: DB에서 가져오게 처리해야되는데 일단 지금은 이렇게....ㅎㅎ
-  const getManufacturerName = (manufacturerId: number): string => {
-    const manufacturers: { [key: number]: string } = {
-      1: "삼성",
-      2: "애플",
-    };
-    return manufacturers[manufacturerId] || "알 수 없음";
-  };
-
-  // function transformRegions(data: RegionCondition[]) {
-  //   const result = {
-  //     allRegion: [] as string[],
-  //     region: [] as string[],
-  //   };
-
-  //   data.forEach((item) => {
-  //     if (item.child.code.startsWith("-")) {
-  //       result.allRegion.push(
-  //         item.parent.code.substring(
-  //           0,
-  //           item.parent.code.substring(0, 2) === "36" ? 4 : 2,
-  //         ),
-  //       );
-  //     } else {
-  //       result.region.push(item.child.code);
-  //     }
-  //   });
-
-  //   return result;
-  // }
-
-  // --- 검색 핸들러 수정 ---
   const handleSearch = () => {
     if (
       selectedRegions.length === 0 &&
-      modelConditions.length === 0 &&
-      carrierConditions.length === 0 &&
-      offerTypeConditions.length === 0
+      selectedModels.length === 0 &&
+      selectedCarriers.length === 0 &&
+      selectedOfferTypes.length === 0
     ) {
       toast.error("검색할 조건이 없습니다.");
       return; // 검색 조건이 없으면 fetch하지 않고 종료
@@ -216,9 +174,9 @@ const OfferPage: React.FC = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         setSelectedRegions([]);
-        setModelConditions([]);
-        setCarrierConditions([]);
-        setOfferTypeConditions([]);
+        setSelectedModels([]);
+        setSelectedCarriers([]);
+        setSelectedOfferTypes([]);
         setSortOrder("default"); // 정렬 순서도 초기화
       }
     });
@@ -244,9 +202,9 @@ const OfferPage: React.FC = () => {
 
   const hasConditions =
     selectedRegions.length > 0 ||
-    modelConditions.length > 0 ||
-    carrierConditions.length > 0 ||
-    offerTypeConditions.length > 0;
+    selectedModels.length > 0 ||
+    selectedCarriers.length > 0 ||
+    selectedOfferTypes.length > 0;
 
   return (
     <>
@@ -312,19 +270,19 @@ const OfferPage: React.FC = () => {
               />
             ) : activeTab === "carrier" ? (
               <CarrierSelector
-                carrierConditions={carrierConditions}
-                onCarriersChange={setCarrierConditions}
+                selectedCarriers={selectedCarriers}
+                onCarriersChange={setSelectedCarriers}
               />
             ) : activeTab === "offerType" ? (
               <OfferTypeSelector
-                offerTypeConditions={offerTypeConditions}
-                onOfferTypesChange={setOfferTypeConditions}
+                selectedOfferTypes={selectedOfferTypes}
+                onOfferTypesChange={setSelectedOfferTypes}
               />
             ) : (
               <div>
                 <ModelSelector
-                  modelConditions={modelConditions}
-                  onModelConditionsChange={setModelConditions}
+                  selectedModels={selectedModels}
+                  onSelectedModelsChange={setSelectedModels}
                 />
               </div>
             )}
@@ -373,49 +331,34 @@ const OfferPage: React.FC = () => {
             )}
 
             {/* 모델 조건태그 */}
-            {modelConditions.length > 0 && (
+            {selectedModels.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {modelConditions.map(({ model, storage }) => {
-                  // 제조사 정보 가져오기 (manufacturer_id를 기반으로)
-                  const manufacturerName = getManufacturerName(
-                    model.manufacturer_id,
-                  );
-
+                {selectedModels.map((model) => {
                   // 조건 태그 텍스트 생성
-                  let tagText = "";
+                  let tagText = model.name;
 
-                  if (model.id < 0) {
-                    // 전체 모델 선택 (음수 ID)
-                    tagText = manufacturerName;
-                  } else {
-                    // 특정 모델 선택
-                    tagText = model.name_ko;
-
-                    if (storage && storage.length > 0) {
-                      if (storage.length === 1 && storage[0].id < 0) {
-                        // 전체 용량 선택
-                        tagText = model.name_ko;
-                      } else {
-                        // 특정 용량들 선택
-                        const storageNames = storage
-                          .filter((s) => s.id > 0) // 전체 용량 제외
-                          .map((s) => s.storage)
-                          .join(", ");
-                        tagText = `${model.name_ko} ${storageNames}`;
-                      }
+                  if (model.modelId > 0) {
+                    if (model.storages && model.storages.length > 0) {
+                      const storageNames = model.storages
+                        .filter((s: PhoneStorageDto) => s.id > 0) // 전체 용량 제외
+                        .map((s: PhoneStorageDto) => s.storage)
+                        .join(", ");
+                      tagText += ` ${storageNames}`;
                     }
                   }
 
                   return (
                     <span
-                      key={model.id}
+                      key={model.modelId}
                       className="flex items-center text-sm bg-blue-100 dark:bg-blue-700 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full"
                     >
                       {tagText}
                       <button
                         onClick={() =>
-                          setModelConditions((prev) =>
-                            prev.filter((item) => item.model.id !== model.id),
+                          setSelectedModels((prev) =>
+                            prev.filter(
+                              (item) => item.modelId !== model.modelId,
+                            ),
                           )
                         }
                         className="ml-2 text-blue-500 hover:text-red-500"
@@ -429,9 +372,9 @@ const OfferPage: React.FC = () => {
             )}
 
             {/* 통신사 조건태그 */}
-            {carrierConditions.length > 0 && (
+            {selectedCarriers.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {carrierConditions.map((carrier) => (
+                {selectedCarriers.map((carrier) => (
                   <span
                     key={carrier.id}
                     className="flex items-center text-sm bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200 px-3 py-1 rounded-full"
@@ -439,7 +382,7 @@ const OfferPage: React.FC = () => {
                     {carrier.name}
                     <button
                       onClick={() =>
-                        setCarrierConditions((prev) =>
+                        setSelectedCarriers((prev) =>
                           prev.filter((c) => c !== carrier),
                         )
                       }
@@ -453,9 +396,9 @@ const OfferPage: React.FC = () => {
             )}
 
             {/* 개통방식 조건태그 */}
-            {offerTypeConditions.length > 0 && (
+            {selectedOfferTypes.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {offerTypeConditions.map((offerType) => (
+                {selectedOfferTypes.map((offerType) => (
                   <span
                     key={offerType}
                     className="flex items-center text-sm bg-purple-100 dark:bg-purple-700 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full"
@@ -463,7 +406,7 @@ const OfferPage: React.FC = () => {
                     {offerType === "MNP" ? "번호이동" : "기기변경"}
                     <button
                       onClick={() =>
-                        setOfferTypeConditions((prev) =>
+                        setSelectedOfferTypes((prev) =>
                           prev.filter((type) => type !== offerType),
                         )
                       }
@@ -509,7 +452,7 @@ const OfferPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              offerDatas.map((data: DisplayOffer, index) => {
+              offerDatas.map((data: OfferSearchResult, index) => {
                 // 마지막 요소에 ref를 할당하여 Intersection Observer가 감지하도록 함
                 const isLastElement = offerDatas.length === index + 1;
 
@@ -537,7 +480,7 @@ const OfferPage: React.FC = () => {
                 return (
                   <div
                     ref={isLastElement ? lastOfferElementRef : null}
-                    key={`offer_${data.offer_id}_${index}`}
+                    key={`offer_${data.id}_${index}`}
                     className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
                   >
                     {/* 상단: 대리점명 / 지역 */}

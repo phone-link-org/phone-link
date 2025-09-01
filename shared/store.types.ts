@@ -1,4 +1,4 @@
-import { UserDto, RegionDto } from "./types";
+import type { UserDto, RegionDto } from "./types";
 
 export interface StoreDto {
   readonly id: number;
@@ -22,6 +22,23 @@ export interface StoreDto {
   readonly created_at: Date;
   readonly updated_at?: Date;
 }
+
+// 매장 등록 시 사용할 필드만 선택
+export type StoreRegisterFormData = Pick<
+  StoreDto,
+  | "name"
+  | "description"
+  | "region_code"
+  | "address"
+  | "address_detail"
+  | "contact"
+  | "thumbnail_url"
+  | "link_1"
+  | "link_2"
+  | "owner_name"
+  | "approval_status"
+  | "created_by"
+>;
 
 // 승인 대기 매장 목록 조회용 DTO
 export type PendingStoreDto = Pick<

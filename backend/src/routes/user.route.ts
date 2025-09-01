@@ -165,38 +165,53 @@ router.post("/signup", async (req, res) => {
         await transactionalEntityManager.save(newSocialAccount);
       });
 
-      res
-        .status(201)
-        .json({ message: "SSO 계정으로 성공적으로 가입되었습니다!" });
+      res.status(201).json({
+        success: true,
+        message: "소셜 회원가입을 통해 정상적으로 가입되었습니다!",
+      });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error instanceof jwt.JsonWebTokenError) {
-        return res
-          .status(401)
-          .json({ message: "유효하지 않은 가입 토큰입니다." });
+        return res.status(401).json({
+          success: false,
+          message: "유효하지 않은 가입 토큰입니다.",
+          error: "Unauthorized",
+        });
       }
       if (error.message === "ALREADY_LINKED_ACCOUNT") {
-        return res
-          .status(409)
-          .json({ message: "이미 연동된 소셜 계정입니다." });
+        return res.status(409).json({
+          success: false,
+          message: "이미 연동된 소셜 계정입니다.",
+          error: "Conflict",
+        });
       }
       if (error.message === "EMAIL_ALREADY_EXISTS") {
-        return res.status(409).json({ message: "이미 가입된 이메일입니다." });
+        return res.status(409).json({
+          success: false,
+          message: "이미 가입된 이메일입니다.",
+          error: "Conflict",
+        });
       }
       if (error.message === "PHONE_ALREADY_EXISTS") {
-        return res
-          .status(409)
-          .json({ message: "이미 사용 중인 전화번호입니다." });
+        return res.status(409).json({
+          success: false,
+          message: "이미 사용 중인 전화번호입니다.",
+          error: "Conflict",
+        });
       }
       if (error.message === "STORE_ID_REQUIRED") {
-        return res
-          .status(400)
-          .json({ message: "판매자 가입 시 소속 매장을 선택해야 합니다." });
+        return res.status(400).json({
+          success: false,
+          message: "판매자 가입 시 소속 매장을 선택해야 합니다.",
+          error: "Bad Request",
+        });
       }
       console.error("SSO Signup Error:", error);
-      return res
-        .status(500)
-        .json({ message: "SSO 회원가입 중 오류가 발생했습니다." });
+      return res.status(500).json({
+        success: false,
+        message: "SSO 회원가입 중 오류가 발생했습니다.",
+        error: "Internal Server Error",
+      });
     }
   } else {
     // --- 일반 회원가입 ---
@@ -290,27 +305,46 @@ router.post("/signup", async (req, res) => {
         }
       });
 
-      res.status(201).json({ message: "성공적으로 가입되었습니다!" });
+      res.status(201).json({
+        success: true,
+        message: "성공적으로 가입되었습니다!",
+      });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.message === "EMAIL_ALREADY_EXISTS") {
-        return res.status(409).json({ message: "이미 가입된 이메일입니다." });
+        return res.status(409).json({
+          success: false,
+          message: "이미 가입된 이메일입니다.",
+          error: "Conflict",
+        });
       }
       if (error.message === "PHONE_ALREADY_EXISTS") {
-        return res
-          .status(409)
-          .json({ message: "이미 사용 중인 전화번호입니다." });
+        return res.status(409).json({
+          success: false,
+          message: "이미 사용 중인 전화번호입니다.",
+          error: "Conflict",
+        });
       }
       if (error.message === "PASSWORD_REQUIRED") {
-        return res.status(400).json({ message: "비밀번호를 입력해주세요." });
+        return res.status(400).json({
+          success: false,
+          message: "비밀번호를 입력해주세요.",
+          error: "Bad Request",
+        });
       }
       if (error.message === "STORE_ID_REQUIRED") {
-        return res
-          .status(400)
-          .json({ message: "판매자 가입 시 소속 매장을 선택해야 합니다." });
+        return res.status(400).json({
+          success: false,
+          message: "판매자 가입 시 소속 매장을 선택해야 합니다.",
+          error: "Bad Request",
+        });
       }
       console.error("Traditional Signup Error:", error);
-      res.status(500).json({ message: "회원가입 중 오류가 발생했습니다." });
+      res.status(500).json({
+        success: false,
+        message: "회원가입 중 오류가 발생했습니다.",
+        error: "Internal Server Error",
+      });
     }
   }
 });
@@ -325,16 +359,20 @@ router.post("/login", async (req, res) => {
       },
     });
     if (!user || !user.password) {
-      return res
-        .status(401)
-        .json({ message: "이메일 또는 비밀번호를 확인해주세요." });
+      return res.status(401).json({
+        success: false,
+        message: "이메일 또는 비밀번호를 확인해주세요.",
+        error: "Unauthorized",
+      });
     }
 
     const isMatch = await bcrypt.compare(loginData.password, user.password);
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ message: "이메일 또는 비밀번호를 확인해주세요." });
+      return res.status(401).json({
+        success: false,
+        message: "이메일 또는 비밀번호를 확인해주세요.",
+        error: "Unauthorized",
+      });
     }
 
     // JWT 생성
@@ -355,31 +393,40 @@ router.post("/login", async (req, res) => {
       });
       if (!seller) {
         return res.status(202).json({
+          success: true,
           message: `매장 등록 페이지로 이동합니다.`,
-          user: {
-            id: user.id,
-            email: user.email,
-            nickname: user.nickname,
-            role: user.role,
+          data: {
+            user: {
+              id: user.id,
+              email: user.email,
+              nickname: user.nickname,
+              role: user.role,
+            },
+            token,
           },
-          token, // 생성된 토큰을 응답에 추가
         });
       }
     }
 
     res.status(200).json({
-      message: `${user.email} logged in.`,
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        role: user.role,
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          nickname: user.nickname,
+          role: user.role,
+        },
+        token,
       },
-      token, // 생성된 토큰을 응답에 추가
     });
   } catch (error) {
     console.error("Failed to Login", error);
-    res.status(500).json({ message: "로그인 중 오류가 발생했습니다." });
+    res.status(500).json({
+      success: false,
+      message: "로그인 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
   }
 });
 
@@ -389,7 +436,11 @@ router.post("/auth/callback/:provider", async (req, res) => {
   const { code } = req.body;
 
   if (!code) {
-    return res.status(400).json({ message: "Authorization code is missing." });
+    return res.status(400).json({
+      success: false,
+      message: "Authorization code is missing.",
+      error: "Bad Request",
+    });
   }
 
   try {
@@ -404,15 +455,19 @@ router.post("/auth/callback/:provider", async (req, res) => {
         break;
       // TODO: case "kakao": ... 등 다른 프로바이더 추가
       default:
-        return res
-          .status(400)
-          .json({ message: "지원하지 않는 SSO 프로바이더입니다." });
+        return res.status(400).json({
+          success: false,
+          message: "지원하지 않는 SSO 프로바이더입니다.",
+          error: "Bad Request",
+        });
     }
 
     if (!userProfile) {
-      return res
-        .status(500)
-        .json({ message: "SSO 사용자 프로필을 가져오는데 실패했습니다." });
+      return res.status(500).json({
+        success: false,
+        message: "SSO 사용자 프로필을 가져오는데 실패했습니다.",
+        error: "Internal Server Error",
+      });
     }
 
     // --- 여기부터는 기존의 사용자 조회/연동/생성 로직과 거의 동일 ---
@@ -475,28 +530,33 @@ router.post("/auth/callback/:provider", async (req, res) => {
         });
         if (!seller) {
           return res.status(202).json({
+            success: true,
             message: `매장 등록 페이지로 이동합니다.`,
-            user: {
-              id: user.id,
-              email: user.email,
-              nickname: user.nickname,
-              role: user.role,
+            data: {
+              user: {
+                id: user.id,
+                email: user.email,
+                nickname: user.nickname,
+                role: user.role,
+              },
+              token,
             },
-            token, // 생성된 토큰을 응답에 추가
           });
         }
       }
 
       return res.status(200).json({
-        message: "SSO login successful.",
-        user: {
-          id: user.id,
-          email: user.email,
-          nickname: user.nickname,
-          role: user.role,
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+          },
+          token,
+          isNewUser: false,
         },
-        token,
-        isNewUser: false,
       });
     } else {
       // 신규 가입 처리
@@ -517,15 +577,22 @@ router.post("/auth/callback/:provider", async (req, res) => {
         { expiresIn: "10m" },
       );
       return res.status(200).json({
+        success: true,
         message: "New SSO user. Additional info required.",
-        ssoData,
-        signupToken,
-        isNewUser: true,
+        data: {
+          ssoData,
+          signupToken,
+          isNewUser: true,
+        },
       });
     }
   } catch (error) {
     console.error(`${provider} callback error:`, error);
-    res.status(500).json({ message: "Internal server error." });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: "Internal Server Error",
+    });
   }
 });
 

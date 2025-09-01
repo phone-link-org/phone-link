@@ -1,107 +1,15 @@
 // server/src/routes/offer.routes.ts
 import { Router } from "express";
 import { AppDataSource } from "../db";
-import { Region } from "../typeorm/regions.entity";
-import { Carrier } from "../typeorm/carriers.entity";
-import { PhoneManufacturer } from "../typeorm/phoneManufacturers.entity";
-import { PhoneModel } from "../typeorm/phoneModels.entity";
-import { PhoneStorage } from "../typeorm/phoneStorage.entity";
 import { Offer } from "../typeorm/offers.entity";
-import { OfferRegionDto, OfferSearchResult } from "shared/types";
+import {
+  OfferModelDto,
+  OfferRegionDto,
+  OfferSearchResult,
+  PhoneStorageDto,
+} from "shared/types";
 
 const router = Router();
-
-router.get("/regions", async (req, res) => {
-  try {
-    const { sidoCode = null } = req.query;
-
-    const regionRepo = AppDataSource.getRepository(Region);
-    const qb = regionRepo.createQueryBuilder("regions");
-
-    qb.where("regions.is_active = :isActive", { isActive: true }); // 폐지되지 않은, 현존하는 지역만 조회
-
-    const selectFields = [
-      "regions.code as code",
-      "regions.is_active as is_active",
-      "regions.latitude as latitude",
-      "regions.longitude as longitude",
-      "regions.last_synced_at as last_synced_at",
-      "regions.created_at as created_at",
-      "regions.updated_at as updated_at",
-    ];
-
-    if (sidoCode === null) {
-      // 최상위 지역 (시/도) 조회: 이름에 공백이 없는 지역
-      const nameCaseExpression = `CASE 
-          WHEN regions.name IN ('충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도') 
-          THEN CONCAT(SUBSTRING(regions.name, 1, 1), SUBSTRING(regions.name, 3, 1)) 
-          ELSE SUBSTRING(regions.name, 1, 2) 
-        END`;
-
-      qb.select([...selectFields, `${nameCaseExpression} as name`]);
-      qb.andWhere(
-        "(CHAR_LENGTH(regions.name) - CHAR_LENGTH(REPLACE(regions.name, ' ', ''))) = 0",
-      );
-    } else {
-      // 시/군/구 조회: 이름에 공백이 1개 있고, 코드가 sidoCode로 시작하는 지역
-      qb.select([
-        ...selectFields,
-        "SUBSTRING_INDEX(regions.name, ' ', -1) as name",
-      ]);
-      qb.andWhere(
-        "(CHAR_LENGTH(regions.name) - CHAR_LENGTH(REPLACE(regions.name, ' ', ''))) = 1",
-      ).andWhere("regions.code LIKE :sidoCode", {
-        sidoCode: `${sidoCode}%`,
-      });
-    }
-
-    const rows = await qb.getRawMany();
-
-    res.json(rows);
-  } catch (err) {
-    console.error("Error fetching regions:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.get("/carriers", async (req, res) => {
-  const CarrierRepo = AppDataSource.getRepository(Carrier);
-  const rows = await CarrierRepo.find();
-  res.json(rows);
-});
-
-router.get("/phone-manufacturers", async (req, res) => {
-  const PhoneManufacturerRepo = AppDataSource.getRepository(PhoneManufacturer);
-  const rows = await PhoneManufacturerRepo.find();
-  res.json(rows);
-});
-
-router.post("/phone-models", async (req, res) => {
-  const { manufacturerId } = req.body;
-  const PhoneModelRepo = AppDataSource.getRepository(PhoneModel);
-  const rows = await PhoneModelRepo.find({
-    where: {
-      manufacturer_id: manufacturerId,
-    },
-  });
-  res.json(rows);
-});
-
-router.get("/phone-storages", async (req, res) => {
-  const { modelId } = req.query;
-  const phoneStorageRepo = AppDataSource.getRepository(PhoneStorage);
-
-  const storages = await phoneStorageRepo
-    .createQueryBuilder("ps")
-    .innerJoin("ps.devices", "pd")
-    .where("pd.model_id = :modelId", {
-      modelId: modelId === "null" ? null : Number(modelId),
-    })
-    .select(["ps.id", "ps.storage"])
-    .getMany();
-
-  res.json(storages);
-});
 
 router.post("/search", async (req, res) => {
   try {
@@ -116,10 +24,13 @@ router.post("/search", async (req, res) => {
       sortOrder = "default",
     } = req.body;
 
+    interface DynamicParams {
+      [key: string]: string | string[] | number | number[] | boolean;
+    }
+
     // 지역 조건
     const regionClauses: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const regionParams: any = {};
+    const regionParams: DynamicParams = {};
 
     if (regions?.length) {
       const sidoCodeClauses: string[] = [];
@@ -130,7 +41,6 @@ router.post("/search", async (req, res) => {
         if (region.code.startsWith("-")) {
           // 2,3번째 자리의 코드 추출 (예: '-1100000000' -> '11')
           const temp = region.code.substring(1, 3);
-          console.log(temp);
           const sidoCode = region.code.substring(1, temp === "36" ? 5 : 3);
           sidoCodeClauses.push(`r.code LIKE :parentCode${index}`);
           regionParams[`parentCode${index}`] = `${sidoCode}%`;
@@ -154,35 +64,31 @@ router.post("/search", async (req, res) => {
 
     // 모델 조건
     const modelClauses: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const modelParams: any = {};
+    const modelParams: DynamicParams = {};
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (models || []).forEach((item: any, idx: number) => {
+    (models || []).forEach((item: OfferModelDto, idx: number) => {
       const prefix = `m${idx}`;
 
-      const rawModelId = item?.model?.id;
-      const rawManuId = item?.model?.manufacturer_id;
-      const modelId = Number(rawModelId);
-      const manuId = Number(rawManuId);
+      const modelId = Number(item?.modelId);
+      const manufacturerId = Number(item?.manufacturerId);
+      const storages = Array.isArray(item?.storages) ? item.storages : [];
 
-      // model.id < 0  => 제조사 단위 필터
+      // modelId < 0 => 제조사 단위 필터 (전체 선택)
       if (Number.isFinite(modelId) && modelId < 0) {
-        if (Number.isFinite(manuId) && manuId > 0) {
+        if (Number.isFinite(manufacturerId) && manufacturerId > 0) {
           modelClauses.push(`(pm2.id = :${prefix}_manu)`);
-          modelParams[`${prefix}_manu`] = manuId;
+          modelParams[`${prefix}_manu`] = manufacturerId;
         }
         return; // 이 항목 처리 끝
       }
 
-      // model.id > 0  => 모델 단위 + 스토리지 규칙
+      // modelId > 0 => 모델 단위 + 스토리지 규칙
       if (Number.isFinite(modelId) && modelId > 0) {
-        const storages = Array.isArray(item?.storage) ? item.storage : [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const hasNegativeStorage = storages.some((s: any) => Number(s?.id) < 0);
+        const hasNegativeStorage = storages.some(
+          (s: PhoneStorageDto) => Number(s?.id) < 0,
+        );
         const positiveStorageIds = storages
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((s: any) => Number(s?.id))
+          .map((s: PhoneStorageDto) => Number(s?.id))
           .filter((id: number) => Number.isFinite(id) && id > 0);
 
         if (!hasNegativeStorage && positiveStorageIds.length > 0) {
@@ -291,12 +197,19 @@ router.post("/search", async (req, res) => {
     const paginatedItems = items.slice(0, limit);
 
     res.status(200).json({
-      offers: paginatedItems,
-      hasNextPage,
+      success: true,
+      data: {
+        offers: paginatedItems,
+        hasNextPage,
+      },
     });
   } catch (error) {
     console.error("DB Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error", // 에러 종류
+      message: "데이터를 조회하는 중 서버에서 오류가 발생했습니다.", // 프론트엔드가 사용할 수 있는 메시지
+    });
   }
 });
 

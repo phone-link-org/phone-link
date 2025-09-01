@@ -3,12 +3,12 @@ import React from "react";
 import { BsArrowRepeat, BsPhoneFlip } from "react-icons/bs";
 
 interface OfferTypeSelectorProps {
-  offerTypeConditions: string[];
-  onOfferTypesChange: (offerTypes: string[]) => void;
+  selectedOfferTypes: ("MNP" | "CHG")[];
+  onOfferTypesChange: (offerTypes: ("MNP" | "CHG")[]) => void;
 }
 
 const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
-  offerTypeConditions,
+  selectedOfferTypes,
   onOfferTypesChange,
 }) => {
   const offerTypes = [
@@ -16,17 +16,17 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
     { value: "CHG", label: "기기변경", icon: BsPhoneFlip },
   ];
 
-  const handleOfferTypeChange = (offerType: string) => {
-    const isSelected = offerTypeConditions.includes(offerType);
+  const handleOfferTypeChange = (offerType: "MNP" | "CHG") => {
+    const isSelected = selectedOfferTypes.includes(offerType);
 
     if (isSelected) {
       // 선택 해제
       onOfferTypesChange(
-        offerTypeConditions.filter((type) => type !== offerType),
+        selectedOfferTypes.filter((type) => type !== offerType),
       );
     } else {
       // 선택 추가
-      onOfferTypesChange([...offerTypeConditions, offerType]);
+      onOfferTypesChange([...selectedOfferTypes, offerType]);
     }
   };
 
@@ -34,12 +34,14 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
     <div>
       <div className="grid grid-cols-2 gap-3 items-center min-h-60">
         {offerTypes.map(({ value, label, icon: Icon }) => {
-          const isSelected = offerTypeConditions.includes(value);
+          const isSelected = selectedOfferTypes.includes(
+            value as "MNP" | "CHG",
+          );
           return (
             <button
               key={value}
               type="button"
-              onClick={() => handleOfferTypeChange(value)}
+              onClick={() => handleOfferTypeChange(value as "MNP" | "CHG")}
               className={`flex flex-col items-center justify-center gap-2 w-full h-full max-h-44 rounded-lg border transition-all shadow-sm cursor-pointer dark:text-gray-100
                 ${
                   isSelected

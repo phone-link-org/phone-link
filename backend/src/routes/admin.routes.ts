@@ -2,6 +2,7 @@ import { Router } from "express";
 import axios from "axios";
 import { AppDataSource } from "../db";
 import { Region } from "../typeorm/regions.entity";
+import { RegionDto } from "shared/region.types";
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.get("/region", async (req, res) => {
   }
 });
 
-router.post("/region-sync-db", async (req, res) => {
+router.post("/regions-sync-db", async (req, res) => {
   try {
     const API_KEY = process.env.DATA_GO_KR_REGION_API_KEY;
     if (!API_KEY) {
@@ -77,7 +78,7 @@ router.post("/region-sync-db", async (req, res) => {
         const now = new Date();
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const regionsToSave = records.map((record: any) => ({
+        const regionsToSave: RegionDto[] = records.map((record: any) => ({
           code: record["법정동코드"],
           name: record["법정동명"],
           is_active: record["폐지여부"] === "존재",

@@ -2,9 +2,9 @@ import React, { useContext, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
+import apiClient from "../api/axios";
 import { toast } from "sonner";
 import { ssoConfig } from "../config/sso-config";
-import apiClient from "../api/axios";
 
 import appleLogo from "../assets/images/apple.png";
 import googleLogo from "../assets/images/google.png";
@@ -83,7 +83,7 @@ const LoginPage: React.FC = () => {
       const response = await apiClient.post(`/user/login`, loginData);
 
       if (response.status === 200) {
-        const { user, token } = response.data;
+        const { user, token } = response.data?.data || {};
         if (authContext) {
           authContext.login({
             userId: user.id.toString(),
@@ -95,7 +95,7 @@ const LoginPage: React.FC = () => {
           navigate("/");
         }
       } else if (response.status === 202) {
-        const { user, token } = response.data;
+        const { user, token } = response.data?.data || {};
         if (authContext) {
           authContext.login({
             userId: user.id.toString(),

@@ -5,7 +5,7 @@ import type {
   PriceInput,
   Addon,
   PriceSubmissionData,
-} from "../../../shared/types";
+} from "../../../../shared/types";
 
 type TableRow = {
   model: string;

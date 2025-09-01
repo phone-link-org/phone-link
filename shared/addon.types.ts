@@ -1,4 +1,4 @@
-import { StoreDto, CarrierDto } from "./types";
+import type { StoreDto, CarrierDto } from "./types";
 
 export interface AddonDto {
   readonly id: number;
@@ -11,3 +11,8 @@ export interface AddonDto {
   readonly created_at: Date;
   readonly updated_at?: Date;
 }
+
+export type AddonFormData = Pick<
+  AddonDto,
+  "name" | "carrierId" | "monthlyFee" | "durationMonths" | "penaltyFee"
+>;

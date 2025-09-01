@@ -1,32 +1,39 @@
 import { useEffect, useState } from "react";
-import type { Carrier } from "../../../../shared/types";
+import type { CarrierDto } from "../../../../shared/types";
+import { api } from "../../api/axios";
+import { toast } from "sonner";
 
 interface CarrierSelectorProps {
-  carrierConditions: Carrier[];
-  onCarriersChange: (carriers: Carrier[]) => void;
+  selectedCarriers: CarrierDto[];
+  onCarriersChange: (carriers: CarrierDto[]) => void;
 }
 
 const CarrierSelector: React.FC<CarrierSelectorProps> = ({
-  carrierConditions,
+  selectedCarriers,
   onCarriersChange,
 }) => {
-  const [carriers, setCarriers] = useState<Carrier[]>([]);
-  const SERVER = import.meta.env.VITE_API_URL;
+  const [carriers, setCarriers] = useState<CarrierDto[]>([]);
 
   useEffect(() => {
-    fetch(`${SERVER}/api/offer/carriers`)
-      .then((res) => res.json())
-      .then(setCarriers)
-      .catch((error) => console.error("Error fetching carriers:", error));
-  }, [SERVER]);
+    try {
+      const fetchCarriers = async () => {
+        const response = await api.get<CarrierDto[]>(`/phone/carriers`);
+        setCarriers(response);
+      };
+      fetchCarriers();
+    } catch (error) {
+      console.error("Error fetching carriers:", error);
+      toast.error("통신사 데이터을 불러오는 중 오류가 발생했습니다.");
+    }
+  }, []);
 
-  const handleCarrierChange = (carrier: Carrier) => {
-    const isSelected = carrierConditions.some((c) => c.id === carrier.id);
+  const handleCarrierChange = (carrier: CarrierDto) => {
+    const isSelected = selectedCarriers.some((c) => c.id === carrier.id);
 
     if (isSelected) {
-      onCarriersChange(carrierConditions.filter((c) => c.id !== carrier.id));
+      onCarriersChange(selectedCarriers.filter((c) => c.id !== carrier.id));
     } else {
-      onCarriersChange([...carrierConditions, carrier]);
+      onCarriersChange([...selectedCarriers, carrier]);
     }
   };
 
@@ -56,7 +63,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
         }`}
       >
         {carriers.map((carrier) => {
-          const isSelected = carrierConditions.some((c) => c.id === carrier.id);
+          const isSelected = selectedCarriers.some((c) => c.id === carrier.id);
 
           return (
             <button

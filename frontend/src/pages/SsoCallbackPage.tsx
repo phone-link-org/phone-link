@@ -1,10 +1,9 @@
 import React, { useEffect, useContext } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import axios from "axios";
 import { toast } from "sonner";
+import apiClient from "../api/axios";
 
-// 프로바이더 이름을 더 명확하게 관리하기 위한 타입
 type SsoProvider = "naver" | "kakao" | "google" | "apple";
 
 const SsoCallbackPage: React.FC = () => {
@@ -12,8 +11,6 @@ const SsoCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
   const { provider } = useParams<{ provider: SsoProvider }>(); // URL로부터 provider 동적 추출
-
-  const SERVER = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -48,14 +45,14 @@ const SsoCallbackPage: React.FC = () => {
     if (code) {
       const sendCodeToBackend = async (authorizationCode: string) => {
         try {
-          const response = await axios.post(
-            `${SERVER}/api/user/auth/callback/${provider}`,
+          const response = await apiClient.post(
+            `user/auth/callback/${provider}`,
             { code: authorizationCode },
           );
 
           if (response.status === 200) {
             const { isNewUser, user, token, ssoData, signupToken } =
-              response.data;
+              response.data?.data || {};
 
             if (authContext) {
               if (isNewUser) {
@@ -74,7 +71,7 @@ const SsoCallbackPage: React.FC = () => {
             }
           } else if (response.status === 202) {
             // seller role이지만 매장 등록이 안된 경우
-            const { user, token } = response.data;
+            const { user, token } = response.data?.data || {};
 
             if (authContext) {
               authContext.login({

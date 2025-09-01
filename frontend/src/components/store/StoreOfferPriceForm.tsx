@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import type {
-  PriceInput,
-  Addon,
-  PriceSubmissionData,
-} from "../../../shared/types";
-import apiClient from "../api/axios";
+import type { PriceInput, PriceSubmissionData } from "../../../../shared/types";
+import apiClient from "../../api/axios";
 import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -31,20 +27,11 @@ interface TableRowData {
   capacity: string;
 }
 
-const ManualUpload: React.FC = () => {
+const StoreOfferPriceForm: React.FC = () => {
   const [tableRows, setTableRows] = useState<TableRowData[]>([]);
   const [prices, setPrices] = useState<
     Record<string, Record<string, number | "">>
   >({});
-  const [addons, setAddons] = useState<Addon[]>([
-    {
-      name: "",
-      carrier: "1",
-      monthlyFee: 0,
-      requiredDuration: 0,
-      penaltyFee: 0,
-    },
-  ]);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -81,43 +68,6 @@ const ManualUpload: React.FC = () => {
         [`${carrier}-${buyingType}`]: price,
       },
     }));
-  };
-
-  const handleAddonChange = (
-    index: number,
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    if (
-      ["monthlyFee", "requiredDuration", "penaltyFee"].includes(name) &&
-      value.length > 3
-    ) {
-      return;
-    }
-    const newAddons = [...addons];
-    const numValue =
-      ["monthlyFee", "requiredDuration", "penaltyFee"].includes(name) && value
-        ? parseInt(value)
-        : value;
-    newAddons[index] = { ...newAddons[index], [name]: numValue };
-    setAddons(newAddons);
-  };
-
-  const addAddon = () => {
-    setAddons([
-      ...addons,
-      {
-        name: "",
-        carrier: "1",
-        monthlyFee: 0,
-        requiredDuration: 0,
-        penaltyFee: 0,
-      },
-    ]);
-  };
-
-  const removeAddon = (index: number) => {
-    setAddons(addons.filter((_, i) => i !== index));
   };
 
   const getCarrierImageUrl = (carrierName: string) => {
@@ -315,74 +265,6 @@ const ManualUpload: React.FC = () => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          부가서비스
-        </label>
-        {addons.map((addon, index) => (
-          <div key={index} className="flex items-center gap-2 mt-2">
-            <input
-              type="text"
-              name="name"
-              value={addon.name}
-              onChange={(e) => handleAddonChange(index, e)}
-              placeholder="부가서비스명"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
-            />
-            <select
-              name="carrier"
-              value={addon.carrier}
-              onChange={(e) => handleAddonChange(index, e)}
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
-            >
-              {Object.entries(CARRIERS).map(([key, name]) => (
-                <option key={key} value={key}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              name="monthlyFee"
-              value={addon.monthlyFee}
-              onChange={(e) => handleAddonChange(index, e)}
-              placeholder="월 요금"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
-            />
-            <input
-              type="number"
-              name="requiredDuration"
-              value={addon.requiredDuration}
-              onChange={(e) => handleAddonChange(index, e)}
-              placeholder="유지 기간 (개월)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
-            />
-            <input
-              type="number"
-              name="penaltyFee"
-              value={addon.penaltyFee}
-              onChange={(e) => handleAddonChange(index, e)}
-              placeholder="미가입시 발생 요금(만원)"
-              className="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm no-spinner"
-            />
-            <button
-              type="button"
-              onClick={() => removeAddon(index)}
-              className="text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={addAddon}
-          className="mt-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-        >
-          + 부가서비스 추가
-        </button>
-      </div>
-
-      <div>
         <button
           type="submit"
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark"
@@ -394,4 +276,4 @@ const ManualUpload: React.FC = () => {
   );
 };
 
-export default ManualUpload;
+export default StoreOfferPriceForm;

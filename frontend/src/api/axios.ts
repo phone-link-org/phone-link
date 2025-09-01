@@ -1,7 +1,6 @@
 import axios, { AxiosError } from "axios";
-import type { AxiosResponse } from "axios";
+import type { AxiosResponse, AxiosRequestConfig } from "axios";
 
-// API 응답 기본 타입
 export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
@@ -9,107 +8,130 @@ export interface ApiResponse<T = any> {
   success?: boolean;
 }
 
-// 에러 응답 타입
 export interface ApiError {
   error: string;
   message?: string;
   status?: number;
 }
 
+const baseURL = import.meta.env.VITE_API_URL;
+if (!baseURL) {
+  throw new Error("VITE_API_URL is not defined. Please check your .env file.");
+}
+
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/api`, // 백엔드 API 주소
-  withCredentials: true, // 쿠키 전송을 위함
-  timeout: 10000, // 10초 타임아웃
+  baseURL: `${baseURL}/api`,
+  withCredentials: true,
+  timeout: 10000,
   headers: {
-    "Content-Type": "application/json", // 요청 본문이 JSON임을 명시
-    Accept: "application/json", // 서버에게 JSON 응답을 요청
-    "X-Requested-With": "XMLHttpRequest", // AJAX 요청임을 서버에 알림 (CSRF 방지)
-    "Cache-Control": "no-cache", // 브라우저 캐싱 방지 (항상 최신 데이터 보장)
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+    "Cache-Control": "no-cache",
   },
 });
 
-// 요청 인터셉터
+// 인터셉터
+// TODO: JWT 토큰 인증 로직
 apiClient.interceptors.request.use(
   (config) => {
-    // 로딩 상태 관리 (필요시)
-    // store.dispatch(setLoading(true));
-
-    // 토큰 자동 추가 (localStorage에서)
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// 응답 인터셉터
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // 로딩 상태 해제 (필요시)
-    // store.dispatch(setLoading(false));
-
+    // 성공 응답 로깅 (개발 환경에서만)
+    if (import.meta.env.VITE_DEV_MODE) {
+      console.log(
+        `✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`,
+        {
+          status: response.status,
+          data: response.data,
+          timestamp: new Date().toISOString(),
+        },
+      );
+    }
     return response;
   },
   (error: AxiosError<ApiError>) => {
-    // 로딩 상태 해제 (필요시)
-    // store.dispatch(setLoading(false));
+    const { response, message, config } = error;
+    const errorMessage = response?.data?.message || message;
 
-    const { response } = error;
+    // 로깅할 정보를 하나의 객체로 통합
+    const requestInfo = {
+      method: config?.method?.toUpperCase(),
+      url: config?.url,
+      status: response?.status,
+      message: errorMessage,
+      responseData: response?.data, // 응답 데이터를 객체에 포함
+      timestamp: new Date().toISOString(),
+    };
 
-    // HTTP 상태 코드별 에러 처리
+    console.groupCollapsed(
+      `❌ API Error: ${requestInfo.method} ${requestInfo.url}`,
+    );
+    console.error("Request Info:", requestInfo);
+    console.error("Full Error Object:", error);
+    console.groupEnd();
+
     switch (response?.status) {
       case 401:
-        // 인증 실패 - 로그인 페이지로 리다이렉트
+        console.warn("🔐 인증 실패 - 로그인 페이지로 리다이렉트");
         localStorage.removeItem("token");
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
         break;
       case 403:
-        // 권한 없음
-        console.error("접근 권한이 없습니다.");
+        console.warn("🚫 접근 권한이 없습니다.");
         break;
       case 404:
-        // 리소스 없음
-        console.error("요청한 리소스를 찾을 수 없습니다.");
+        console.warn("🔍 요청한 리소스를 찾을 수 없습니다.");
         break;
       case 500:
-        // 서버 에러
-        console.error("서버 내부 오류가 발생했습니다.");
+        console.error("💥 서버 내부 오류가 발생했습니다.");
+        break;
+      case 502:
+      case 503:
+      case 504:
+        console.error("🌐 서버 연결 오류 - 잠시 후 다시 시도해주세요.");
         break;
       default:
-        // 기타 에러
-        console.error("알 수 없는 오류가 발생했습니다.");
+        console.error(
+          `⚠️ 알 수 없는 오류 (${response?.status}): ${errorMessage}`,
+        );
     }
 
     return Promise.reject(error);
   },
 );
 
-// 타입이 지정된 API 메서드들
+// response.data를 직접 반환하고, 불필요한 메서드 제거 - 미사용 중
 export const api = {
-  get: <T = any>(url: string, config?: any) =>
-    apiClient.get<ApiResponse<T>>(url, config),
+  get: async <T = any>(
+    url: string,
+    config?: AxiosRequestConfig,
+  ): Promise<T> => {
+    const response = await apiClient.get<ApiResponse<T>>(url, config);
+    return response.data.data as T; // 실제 데이터인 response.data.data를 직접 반환
+  },
 
-  post: <T = any>(url: string, data?: any, config?: any) =>
-    apiClient.post<ApiResponse<T>>(url, data, config),
-
-  put: <T = any>(url: string, data?: any, config?: any) =>
-    apiClient.put<ApiResponse<T>>(url, data, config),
-
-  patch: <T = any>(url: string, data?: any, config?: any) =>
-    apiClient.patch<ApiResponse<T>>(url, data, config),
-
-  delete: <T = any>(url: string, config?: any) =>
-    apiClient.delete<ApiResponse<T>>(url, config),
+  post: async <T = any>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<T> => {
+    const response = await apiClient.post<ApiResponse<T>>(url, data, config);
+    return response.data.data as T; // 실제 데이터인 response.data.data를 직접 반환
+  },
 };
 
-// 기본 export (기존 코드 호환성 유지)
 export default apiClient;
-
-// 타입 export
 export type { AxiosResponse, AxiosError };

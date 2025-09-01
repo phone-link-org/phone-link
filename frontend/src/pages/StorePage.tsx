@@ -1,11 +1,12 @@
 import { useState } from "react";
-import ExcelUpload from "../components/ExcelUpload";
-import ManualUpload from "../components/ManualUpload";
+import ExcelUpload from "../components/store/ExcelUpload";
+import ManualUpload from "../components/store/StoreOfferPriceForm";
+import StoreAddonForm from "../components/store/StoreAddonForm";
 
 const StorePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"manual" | "excel" | "addon">(
-    "manual",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "prices" | "excel" | "addon" | "requiredPlan"
+  >("prices");
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
@@ -56,13 +57,23 @@ const StorePage: React.FC = () => {
             <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
               <button
                 className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
-                  activeTab === "manual"
+                  activeTab === "prices"
                     ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
                 }`}
-                onClick={() => setActiveTab("manual")}
+                onClick={() => setActiveTab("prices")}
               >
                 시세표
+              </button>
+              <button
+                className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                  activeTab === "requiredPlan"
+                    ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                onClick={() => setActiveTab("requiredPlan")}
+              >
+                요금제
               </button>
               <button
                 className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
@@ -86,7 +97,11 @@ const StorePage: React.FC = () => {
               </button>
             </nav>
           </div>
-          {activeTab === "manual" && <ManualUpload />}
+          {activeTab === "prices" && <ManualUpload />}
+          {activeTab === "requiredPlan" && (
+            <p className="text-white p-6">필수 요금제 설정 화면</p>
+          )}
+          {activeTab === "addon" && <StoreAddonForm />}
           {activeTab === "excel" && (
             <div className="p-6">
               <ExcelUpload />

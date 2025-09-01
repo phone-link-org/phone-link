@@ -1,187 +1,201 @@
 import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
 import type {
-  ModelCondition,
-  PhoneManufacturer,
-  PhoneModel,
-  PhoneStorage,
+  OfferModelDto,
+  PhoneManufacturerDto,
+  PhoneStorageDto,
 } from "../../../../shared/types";
 import CustomCheckbox from "../CustomCheckbox";
+import { api } from "../../api/axios";
+import { toast } from "sonner";
 
 interface ModelSelectorProps {
-  modelConditions: ModelCondition[];
-  onModelConditionsChange: (conditions: ModelCondition[]) => void;
+  selectedModels: OfferModelDto[];
+  onSelectedModelsChange: (models: OfferModelDto[]) => void;
 }
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
-  modelConditions,
-  onModelConditionsChange,
+  selectedModels,
+  onSelectedModelsChange,
 }) => {
-  const [manufacturers, setManufacturers] = useState<PhoneManufacturer[]>([]);
-  const [selectedManufacturer, setSelectedManufacturer] =
-    useState<PhoneManufacturer | null>(null);
-  const [models, setModels] = useState<PhoneModel[]>([]);
-  const [lastSelectedModel, setLastSelectedModel] = useState<PhoneModel | null>(
-    null,
+  const [manufacturers, setManufacturers] = useState<PhoneManufacturerDto[]>(
+    [],
   );
-  const [storages, setStorages] = useState<PhoneStorage[]>([]);
-
-  const SERVER = import.meta.env.VITE_API_URL;
+  const [selectedManufacturer, setSelectedManufacturer] =
+    useState<PhoneManufacturerDto | null>(null);
+  const [models, setModels] = useState<OfferModelDto[]>([]);
+  const [lastSelectedModel, setLastSelectedModel] =
+    useState<OfferModelDto | null>(null);
+  const [storages, setStorages] = useState<PhoneStorageDto[]>([]);
 
   // 제조사 목록 조회 (최초 1회만)
   useEffect(() => {
-    fetch(`${SERVER}/api/offer/phone-manufacturers`)
-      .then((res) => res.json())
-      .then(setManufacturers);
-  }, [SERVER]);
+    try {
+      const fetchManufacturers = async () => {
+        const response =
+          await api.get<PhoneManufacturerDto[]>(`/phone/manufacturers`);
+        console.log(response);
+
+        setManufacturers(response);
+      };
+      fetchManufacturers();
+    } catch (error) {
+      console.error("Error fetching manufacturers:", error);
+      toast.error("제조사 데이터을 불러오는 중 오류가 발생했습니다.");
+    }
+  }, []);
 
   // 모델 목록 조회 (제조사 선택 시)
   useEffect(() => {
-    if (selectedManufacturer !== null) {
-      fetch(`${SERVER}/api/offer/phone-models`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ manufacturerId: selectedManufacturer.id }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          const all = {
-            id: -selectedManufacturer.id,
-            manufacturer_id: selectedManufacturer.id,
-            name_ko: "전체",
-            name_en: "All",
+    try {
+      if (selectedManufacturer) {
+        const fetchModels = async () => {
+          const response = await api.get<OfferModelDto[]>(`/phone/models`, {
+            params: {
+              manufacturerId: selectedManufacturer.id,
+            },
+          });
+
+          const allOption: OfferModelDto = {
+            manufacturerId: selectedManufacturer.id,
+            modelId: -selectedManufacturer.id,
+            name: "전체",
+            storages: [],
           };
-          setModels([all, ...data]);
-        });
+          setModels([allOption, ...response]);
+        };
+        fetchModels();
+      }
+    } catch (error) {
+      console.error("Error fetching models:", error);
+      toast.error("핸드폰 기종 데이터을 불러오는 중 오류가 발생했습니다.");
     }
-  }, [selectedManufacturer, SERVER]);
+  }, [selectedManufacturer]);
 
   // 사용자가 마지막으로 선택한 모델의 저장소 목록 조회
   useEffect(() => {
-    if (lastSelectedModel !== null && lastSelectedModel.id > 0) {
-      fetch(
-        `${SERVER}/api/offer/phone-storages?modelId=${lastSelectedModel.id}`,
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          const all = {
-            id: -lastSelectedModel.id,
-            storage: "전체",
-          };
-          setStorages([all, ...data]);
-        });
+    try {
+      if (lastSelectedModel && lastSelectedModel.modelId > 0) {
+        const fetchStorages = async () => {
+          const response = await api.get<PhoneStorageDto[]>(`/phone/storages`, {
+            params: {
+              modelId: lastSelectedModel.modelId,
+            },
+          });
+          setStorages(response);
+        };
+        fetchStorages();
+      }
+    } catch (error) {
+      console.error("Error fetching storages:", error);
+      toast.error("용량 데이터을 불러오는 중 오류가 발생했습니다.");
     }
-  }, [lastSelectedModel, SERVER]);
+  }, [lastSelectedModel]);
 
-  const handleManufacturerChange = (manufacturer: PhoneManufacturer) => {
-    //TODO: 모델만 선택한 후 제조사 변경 시 에러 메시지 출력 + return;
-
+  // 제조사 선택 시
+  const handleManufacturerChange = (manufacturer: PhoneManufacturerDto) => {
     setSelectedManufacturer(manufacturer);
     setStorages([]);
     setLastSelectedModel(null);
   };
 
-  const handleModelChange = (model: PhoneModel) => {
-    const isAlreadySelected = modelConditions.some(
-      (condition) => condition.model.id === model.id,
+  // 모델 선택 시
+  const handleModelChange = (clickedModel: OfferModelDto) => {
+    // 1. 모델 선택/해제 로직
+    const isAlreadySelected = selectedModels.some(
+      (item) => item.modelId === clickedModel.modelId,
     );
 
-    // 현재 선택된 모델이 있고, 해당 모델의 용량이 선택되지 않았는지 확인
-    if (lastSelectedModel && !isAlreadySelected) {
-      // lastSelectedModel과 model의 ID 부호가 같을 때만 용량 검증 수행
-      const isSameSign =
-        (lastSelectedModel.id > 0 && model.id > 0) ||
-        (lastSelectedModel.id < 0 && model.id < 0);
-
-      if (isSameSign) {
-        const currentCondition = modelConditions.find(
-          (condition) => condition.model.id === lastSelectedModel.id,
-        );
-
-        // 용량이 선택되지 않았거나 빈 배열인 경우
-        if (
-          !currentCondition?.storage ||
-          currentCondition.storage.length === 0
-        ) {
-          toast.error(`${lastSelectedModel.name_ko}의 용량을 선택해주세요.`);
-          return; // 모델 선택을 중단
-        }
-      }
-    }
-
-    // lastSelectedModel & storages control
-    setLastSelectedModel(isAlreadySelected ? null : model);
+    // 3. lastSelectedModel 및 storages 상태 업데이트
     if (isAlreadySelected) {
+      setLastSelectedModel(null);
       setStorages([]);
+    } else {
+      setLastSelectedModel(clickedModel);
+
+      // '전체' 모델 선택 시 storages 비우기
+      if (clickedModel.modelId < 0) {
+        setStorages([]);
+      }
+      // 일반 모델 선택 시 용량 데이터 요청은 useEffect에서 자동으로 처리됨
     }
 
-    const isAllSelected =
-      selectedManufacturer !== null && model.id === -selectedManufacturer.id;
+    // 4. selectedModels 업데이트
+    let newSelectedModels: OfferModelDto[];
 
-    if (isAllSelected) {
-      // 선택된 제조사의 모델들을 제거하고 '전체'만 추가
-      const filteredConditions = modelConditions.filter(
-        (condition) =>
-          condition.model.manufacturer_id !== selectedManufacturer?.id,
+    if (isAlreadySelected) {
+      // 모델 선택 해제
+      newSelectedModels = selectedModels.filter(
+        (item) => item.modelId !== clickedModel.modelId,
       );
-      onModelConditionsChange([...filteredConditions, { model }]);
     } else {
-      // 기존 '전체' 선택 모델 제거
-      const filteredConditions = modelConditions.filter(
-        (condition) =>
-          !(
-            condition.model.manufacturer_id === selectedManufacturer?.id &&
-            condition.model.id === -selectedManufacturer.id
-          ),
-      );
+      // 모델 선택 추가
+      const isAllSelected = clickedModel.modelId < 0; // '전체' 모델인지 확인
 
-      const alreadySelected = filteredConditions.find(
-        (condition) => condition.model.id === model.id,
-      );
+      if (isAllSelected) {
+        const manufacturerName = selectedManufacturer?.name_ko || "";
+        const allModelWithCustomName: OfferModelDto = {
+          ...clickedModel,
+          name: `${manufacturerName} 전체`,
+        };
 
-      if (alreadySelected) {
-        // 모델 선택 해제
-        onModelConditionsChange(
-          filteredConditions.filter(
-            (condition) => condition.model.id !== model.id,
+        newSelectedModels = [
+          ...selectedModels.filter(
+            (item) => item.manufacturerId !== clickedModel.manufacturerId,
           ),
-        );
+          allModelWithCustomName,
+        ];
       } else {
-        // 모델 선택 추가
-        onModelConditionsChange([...filteredConditions, { model }]);
+        // 일반 모델 선택 시: 기존 '전체' 제거하고 새 모델 추가
+        newSelectedModels = [
+          ...selectedModels.filter(
+            (item) =>
+              !(
+                item.manufacturerId === clickedModel.manufacturerId &&
+                item.modelId < 0
+              ),
+          ),
+          clickedModel,
+        ];
       }
     }
+
+    onSelectedModelsChange(newSelectedModels);
   };
 
-  const handleStorageChange = (storage: PhoneStorage) => {
+  // 용량 선택 시
+  const handleStorageChange = (storage: PhoneStorageDto) => {
     if (!lastSelectedModel) return;
 
-    // 현재 선택된 모델의 storage 정보 가져오기
-    const currentCondition = modelConditions.find(
-      (condition) => condition.model.id === lastSelectedModel.id,
+    // 1. 현재 선택된 모델 찾기
+    const currentModelIndex = selectedModels.findIndex(
+      (item) => item.modelId === lastSelectedModel.modelId,
     );
-    const currentStorages = currentCondition?.storage || [];
 
-    // '전체' storage인지 확인 (음수 ID)
-    const isAllStorage = storage.id < 0;
+    if (currentModelIndex === -1) return; // 모델이 선택되지 않은 경우
 
-    let newStorages: PhoneStorage[];
+    const currentModel = selectedModels[currentModelIndex];
+    const currentStorages = currentModel.storages || [];
 
-    if (isAllStorage) {
-      // '전체' 선택 시: 기존 모든 storage 제거하고 '전체'만 추가
-      newStorages = [storage];
+    // 2. 선택된 storage가 이미 있는지 확인
+    const isAlreadySelected = currentStorages.some((s) => s.id === storage.id);
+
+    // 3. 새로운 storages 배열 생성
+    let newStorages: PhoneStorageDto[];
+
+    if (isAlreadySelected) {
+      // 선택 해제: 해당 storage만 제거
+      newStorages = currentStorages.filter((s) => s.id !== storage.id);
     } else {
-      // 일반 storage 선택 시
-      const isCurrentlySelected = currentStorages.some(
-        (s) => s.id === storage.id,
-      );
-      const hasAllStorage = currentStorages.some((s) => s.id < 0); // '전체'가 현재 선택되어 있는지
+      // 선택 추가
+      const isAllStorage = storage.id < 0; // '전체' storage인지 확인
 
-      if (isCurrentlySelected) {
-        // 현재 선택된 storage를 해제
-        newStorages = currentStorages.filter((s) => s.id !== storage.id);
+      if (isAllStorage) {
+        // '전체' 선택 시: 기존 모든 storage 제거하고 '전체'만 추가
+        newStorages = [storage];
       } else {
-        // 새로운 storage 선택
+        // 일반 storage 선택 시
+        const hasAllStorage = currentStorages.some((s) => s.id < 0);
+
         if (hasAllStorage) {
           // '전체'가 선택되어 있다면 '전체' 제거하고 새 storage 추가
           newStorages = [...currentStorages.filter((s) => s.id >= 0), storage];
@@ -192,18 +206,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       }
     }
 
-    // modelConditions 업데이트
-    const updatedConditions = modelConditions.map((condition) => {
-      if (condition.model.id === lastSelectedModel.id) {
-        return {
-          ...condition,
-          storage: newStorages,
-        };
-      }
-      return condition;
-    });
+    // 4. selectedModels 업데이트 (불변성 유지)
+    const updatedModels = [...selectedModels];
+    updatedModels[currentModelIndex] = {
+      ...currentModel,
+      storages: newStorages,
+    };
 
-    onModelConditionsChange(updatedConditions);
+    onSelectedModelsChange(updatedModels);
   };
 
   return (
@@ -238,13 +248,13 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           ) : (
             models?.map((model) => (
               <label
-                key={model.id}
+                key={model.modelId}
                 className="flex justify-center items-center cursor-pointer"
               >
                 <CustomCheckbox
-                  label={model.name_ko}
-                  checked={modelConditions.some(
-                    (item) => item.model.id == model.id,
+                  label={model.name}
+                  checked={selectedModels.some(
+                    (item) => item.modelId == model.modelId,
                   )}
                   onChange={() => handleModelChange(model)}
                   customStyle="text-sm w-[150px]"
@@ -258,17 +268,17 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         <div className="flex flex-col gap-2">
           {storages.map((data) => (
             <label
-              key={`${lastSelectedModel?.id}-${data.id}`}
+              key={`${lastSelectedModel?.modelId}-${data.id}`}
               className="flex justify-center items-center cursor-pointer"
             >
               <CustomCheckbox
                 label={data.storage}
                 checked={(() => {
-                  const currentCondition = modelConditions.find(
-                    (condition) => condition.model.id === lastSelectedModel?.id,
+                  const currentCondition = selectedModels.find(
+                    (item) => item.modelId === lastSelectedModel?.modelId,
                   );
                   return (
-                    currentCondition?.storage?.some(
+                    currentCondition?.storages?.some(
                       (item) => item.id === data.id,
                     ) || false
                   );
@@ -280,30 +290,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           ))}
         </div>
       </div>
-      {/* <div className="w-1/5 max-h-60 min-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          <div className="flex flex-col gap-3">
-            {storages.map((storage) => (
-              <label
-                key={storage}
-                className="flex justify-center items-center cursor-pointer"
-              >
-                <CustomCheckbox
-                  label={storage}
-                  checked={selectedStorages.some((item) => item === storage)}
-                  onChange={() =>
-                    setSelectedStorages((prev) =>
-                      prev.includes(storage)
-                        ? prev.filter((s) => s !== storage)
-                        : [...prev, storage]
-                    )
-                  }
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

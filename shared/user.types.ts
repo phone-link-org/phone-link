@@ -33,6 +33,7 @@ export interface SocialAccountDto {
   readonly created_at: Date;
 }
 
+//Omit은 특정 타입에서 특정 키를 제외한 타입을 생성하는 타입
 export type SignupFormData = Omit<
   UserDto,
   | "id"
@@ -47,4 +48,5 @@ export type SignupFormData = Omit<
   | "updated_at"
 >;
 
+//Pick은 특정 타입에서 특정 키를 선택한 타입을 생성하는 타입
 export type LoginFormData = Pick<Required<UserDto>, "email" | "password">;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
+import { api } from "../api/axios";
 import { toast } from "sonner";
-import type { SignupFormData, StoreDto } from "../../../shared/index";
+import type { SignupFormData, StoreDto } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import StoreSearchableSelect from "../components/StoreSearchableSelect";
 
@@ -41,8 +42,6 @@ const SignupPage: React.FC = () => {
   const location = useLocation();
   const addressDetailRef = useRef<HTMLInputElement>(null);
 
-  const SERVER = import.meta.env.VITE_API_URL;
-
   useEffect(() => {
     if (location.state?.ssoData) {
       const { ssoData, signupToken } = location.state;
@@ -67,11 +66,17 @@ const SignupPage: React.FC = () => {
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        const response = await axios.get(`${SERVER}/api/store/stores`);
-        setStores(response.data);
+        const storesData = await api.get<StoreDto[]>("/store/stores");
+        setStores(storesData);
       } catch (error) {
-        console.error("Error fetching stores:", error);
-        toast.error("매장 목록을 불러오는데 실패했습니다.");
+        if (axios.isAxiosError(error) && error.response) {
+          toast.error(
+            error.response.data.message ||
+              "매장 목록을 불러오는데 실패했습니다.",
+          );
+        } else {
+          toast.error("매장 목록을 불러오는데 실패했습니다.");
+        }
       }
     };
 
@@ -249,7 +254,7 @@ const SignupPage: React.FC = () => {
         ...(formData.role === "SELLER" && { storeId: selectedStore?.id }),
       };
 
-      await axios.post(`${SERVER}/api/user/signup`, payload);
+      await api.post("/user/signup", payload);
 
       toast.success("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.");
       navigate("/login");

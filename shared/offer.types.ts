@@ -1,5 +1,7 @@
-import {
+import type {
   CarrierDto,
+  OfferModelDto,
+  OfferRegionDto,
   PhoneDeviceDto,
   PhoneModelDto,
   RegionDto,
@@ -19,6 +21,16 @@ export interface OfferDto {
   readonly created_at: Date;
   readonly updated_at?: Date;
 }
+
+export type OfferSearchRequest = {
+  regions: OfferRegionDto[];
+  models: OfferModelDto[];
+  carriers: CarrierDto[];
+  offerTypes: ("MNP" | "CHG")[];
+  page: number;
+  limit: number;
+  sortOrder: "default" | "price_asc" | "price_desc";
+};
 
 export type OfferSearchResult = Pick<
   OfferDto,

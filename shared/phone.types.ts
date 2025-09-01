@@ -30,3 +30,10 @@ export interface PhoneDeviceDto {
   readonly created_at: Date;
   readonly updated_at?: Date;
 }
+
+export type OfferModelDto = {
+  manufacturerId: PhoneManufacturerDto["id"];
+  modelId: PhoneModelDto["id"];
+  name: PhoneModelDto["name_ko"];
+  storages?: PhoneStorageDto[];
+};

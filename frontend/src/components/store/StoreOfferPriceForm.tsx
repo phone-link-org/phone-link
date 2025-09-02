@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
-import type { PriceInput, PriceSubmissionData } from "../../../../shared/types";
-import apiClient from "../../api/axios";
+import type {
+  CarrierDto,
+  PriceInput,
+  PriceSubmissionData,
+  StoreOfferPriceFormData,
+} from "../../../../shared/types";
+import apiClient, { api } from "../../api/axios";
 import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 
-const CARRIERS = {
-  "1": "SKT",
-  "2": "KT",
-  "3": "LG U+",
-};
-
-const BUYING_TYPES = {
-  MNP: "번호이동",
-  CHG: "기기변경",
-};
+const offerTypes = [
+  { value: "MNP", label: "번호이동" },
+  { value: "CHG", label: "기기변경" },
+];
 
 interface Device {
   manufacturerId: string;
@@ -27,11 +26,42 @@ interface TableRowData {
   capacity: string;
 }
 
-const StoreOfferPriceForm: React.FC = () => {
+const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
+  const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [tableRows, setTableRows] = useState<TableRowData[]>([]);
   const [prices, setPrices] = useState<
     Record<string, Record<string, number | "">>
   >({});
+
+  // 통신사 정보 조회
+  useEffect(() => {
+    try {
+      const fetchCarriers = async () => {
+        const response = await api.get<CarrierDto[]>(`/phone/carriers`);
+        setCarriers(response);
+      };
+      fetchCarriers();
+    } catch (error) {
+      console.error("Error fetching carriers:", error);
+      toast.error("통신사 데이터을 불러오는 중 오류가 발생했습니다.");
+    }
+  }, []);
+
+  // 시세표 조회
+  useEffect(() => {
+    try {
+      const fetchPriceTableData = async () => {
+        const response = await api.get<StoreOfferPriceFormData[]>(
+          `/store/${storeId}/offers`,
+        );
+        console.log(response);
+      };
+      fetchPriceTableData();
+    } catch (error) {
+      console.error("Error fetching price table data:", error);
+      toast.error("가격 정보를 불러오는 중 오류가 발생했습니다.");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -54,7 +84,7 @@ const StoreOfferPriceForm: React.FC = () => {
   const handlePriceChange = (
     modelName: string,
     capacity: string,
-    carrier: string,
+    carrier: number,
     buyingType: string,
     value: string,
   ) => {
@@ -114,7 +144,7 @@ const StoreOfferPriceForm: React.FC = () => {
       return;
     }
 
-    const submissionData: PriceSubmissionData = { priceInputs, addons };
+    const submissionData: PriceSubmissionData = { priceInputs };
 
     try {
       await apiClient.post("/price-input", submissionData);
@@ -151,19 +181,19 @@ const StoreOfferPriceForm: React.FC = () => {
                 >
                   용량
                 </th>
-                {Object.values(CARRIERS).map((carrierName) =>
-                  Object.values(BUYING_TYPES).map((buyingTypeName) => (
+                {carriers.map((carrier) =>
+                  offerTypes.map((type) => (
                     <th
-                      key={`${carrierName}-${buyingTypeName}`}
+                      key={`th-${carrier.id}-${type.value}`}
                       scope="col"
                       className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
                     >
                       <img
-                        src={getCarrierImageUrl(carrierName)}
-                        alt={carrierName}
+                        src={getCarrierImageUrl(carrier.name)}
+                        alt={carrier.name}
                         className="max-w-6 max-h-6 object-contain mx-auto mb-1"
                       />
-                      {buyingTypeName}
+                      {type.label}
                     </th>
                   )),
                 )}
@@ -204,46 +234,43 @@ const StoreOfferPriceForm: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                         {capacity}
                       </td>
-                      {Object.keys(CARRIERS).map((carrierKey, carrierIndex) =>
-                        Object.keys(BUYING_TYPES).map(
-                          (buyingTypeKey, buyingTypeIndex) => {
-                            const numInputColsPerRow =
-                              Object.keys(CARRIERS).length *
-                              Object.keys(BUYING_TYPES).length;
-                            const tabIndex =
-                              rowIndex * numInputColsPerRow +
-                              carrierIndex * Object.keys(BUYING_TYPES).length +
-                              buyingTypeIndex +
-                              1;
+                      {carriers.map((carrier, carrierIndex) =>
+                        offerTypes.map((type, typeIndex) => {
+                          const numInputColsPerRow =
+                            carriers.length * offerTypes.length;
+                          const tabIndex =
+                            rowIndex * numInputColsPerRow +
+                            carrierIndex * offerTypes.length +
+                            typeIndex +
+                            1;
 
-                            return (
-                              <td
-                                key={`${carrierKey}-${buyingTypeKey}`}
-                                className="px-4 py-4 whitespace-nowrap"
-                              >
-                                <input
-                                  type="number"
-                                  tabIndex={tabIndex}
-                                  className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
-                                  value={
-                                    prices[`${modelName}-${capacity}`]?.[
-                                      `${carrierKey}-${buyingTypeKey}`
-                                    ] ?? ""
-                                  }
-                                  onChange={(e) =>
-                                    handlePriceChange(
-                                      modelName,
-                                      capacity,
-                                      carrierKey,
-                                      buyingTypeKey,
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </td>
-                            );
-                          },
-                        ),
+                          return (
+                            <td
+                              key={`td-${carrier.id}-${type.value}`}
+                              className="px-4 py-4 whitespace-nowrap"
+                            >
+                              <input
+                                type="number"
+                                tabIndex={tabIndex}
+                                className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                value={
+                                  prices[`${modelName}-${capacity}`]?.[
+                                    `${carrier.id}-${type.value}`
+                                  ] ?? ""
+                                }
+                                onChange={(e) =>
+                                  handlePriceChange(
+                                    modelName,
+                                    capacity,
+                                    carrier.id,
+                                    type.value,
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </td>
+                          );
+                        }),
                       )}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button

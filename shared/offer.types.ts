@@ -3,7 +3,9 @@ import type {
   OfferModelDto,
   OfferRegionDto,
   PhoneDeviceDto,
+  PhoneManufacturerDto,
   PhoneModelDto,
+  PhoneStorageDto,
   RegionDto,
   StoreDto,
   UserDto,
@@ -41,4 +43,14 @@ export type OfferSearchResult = Pick<
   carrier_name: CarrierDto["name"];
   model_name: string;
   image_url: PhoneModelDto["image_url"];
+};
+
+export type StoreOfferPriceFormData = Pick<
+  OfferDto,
+  "id" | "offer_type" | "price"
+> & {
+  carrier_name: CarrierDto["name"];
+  model_name: PhoneModelDto["name_ko"];
+  storage: PhoneStorageDto["storage"];
+  manufacturer_id: PhoneManufacturerDto["id"];
 };

@@ -7,6 +7,8 @@ import { Store } from "../typeorm/stores.entity";
 import { PendingStoreDto } from "../../../shared/store.types";
 import { Addon } from "../typeorm/addons.entity";
 import { AddonFormData } from "shared/addon.types";
+import { Offer } from "../typeorm/offers.entity";
+import { StoreOfferPriceFormData } from "shared/offer.types";
 
 const router = Router();
 
@@ -343,6 +345,51 @@ router.get("/pending-stores", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "승인 대기 매장 목록 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/:storeId/offers", async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const offerRepo = AppDataSource.getRepository(Offer);
+
+    const offers = await offerRepo
+      .createQueryBuilder("o")
+      .select([
+        "o.id as id",
+        "c.name as carrier_name",
+        "o.offer_type as offer_type",
+        "pm.name_ko as model_name",
+        "ps.storage as storage",
+        "o.price as price",
+        "pm2.id as manufacturer_id",
+      ])
+      .innerJoin("o.carrier", "c")
+      .innerJoin("o.device", "pd")
+      .innerJoin("pd.model", "pm")
+      .innerJoin("pd.storage", "ps")
+      .innerJoin("pm.manufacturer", "pm2")
+      .where("o.store_id = :storeId", { storeId: parseInt(storeId) })
+      .orderBy("pm2.id", "ASC")
+      .addOrderBy("pm.release_date", "ASC")
+      .addOrderBy("LENGTH(pm.name_ko)", "ASC")
+      .addOrderBy("pm.name_ko", "ASC")
+      .addOrderBy("ps.storage", "ASC")
+      .addOrderBy("c.id", "ASC")
+      .addOrderBy("o.offer_type", "ASC")
+      .getRawMany<StoreOfferPriceFormData>();
+
+    res.status(200).json({
+      success: true,
+      data: offers,
+    });
+  } catch (error) {
+    console.error("Error during fetching addons", error);
+    res.status(500).json({
+      success: false,
+      message: "부가서비스 조회 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

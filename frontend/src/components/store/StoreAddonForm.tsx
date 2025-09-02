@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import Swal from "sweetalert2";
 import { useTheme } from "../../hooks/useTheme";
 
-const StoreAddonForm: React.FC = () => {
+const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [addons, setAddons] = useState<AddonFormData[]>([
     {
@@ -20,7 +20,6 @@ const StoreAddonForm: React.FC = () => {
   ]);
 
   const { theme } = useTheme();
-  const storeId = 1; // TODO: 스토어 아이디 가져오기
 
   useEffect(() => {
     try {
@@ -41,7 +40,19 @@ const StoreAddonForm: React.FC = () => {
         const response = await api.get<AddonFormData[]>(
           `/store/${storeId}/addons`,
         );
-        setAddons(response);
+        setAddons(
+          response.length > 0
+            ? response
+            : [
+                {
+                  name: "",
+                  carrierId: 1,
+                  monthlyFee: 0,
+                  durationMonths: 0,
+                  penaltyFee: 0,
+                },
+              ],
+        );
       };
       fetchAddons();
     } catch (error) {
@@ -219,8 +230,7 @@ const StoreAddonForm: React.FC = () => {
                 onChange={(e) =>
                   handleAddonChange(index, "name", e.target.value)
                 }
-                placeholder="부가서비스명"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light dark:placeholder:text-gray-600"
+                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
 
@@ -232,9 +242,8 @@ const StoreAddonForm: React.FC = () => {
                 onChange={(e) =>
                   handleAddonChange(index, "monthlyFee", e.target.value)
                 }
-                placeholder="4,900"
                 min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light dark:placeholder:text-gray-600"
+                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
 
@@ -246,9 +255,8 @@ const StoreAddonForm: React.FC = () => {
                 onChange={(e) =>
                   handleAddonChange(index, "durationMonths", e.target.value)
                 }
-                placeholder="3"
                 min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light dark:placeholder:text-gray-600"
+                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
 
@@ -260,9 +268,8 @@ const StoreAddonForm: React.FC = () => {
                 onChange={(e) =>
                   handleAddonChange(index, "penaltyFee", e.target.value)
                 }
-                placeholder="2"
                 min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light dark:placeholder:text-gray-600"
+                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
 

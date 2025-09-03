@@ -17,7 +17,7 @@ export interface OfferDto {
   carrier_id: CarrierDto["id"];
   device_id: PhoneDeviceDto["id"];
   offer_type: "MNP" | "CHG";
-  price: number;
+  price?: number;
   sort_order: number;
   updated_by?: UserDto["id"];
   readonly created_at: Date;
@@ -49,8 +49,37 @@ export type StoreOfferPriceFormData = Pick<
   OfferDto,
   "id" | "offer_type" | "price"
 > & {
+  carrier_id: CarrierDto["id"];
   carrier_name: CarrierDto["name"];
+  model_id: PhoneModelDto["id"];
   model_name: PhoneModelDto["name_ko"];
+  storage_id: PhoneStorageDto["id"];
   storage: PhoneStorageDto["storage"];
   manufacturer_id: PhoneManufacturerDto["id"];
 };
+
+//Store Page의 시세표 출력을 위한 커스텀 타입 start
+type StoreOfferType = {
+  offer_type: "MNP" | "CHG";
+  price: OfferDto["price"];
+};
+
+type StoreOfferCarrier = {
+  carrier_id: CarrierDto["id"];
+  carrier_name: CarrierDto["name"];
+  offer_types: StoreOfferType[];
+};
+
+type StoreOfferStorage = {
+  storage_id: PhoneStorageDto["id"];
+  storage: PhoneStorageDto["storage"];
+  carriers: StoreOfferCarrier[];
+};
+
+export type StoreOfferModel = {
+  manufacturer_id: PhoneManufacturerDto["id"];
+  model_id: PhoneModelDto["id"];
+  model_name: PhoneModelDto["name_ko"];
+  storages: StoreOfferStorage[];
+};
+//Store Page의 시세표 출력을 위한 커스텀 타입 end

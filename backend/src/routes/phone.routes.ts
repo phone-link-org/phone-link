@@ -35,12 +35,12 @@ router.get("/models", async (req, res) => {
     const { manufacturerId } = req.query;
     const modelRepo = AppDataSource.getRepository(PhoneModel);
     const rows = await modelRepo.find({
-      where: { manufacturer_id: Number(manufacturerId) },
-      select: ["manufacturer_id", "id", "name_ko"],
+      where: { manufacturerId: Number(manufacturerId) },
+      select: ["manufacturerId", "id", "name_ko"],
     });
 
     const resRows: OfferModelDto[] = rows.map((row) => ({
-      manufacturerId: row.manufacturer_id,
+      manufacturerId: row.manufacturerId,
       modelId: Number(row.id),
       name: row.name_ko,
     }));
@@ -66,7 +66,7 @@ router.get("/storages", async (req, res) => {
 
     const storages = await phoneStorageRepo
       .createQueryBuilder("ps")
-      .select(["ps.id as id", "ps.storage as storage"])
+      .select(["ps.id AS id", "ps.storage AS storage"])
       .where("pd.model_id = :modelId", {
         modelId: modelId === "null" ? null : Number(modelId),
       })

@@ -463,7 +463,7 @@ const OfferPage: React.FC = () => {
                       return "bg-[#5EDFDE] text-white";
                     case "SKT":
                       return "bg-[#3618CE] text-white";
-                    case "LGU+":
+                    case "LG U+":
                       return "bg-[#E2207E] text-white";
                     default:
                       return "bg-gray-400 text-white";
@@ -486,9 +486,9 @@ const OfferPage: React.FC = () => {
                     {/* 상단: 대리점명 / 지역 */}
                     <div className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
                       <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {data.store_name}
+                        {data.storeName}
                       </span>
-                      <span className="mt-1 sm:mt-0">{data.region_name}</span>
+                      <span className="mt-1 sm:mt-0">{data.regionName}</span>
                     </div>
 
                     {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
@@ -496,8 +496,8 @@ const OfferPage: React.FC = () => {
                       {/* 썸네일 */}
                       <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center flex-shrink-0 self-center sm:self-start">
                         <img
-                          src={`${SERVER}${data.image_url}`}
-                          alt={data.model_name}
+                          src={`${SERVER}${data.imageUrl}`}
+                          alt={data.modelName}
                           className="max-w-full max-h-full object-contain"
                         />
                       </div>
@@ -509,25 +509,25 @@ const OfferPage: React.FC = () => {
                           {/* 통신사 뱃지 */}
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${getCarrierBadgeColor(
-                              data.carrier_name,
+                              data.carrierName,
                             )}`}
                           >
-                            {data.carrier_name}
+                            {data.carrierName}
                           </span>
 
                           {/* 개통방식 뱃지 */}
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${getOfferTypeBadgeColor(
-                              data.offer_type,
+                              data.offerType,
                             )}`}
                           >
-                            {data.offer_type}
+                            {data.offerType}
                           </span>
                         </div>
 
                         {/* 모델명 */}
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                          {data.model_name}
+                          {data.modelName}
                         </h2>
                       </div>
 
@@ -549,7 +549,7 @@ const OfferPage: React.FC = () => {
                         <div className="text-center sm:text-right">
                           <p
                             className={`text-2xl sm:text-3xl font-bold ${
-                              data.price < 0
+                              data.price && data.price < 0
                                 ? "text-red-500 dark:text-red-400"
                                 : "text-primary-light dark:text-primary-dark"
                             }`}

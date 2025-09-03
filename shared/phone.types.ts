@@ -6,13 +6,13 @@ export interface PhoneManufacturerDto {
 
 export interface PhoneModelDto {
   readonly id: number;
-  manufacturer_id: PhoneManufacturerDto["id"];
+  manufacturerId: PhoneManufacturerDto["id"];
   name_ko: string;
   name_en: string;
-  image_url?: string;
-  release_date?: Date;
-  readonly created_at: Date;
-  readonly updated_at?: Date;
+  imageUrl?: string;
+  releaseDate?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt?: Date;
 }
 
 export interface PhoneStorageDto {
@@ -22,13 +22,13 @@ export interface PhoneStorageDto {
 
 export interface PhoneDeviceDto {
   readonly id: number;
-  model_id: PhoneModelDto["id"];
-  storage_id: PhoneStorageDto["id"];
-  retail_price: number;
-  unlocked_price?: number;
-  coupang_link?: string;
-  readonly created_at: Date;
-  readonly updated_at?: Date;
+  modelId: PhoneModelDto["id"];
+  storageId: PhoneStorageDto["id"];
+  retailPrice: number;
+  unlockedPrice?: number;
+  coupangLink?: string;
+  readonly createdAt: Date;
+  readonly updatedAt?: Date;
 }
 
 export type OfferModelDto = {

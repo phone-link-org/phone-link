@@ -14,21 +14,21 @@ export class PostFile {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "post_id", type: "bigint", nullable: false })
   @Index()
-  post_id: number;
+  postId: number;
 
-  @Column({ type: "varchar", length: 255, nullable: false })
-  file_name: string;
+  @Column({ name: "file_name", type: "varchar", length: 255, nullable: false })
+  fileName: string;
 
-  @Column({ type: "text", nullable: false })
-  file_url: string;
+  @Column({ name: "file_url", type: "text", nullable: false })
+  fileUrl: string;
 
-  @Column({ type: "int", nullable: false })
-  file_size: number;
+  @Column({ name: "file_size", type: "int", nullable: false })
+  fileSize: number;
 
-  @CreateDateColumn({ type: "datetime" })
-  uploaded_at: Date;
+  @CreateDateColumn({ name: "uploaded_at", type: "datetime" })
+  uploadedAt: Date;
 
   @ManyToOne(() => Post, (post) => post.files, {
     onDelete: "CASCADE",

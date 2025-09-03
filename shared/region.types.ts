@@ -1,12 +1,12 @@
 export interface RegionDto {
   code: string;
   name: string;
-  is_active: boolean;
+  isActive: boolean;
   latitude?: number;
   longitude?: number;
-  last_synced_at?: Date;
-  created_at: Date;
-  updated_at?: Date;
+  lastSyncedAt?: Date;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
 export type OfferRegionDto = Pick<RegionDto, "code" | "name">;

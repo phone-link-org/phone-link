@@ -30,7 +30,7 @@ router.get("/sidos", async (req, res) => {
             ELSE SUBSTRING(r.name, 1, 2) 
           END`;
 
-    qb.select(["r.code as code", `${nameCaseExpression} as name`]);
+    qb.select(["r.code AS code", `${nameCaseExpression} AS name`]);
     qb.andWhere(
       "(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 0",
     );
@@ -77,7 +77,7 @@ router.get("/sigungus", async (req: RegionRequest, res) => {
     const qb = regionRepo.createQueryBuilder("r");
     buildActiveRegionQuery(qb);
 
-    qb.select(["r.code as code", "SUBSTRING_INDEX(r.name, ' ', -1) as name"]);
+    qb.select(["r.code AS code", "SUBSTRING_INDEX(r.name, ' ', -1) AS name"]);
     qb.andWhere("r.code LIKE :sidoCode", {
       sidoCode: `${sidoCode}%`,
     }).andWhere(

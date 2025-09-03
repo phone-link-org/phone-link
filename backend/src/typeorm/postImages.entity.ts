@@ -14,15 +14,15 @@ export class PostImage {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "post_id", type: "bigint", nullable: false })
   @Index()
-  post_id: number;
+  postId: number;
 
-  @Column({ type: "text", nullable: false })
-  image_url: string;
+  @Column({ name: "image_url", type: "text", nullable: false })
+  imageUrl: string;
 
-  @CreateDateColumn({ type: "datetime" })
-  uploaded_at: Date;
+  @CreateDateColumn({ name: "uploaded_at", type: "datetime" })
+  uploadedAt: Date;
 
   @ManyToOne(() => Post, (post) => post.images, {
     onDelete: "CASCADE",

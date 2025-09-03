@@ -15,33 +15,33 @@ import { PhoneStorage } from "./phoneStorage.entity";
 import { Offer } from "./offers.entity";
 
 @Entity("phone_devices")
-@Unique("uk_model_storage", ["model_id", "storage_id"])
+@Unique("uk_model_storage", ["modelId", "storageId"])
 export class PhoneDevice {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "model_id", type: "bigint", nullable: false })
   @Index()
-  model_id: number;
+  modelId: number;
 
-  @Column({ type: "int", nullable: false })
+  @Column({ name: "storage_id", type: "int", nullable: false })
   @Index()
-  storage_id: number;
+  storageId: number;
 
-  @Column({ type: "int", nullable: false })
-  retail_price: number;
+  @Column({ name: "retail_price", type: "int", nullable: false })
+  retailPrice: number;
 
-  @Column({ type: "int" })
-  unlocked_price: number;
+  @Column({ name: "unlocked_price", type: "int" })
+  unlockedPrice: number;
 
-  @Column({ type: "text" })
-  coupang_link: string;
+  @Column({ name: "coupang_link", type: "text" })
+  coupangLink: string;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => PhoneModel, (model) => model.devices)
   @JoinColumn({ name: "model_id" })

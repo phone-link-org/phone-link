@@ -9,6 +9,9 @@ import { Addon } from "../typeorm/addons.entity";
 import { AddonFormData } from "shared/addon.types";
 import { Offer } from "../typeorm/offers.entity";
 import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
+import { PhoneDevice } from "../typeorm/phoneDevices.entity";
+import { OfferDto } from "shared/offer.types";
+import { PhoneDeviceDto } from "shared/phone.types";
 
 const router = Router();
 
@@ -84,7 +87,7 @@ router.get("/stores", async (req, res) => {
     const storeRepo = AppDataSource.getRepository(Store);
     const stores = await storeRepo.find({
       where: {
-        approval_status: "APPROVED",
+        approvalStatus: "APPROVED",
       },
     });
     res.status(200).json({
@@ -175,7 +178,7 @@ router.post(
       res.status(200).json({
         success: true,
         data: {
-          thumbnail_url: relativePath,
+          thumbnailUrl: relativePath,
         },
       });
     } catch (error) {
@@ -235,21 +238,21 @@ router.post("/register", async (req, res) => {
   try {
     const {
       name,
-      region_code,
+      regionCode,
       address,
-      address_detail,
+      addressDetail,
       contact,
-      thumbnail_url,
+      thumbnailUrl,
       link_1,
       link_2,
-      owner_name,
+      ownerName,
       description,
-      approval_status,
-      created_by,
+      approvalStatus,
+      createdBy,
     } = req.body;
 
     // 필수 필드 검증
-    if (!name || !address || !contact || !region_code) {
+    if (!name || !address || !contact || !regionCode) {
       return res.status(400).json({
         success: false,
         message: "필수 정보(매장명, 주소, 연락처)가 누락되었습니다.",
@@ -277,19 +280,19 @@ router.post("/register", async (req, res) => {
     // 새 매장 생성
     const newStore = storeRepo.create({
       name: name,
-      region_code: region_code,
+      regionCode: regionCode,
       address: address,
-      address_detail: address_detail || null,
+      addressDetail: addressDetail || null,
       contact: contact.trim(),
-      thumbnail_url: thumbnail_url || null,
+      thumbnailUrl: thumbnailUrl || null,
       link_1: link_1?.trim() || null,
       link_2: link_2?.trim() || null,
-      owner_name: owner_name?.trim() || null,
+      ownerName: ownerName?.trim() || null,
       description: description || null,
-      approval_status: approval_status || "PENDING",
-      created_by: created_by,
-      created_at: new Date(),
-      updated_at: new Date(),
+      approvalStatus: approvalStatus || "PENDING",
+      createdBy: createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     await storeRepo.save(newStore);
@@ -300,7 +303,7 @@ router.post("/register", async (req, res) => {
       data: {
         id: newStore.id,
         name: newStore.name,
-        approval_status: newStore.approval_status,
+        approvalStatus: newStore.approvalStatus,
       },
     });
   } catch (error) {
@@ -327,11 +330,11 @@ router.get("/pending-stores", async (req, res) => {
         "s.id as id",
         "s.name as name",
         "s.contact as contact",
-        "s.created_at as created_at",
-        "s.created_by as created_by",
-        "s.region_code as region_code",
-        "r.name as region_name",
-        "u.email as user_email",
+        "s.created_at as createdAt",
+        "s.created_by as createdBy",
+        "s.region_code as regionCode",
+        "r.name as regionName",
+        "u.email as userEmail",
       ])
       .where("s.approval_status = :status", { status: "PENDING" })
       .getRawMany<PendingStoreDto>();
@@ -355,19 +358,19 @@ router.get("/:storeId/offers", async (req, res) => {
     const { storeId } = req.params;
     const offerRepo = AppDataSource.getRepository(Offer);
 
-    const offers = await offerRepo
+    const response = await offerRepo
       .createQueryBuilder("o")
       .select([
         "o.id as id",
-        "c.id as carrier_id",
-        "c.name as carrier_name",
-        "o.offer_type as offer_type",
-        "pm.id as model_id",
-        "pm.name_ko as model_name",
-        "ps.id as storage_id",
+        "c.id as carrierId",
+        "c.name as carrierName",
+        "o.offer_type as offerType",
+        "pm.id as modelId",
+        "pm.name_ko as modelName",
+        "ps.id as storageId",
         "ps.storage as storage",
         "o.price as price",
-        "pm2.id as manufacturer_id",
+        "pm2.id as manufacturerId",
       ])
       .innerJoin("o.carrier", "c")
       .innerJoin("o.device", "pd")
@@ -385,26 +388,26 @@ router.get("/:storeId/offers", async (req, res) => {
       .getRawMany<StoreOfferPriceFormData>();
 
     // 🔹 계층 구조로 가공
-    const response: StoreOfferModel[] = [];
+    const formattedData: StoreOfferModel[] = [];
 
-    for (const row of offers) {
+    for (const row of response) {
       // 모델 찾기
-      let model = response.find((m) => m.model_id === row.model_id);
+      let model = formattedData.find((m) => m.modelId === row.modelId);
       if (!model) {
         model = {
-          manufacturer_id: row.manufacturer_id,
-          model_id: row.model_id,
-          model_name: row.model_name,
+          manufacturerId: row.manufacturerId,
+          modelId: row.modelId,
+          modelName: row.modelName,
           storages: [],
         };
-        response.push(model);
+        formattedData.push(model);
       }
 
       // 스토리지 찾기
-      let storage = model.storages.find((s) => s.storage_id === row.storage_id);
+      let storage = model.storages.find((s) => s.storageId === row.storageId);
       if (!storage) {
         storage = {
-          storage_id: row.storage_id,
+          storageId: row.storageId,
           storage: row.storage,
           carriers: [],
         };
@@ -412,36 +415,164 @@ router.get("/:storeId/offers", async (req, res) => {
       }
 
       // 통신사 찾기
-      let carrier = storage.carriers.find(
-        (c) => c.carrier_id === row.carrier_id,
-      );
+      let carrier = storage.carriers.find((c) => c.carrierId === row.carrierId);
       if (!carrier) {
         carrier = {
-          carrier_id: row.carrier_id,
-          carrier_name: row.carrier_name,
-          offer_types: [],
+          carrierId: row.carrierId,
+          carrierName: row.carrierName,
+          offerTypes: [],
         };
         storage.carriers.push(carrier);
       }
 
       // 조건 추가
-      carrier.offer_types.push({
-        offer_type: row.offer_type,
+      carrier.offerTypes.push({
+        offerType: row.offerType,
         price: row.price,
       });
     }
 
     res.status(200).json({
       success: true,
-      data: response,
+      data: formattedData,
     });
   } catch (error) {
-    console.error("Error during fetching addons", error);
+    console.error("Error during fetching offers", error);
     res.status(500).json({
       success: false,
-      message: "부가서비스 조회 중 오류가 발생했습니다.",
+      message: "가격 정보 조회 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
+  }
+});
+
+router.post("/:storeId/offers", async (req, res) => {
+  const { storeId } = req.params;
+  const { offers } = req.body;
+
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const offerRepo = queryRunner.manager.getRepository(Offer);
+    const deviceRepo = queryRunner.manager.getRepository(PhoneDevice);
+
+    // N+1 문제 해결을 위해 필요한 모든 device 정보를 미리 조회
+    const deviceIdentifiers = offers.flatMap((model: StoreOfferModel) =>
+      model.storages.map((storage) => ({
+        modelId: model.modelId,
+        storageId: storage.storageId,
+      })),
+    );
+    const devices = await deviceRepo.find({ where: deviceIdentifiers });
+    // 빠른 조회를 위해 Map으로 변환: '모델ID-스토리지ID'를 키로 사용
+    const deviceMap = new Map(
+      devices.map(
+        (d) => [`${d.modelId}-${d.storageId}`, d] as [string, PhoneDeviceDto],
+      ),
+    );
+
+    // 클라이언트에서 받은 데이터를 DB에 저장할 최종 형태로 가공
+    const newOfferMap = new Map<string, OfferDto>();
+    for (const model of offers) {
+      for (const storage of model.storages) {
+        for (const carrier of storage.carriers) {
+          for (const offerType of carrier.offerTypes) {
+            const device = deviceMap.get(
+              `${model.modelId}-${storage.storageId}`,
+            );
+            if (device) {
+              // 유니크한 키를 생성하여 Offer를 식별
+              const offerKey = `${carrier.carrierId}-${device.id}-${offerType.offerType}`;
+              const offerData: OfferDto = {
+                storeId: parseInt(storeId),
+                carrierId: carrier.carrierId,
+                deviceId: device.id,
+                offerType: offerType.offerType,
+                price: offerType.price,
+                updatedBy: 9999, //TODO: 로그인 정보 가져와서 ID값으로 변경 필요!
+              };
+              newOfferMap.set(offerKey, offerData);
+            }
+          }
+        }
+      }
+    }
+
+    // DB에 저장된 기존 Offer 데이터를 조회
+    const existingOffers = await offerRepo.findBy({
+      storeId: parseInt(storeId),
+    });
+    const existingOfferMap = new Map(
+      existingOffers.map((o) => {
+        const key = `${o.carrierId}-${o.deviceId}-${o.offerType}`;
+        return [key, o];
+      }),
+    );
+
+    // 추가(Insert), 수정(Update), 삭제(Delete)할 대상을 분류
+    const toInsert: OfferDto[] = [];
+    const toUpdate: Offer[] = [];
+    const toDelete: number[] = []; // id 배열
+
+    // 새로운 데이터를 기준으로 Insert/Update 대상 찾기
+    for (const [key, newOffer] of newOfferMap.entries()) {
+      const existingOffer = existingOfferMap.get(key);
+
+      if (existingOffer) {
+        // 기존에 데이터가 있으면
+        // 가격이 다를 경우에만 업데이트 목록에 추가
+        if (existingOffer.price !== newOffer.price) {
+          toUpdate.push({ ...existingOffer, price: newOffer.price ?? null });
+        }
+        // 비교가 끝난 항목은 기존 맵에서 제거
+        existingOfferMap.delete(key);
+      } else {
+        // 기존에 데이터가 없으면
+        toInsert.push(newOffer); // 추가 목록에 추가
+      }
+    }
+
+    // 이제 existingOfferMap에 남아있는 데이터는 삭제 대상입니다.
+    for (const offerToDelete of existingOfferMap.values()) {
+      toDelete.push(offerToDelete.id);
+    }
+
+    // 5. 분류된 데이터를 바탕으로 DB 작업을 실행합니다.
+    if (toDelete.length > 0) {
+      await offerRepo.delete(toDelete);
+    }
+    if (toUpdate.length > 0) {
+      await offerRepo.save(toUpdate);
+    }
+    if (toInsert.length > 0) {
+      await offerRepo.insert(toInsert);
+    }
+
+    // 6. 모든 작업이 성공했으므로 트랜잭션을 커밋합니다.
+    await queryRunner.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        inserted: toInsert.length,
+        updated: toUpdate.length,
+        deleted: toDelete.length,
+      },
+    });
+  } catch (error) {
+    // 에러 발생 시 모든 변경사항을 롤백합니다.
+    await queryRunner.rollbackTransaction();
+    console.error("Error during saving offers", error);
+    res.status(500).json({
+      success: false,
+      message: "가격 정보 저장 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  } finally {
+    // 사용한 QueryRunner를 반드시 해제해줘야 합니다.
+    await queryRunner.release();
   }
 });
 
@@ -450,15 +581,15 @@ router.get("/:storeId/addons", async (req, res) => {
     const { storeId } = req.params;
     const addonRepo = AppDataSource.getRepository(Addon);
     const result = await addonRepo.find({
-      where: { store_id: parseInt(storeId) },
+      where: { storeId: parseInt(storeId) },
     });
 
     const parsedResult: AddonFormData[] = result.map((addon) => ({
       ...addon,
-      carrierId: addon.carrier_id,
-      monthlyFee: addon.monthly_fee,
-      durationMonths: addon.duration_months,
-      penaltyFee: addon.penalty_fee,
+      carrierId: addon.carrierId,
+      monthlyFee: addon.monthlyFee,
+      durationMonths: addon.durationMonths,
+      penaltyFee: addon.penaltyFee,
     }));
 
     res.status(200).json({
@@ -487,7 +618,7 @@ router.post("/:storeId/addon-save", async (req, res) => {
 
         // 기존 데이터 삭제
         await transactionalEntityManager.delete(Addon, {
-          store_id: storeIdNumber,
+          storeId: storeIdNumber,
         });
 
         if (addons.length === 0) {
@@ -496,12 +627,12 @@ router.post("/:storeId/addon-save", async (req, res) => {
 
         // 새로운 데이터를 저장할 객체 배열 생성
         const newAddons = addons.map((addon: AddonFormData) => ({
-          store_id: storeIdNumber,
-          carrier_id: addon.carrierId,
+          storeId: storeIdNumber,
+          carrierId: addon.carrierId,
           name: addon.name,
-          monthly_fee: addon.monthlyFee,
-          duration_months: addon.durationMonths,
-          penalty_fee: addon.penaltyFee,
+          monthlyFee: addon.monthlyFee,
+          durationMonths: addon.durationMonths,
+          penaltyFee: addon.penaltyFee,
         }));
 
         // 새로운 데이터 저장

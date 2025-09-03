@@ -18,8 +18,8 @@ export class Carrier {
   @Column({ type: "varchar", length: 50, nullable: false })
   name: string;
 
-  @Column({ type: "varchar", length: 2048 })
-  image_url: string;
+  @Column({ name: "image_url", type: "varchar", length: 2048 })
+  imageUrl: string;
 
   @OneToMany(() => Addon, (addon) => addon.carrier)
   addons: Addon[];

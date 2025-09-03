@@ -8,8 +8,8 @@ export interface AddonDto {
   monthlyFee: number;
   durationMonths: number;
   penaltyFee: number;
-  readonly created_at: Date;
-  readonly updated_at?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt?: Date;
 }
 
 export type AddonFormData = Pick<

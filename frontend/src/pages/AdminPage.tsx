@@ -3,16 +3,7 @@ import { api } from "../api/axios";
 import { useTheme } from "../hooks/useTheme";
 import { TbReload } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
-
-// 매장 승인 대기 데이터 타입
-interface PendingStore {
-  id: number;
-  name: string;
-  region_code: string;
-  contact: string;
-  created_by: number;
-  created_at: string;
-}
+import type { PendingStoreDto } from "../../../shared/store.types";
 
 const AdminPage: React.FC = () => {
   const { theme } = useTheme();
@@ -26,34 +17,42 @@ const AdminPage: React.FC = () => {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   // 매장 승인 대기 관련 상태
-  const [pendingStores, setPendingStores] = useState<PendingStore[]>([
+  const [pendingStores, setPendingStores] = useState<PendingStoreDto[]>([
     {
       id: 1,
       name: "스마트폰 전문점 A",
-      region_code: "11000",
+      regionCode: "11000",
+      regionName: "서울시",
       contact: "02-1234-5678",
-      created_by: 101,
-      created_at: "2024-01-15T14:30:00Z",
+      userEmail: "test01@test.com",
+      createdBy: 101,
+      createdAt: new Date("2024-01-15T09:15:00Z"),
     },
     {
       id: 2,
       name: "휴대폰 갤러리 B",
-      region_code: "26000",
+      regionCode: "26000",
+      regionName: "부산시",
+      userEmail: "test02@test.com",
       contact: "051-9876-5432",
-      created_by: 102,
-      created_at: "2024-01-16T09:15:00Z",
+      createdBy: 102,
+      createdAt: new Date("2024-01-16T09:15:00Z"),
     },
     {
       id: 3,
       name: "모바일 스토어 C",
-      region_code: "41000",
+      regionCode: "41000",
+      regionName: "울산시",
+      userEmail: "test03@test.com",
       contact: "031-5555-7777",
-      created_by: 103,
-      created_at: "2024-01-17T16:45:00Z",
+      createdBy: 103,
+      createdAt: new Date("2024-01-17T16:45:00Z"),
     },
   ]);
   const [loading, setLoading] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<PendingStore | null>(null);
+  const [selectedStore, setSelectedStore] = useState<PendingStoreDto | null>(
+    null,
+  );
   const [showModal, setShowModal] = useState(false);
 
   const syncRegionDataToDb = async () => {
@@ -188,16 +187,16 @@ const AdminPage: React.FC = () => {
                               {store.name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {store.region_code}
+                              {store.regionCode}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {store.contact}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {store.created_by}
+                              {store.createdBy}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {new Date(store.created_at).toLocaleDateString(
+                              {new Date(store.createdAt).toLocaleDateString(
                                 "ko-KR",
                                 {
                                   year: "numeric",
@@ -293,7 +292,7 @@ const AdminPage: React.FC = () => {
                   지역코드
                 </label>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.region_code}
+                  {selectedStore.regionCode}
                 </p>
               </div>
 
@@ -311,7 +310,7 @@ const AdminPage: React.FC = () => {
                   등록자 ID
                 </label>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.created_by}
+                  {selectedStore.createdBy}
                 </p>
               </div>
 
@@ -320,7 +319,7 @@ const AdminPage: React.FC = () => {
                   등록일
                 </label>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {new Date(selectedStore.created_at).toLocaleDateString(
+                  {new Date(selectedStore.createdAt).toLocaleDateString(
                     "ko-KR",
                     {
                       year: "numeric",

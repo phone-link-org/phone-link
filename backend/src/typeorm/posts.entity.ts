@@ -20,9 +20,9 @@ export class Post {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "user_id", type: "bigint", nullable: false })
   @Index()
-  user_id: number;
+  userId: number;
 
   @Column({ type: "varchar", length: 255, nullable: false })
   title: string;
@@ -30,17 +30,22 @@ export class Post {
   @Column({ type: "text", nullable: false })
   content: string;
 
-  @Column({ type: "int", nullable: false, default: 0 })
-  view_count: number;
+  @Column({ name: "view_count", type: "int", nullable: false, default: 0 })
+  viewCount: number;
 
-  @Column({ type: "boolean", nullable: false, default: false })
-  is_deleted: boolean;
+  @Column({
+    name: "is_deleted",
+    type: "boolean",
+    nullable: false,
+    default: false,
+  })
+  isDeleted: boolean;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => User, (user) => user.posts)
   @JoinColumn({ name: "user_id" })

@@ -16,8 +16,13 @@ export class Region {
   @Column({ type: "varchar", length: 100, nullable: false })
   name: string;
 
-  @Column({ type: "boolean", nullable: false, default: true })
-  is_active: boolean;
+  @Column({
+    name: "is_active",
+    type: "boolean",
+    nullable: false,
+    default: true,
+  })
+  isActive: boolean;
 
   @Column({ type: "decimal", precision: 10, scale: 7 })
   latitude: number;
@@ -25,14 +30,14 @@ export class Region {
   @Column({ type: "decimal", precision: 10, scale: 7 })
   longitude: number;
 
-  @Column({ type: "datetime" })
-  last_synced_at: Date;
+  @Column({ name: "last_synced_at", type: "datetime" })
+  lastSyncedAt: Date;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @OneToMany(() => Store, (store) => store.region)
   stores: Store[];

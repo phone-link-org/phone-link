@@ -17,36 +17,37 @@ export class Offer {
   @PrimaryGeneratedColumn({ type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
-  store_id: number;
+  @Column({ name: "store_id", type: "bigint", nullable: false })
+  storeId: number;
 
-  @Column({ type: "int", nullable: false })
-  carrier_id: number;
+  @Column({ name: "carrier_id", type: "int", nullable: false })
+  carrierId: number;
 
-  @Column({ type: "bigint", nullable: false })
-  device_id: number;
+  @Column({ name: "device_id", type: "bigint", nullable: false })
+  deviceId: number;
 
   @Column({
+    name: "offer_type",
     type: "enum",
     enum: ["MNP", "CHG"],
     nullable: false,
   })
-  offer_type: "MNP" | "CHG";
+  offerType: "MNP" | "CHG";
 
-  @Column({ type: "int", nullable: false })
-  price: number;
+  @Column({ type: "int" })
+  price: number | null;
 
-  @Column({ type: "int", nullable: false, default: 0 })
-  sort_order: number;
+  @Column({ name: "sort_order", type: "int", nullable: false, default: 0 })
+  sortOrder: number;
 
-  @Column({ type: "bigint" })
-  updated_by: number;
+  @Column({ name: "updated_by", type: "bigint" })
+  updatedBy: number;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => Store, (store) => store.offers)
   @JoinColumn({ name: "store_id" })

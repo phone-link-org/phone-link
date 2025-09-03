@@ -23,11 +23,11 @@ const SignupPage: React.FC = () => {
     password: "",
     name: "",
     birthday: "",
-    phone_number: "",
+    phoneNumber: "",
     gender: "M",
     role: "USER",
     address: "",
-    address_detail: "",
+    addressDetail: "",
   });
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [errors, setErrors] = useState<
@@ -46,8 +46,8 @@ const SignupPage: React.FC = () => {
     if (location.state?.ssoData) {
       const { ssoData, signupToken } = location.state;
       const birthdate =
-        ssoData.birth_year && ssoData.birthday
-          ? `${ssoData.birth_year}-${ssoData.birthday}`
+        ssoData.birthYear && ssoData.birthday
+          ? `${ssoData.birthYear}-${ssoData.birthday}`
           : "";
 
       setFormData((prev) => ({
@@ -55,7 +55,7 @@ const SignupPage: React.FC = () => {
         email: ssoData.email || "",
         name: ssoData.name || "",
         gender: ssoData.gender || "M",
-        phone_number: ssoData.phone_number?.replace("+82 ", "0") || "",
+        phoneNumber: ssoData.phoneNumber?.replace("+82 ", "0") || "",
         birthday: birthdate,
       }));
       setIsSsoSignup(true);
@@ -95,7 +95,7 @@ const SignupPage: React.FC = () => {
         ...prev,
         role: isChecked ? "SELLER" : "USER",
       }));
-    } else if (name === "phone_number") {
+    } else if (name === "phoneNumber") {
       const formattedPhoneNumber = value
         .replace(/[^0-9]/g, "") // 숫자 이외의 문자 제거
         .replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/, "$1-$2-$3") // 하이픈 추가
@@ -107,7 +107,7 @@ const SignupPage: React.FC = () => {
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: name === "birth_year" ? Number(value) || undefined : value,
+        [name]: name === "birthYear" ? Number(value) || undefined : value,
       }));
     }
   };
@@ -129,7 +129,7 @@ const SignupPage: React.FC = () => {
 
     setFormData((prev) => ({
       ...prev,
-      postal_code: data.zonecode,
+      postalCode: data.zonecode,
       sido: data.sido,
       sigungu: data.sigungu,
       address: fullAddress,
@@ -210,11 +210,11 @@ const SignupPage: React.FC = () => {
     //   formIsValid = false;
     // }
     // 전화번호는 필수 사항, 입력 시 형식 검사
-    if (!formData.phone_number) {
-      newErrors.phone_number = "전화번호를 입력해주세요.";
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = "전화번호를 입력해주세요.";
       formIsValid = false;
-    } else if (formData.phone_number.length !== 13) {
-      newErrors.phone_number = "전화번호 11자리를 올바르게 입력해주세요.";
+    } else if (formData.phoneNumber.length !== 13) {
+      newErrors.phoneNumber = "전화번호 11자리를 올바르게 입력해주세요.";
       formIsValid = false;
     }
 
@@ -472,16 +472,16 @@ const SignupPage: React.FC = () => {
                 {/* Phone Number */}
                 <div>
                   <label
-                    htmlFor="phone_number"
+                    htmlFor="phoneNumber"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     전화번호 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
-                    id="phone_number"
-                    name="phone_number"
-                    value={formData.phone_number || ""}
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber || ""}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     maxLength={13}
@@ -490,7 +490,7 @@ const SignupPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
                   />
                   <p className="h-4 text-xs text-red-500">
-                    {errors.phone_number || " "}
+                    {errors.phoneNumber || " "}
                   </p>
                 </div>
               </div>
@@ -526,23 +526,23 @@ const SignupPage: React.FC = () => {
               {/* Address Detail */}
               <div>
                 <label
-                  htmlFor="address_detail"
+                  htmlFor="addressDetail"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
                   상세 주소
                 </label>
                 <input
                   type="text"
-                  id="address_detail"
-                  name="address_detail"
-                  value={formData.address_detail}
+                  id="addressDetail"
+                  name="addressDetail"
+                  value={formData.addressDetail}
                   onChange={handleChange}
                   onFocus={handleFocus}
                   ref={addressDetailRef}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                 />
                 <p className="h-4 text-xs text-red-500">
-                  {errors.address_detail || " "}
+                  {errors.addressDetail || " "}
                 </p>
               </div>
 

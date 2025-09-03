@@ -12,18 +12,18 @@ import { User } from "./users.entity";
 import { Store } from "./stores.entity";
 
 @Entity("sellers")
-@Unique("uk_user_store", ["user_id", "store_id"])
+@Unique("uk_user_store", ["userId", "storeId"])
 export class Seller {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "user_id", type: "bigint", nullable: false })
   @Index()
-  user_id: number;
+  userId: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "store_id", type: "bigint", nullable: false })
   @Index()
-  store_id: number;
+  storeId: number;
 
   @Column({
     type: "enum",
@@ -35,8 +35,8 @@ export class Seller {
   })
   status: "ACTIVE" | "INACTIVE";
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.sellers)
   @JoinColumn({ name: "user_id" })

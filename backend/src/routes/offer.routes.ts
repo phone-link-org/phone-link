@@ -136,13 +136,13 @@ router.post("/search", async (req, res) => {
       .createQueryBuilder("o")
       .select([
         "o.id AS id",
-        "s.name AS store_name",
-        "r.name as region_name",
-        "c.name AS carrier_name",
-        "CONCAT_WS(' ', pm.name_ko, ps.storage) as model_name",
-        "CASE WHEN o.offer_type = 'MNP' THEN '번호이동' WHEN o.offer_type = 'CHG' THEN '기기변경' ELSE o.offer_type END AS offer_type",
+        "s.name AS storeName",
+        "r.name AS regionName",
+        "c.name AS carrierName",
+        "CONCAT_WS(' ', pm.name_ko, ps.storage) AS modelName",
+        "CASE WHEN o.offer_type = 'MNP' THEN '번호이동' WHEN o.offer_type = 'CHG' THEN '기기변경' ELSE o.offer_type END AS offerType",
         "o.price AS price",
-        "pm.image_url AS image_url",
+        "pm.image_url AS imageUrl",
       ])
       .innerJoin("o.store", "s")
       .innerJoin("s.region", "r")

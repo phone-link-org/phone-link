@@ -16,25 +16,30 @@ export class Comment {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "post_id", type: "bigint", nullable: false })
   @Index()
-  post_id: number;
+  postId: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "user_id", type: "bigint", nullable: false })
   @Index()
-  user_id: number;
+  userId: number;
 
   @Column({ type: "text", nullable: false })
   content: string;
 
-  @Column({ type: "boolean", nullable: false, default: false })
-  is_deleted: boolean;
+  @Column({
+    name: "is_deleted",
+    type: "boolean",
+    nullable: false,
+    default: false,
+  })
+  isDeleted: boolean;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => Post, (post) => post.comments, {
     onDelete: "CASCADE",

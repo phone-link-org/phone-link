@@ -81,8 +81,8 @@ router.post("/regions-sync-db", async (req, res) => {
         const regionsToSave: RegionDto[] = records.map((record: any) => ({
           code: record["법정동코드"],
           name: record["법정동명"],
-          is_active: record["폐지여부"] === "존재",
-          last_synced_at: now,
+          isActive: record["폐지여부"] === "존재",
+          lastSyncedAt: now,
         }));
 
         await regionRepository.save(regionsToSave);

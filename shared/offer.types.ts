@@ -12,16 +12,16 @@ import type {
 } from "./types";
 
 export interface OfferDto {
-  readonly id: number;
-  store_id: StoreDto["id"];
-  carrier_id: CarrierDto["id"];
-  device_id: PhoneDeviceDto["id"];
-  offer_type: "MNP" | "CHG";
-  price?: number;
-  sort_order: number;
-  updated_by?: UserDto["id"];
-  readonly created_at: Date;
-  readonly updated_at?: Date;
+  readonly id?: number;
+  storeId: StoreDto["id"];
+  carrierId: CarrierDto["id"];
+  deviceId: PhoneDeviceDto["id"];
+  offerType: "MNP" | "CHG";
+  price?: number | null;
+  sortOrder?: number;
+  updatedBy?: UserDto["id"];
+  readonly createdAt?: Date;
+  readonly updatedAt?: Date;
 }
 
 export type OfferSearchRequest = {
@@ -34,52 +34,49 @@ export type OfferSearchRequest = {
   sortOrder: "default" | "price_asc" | "price_desc";
 };
 
-export type OfferSearchResult = Pick<
-  OfferDto,
-  "id" | "offer_type" | "price"
-> & {
-  store_name: StoreDto["name"];
-  region_name: RegionDto["name"];
-  carrier_name: CarrierDto["name"];
-  model_name: string;
-  image_url: PhoneModelDto["image_url"];
+export type OfferSearchResult = Pick<OfferDto, "id" | "offerType" | "price"> & {
+  storeName: StoreDto["name"];
+  regionName: RegionDto["name"];
+  carrierName: CarrierDto["name"];
+  modelName: string;
+  imageUrl: PhoneModelDto["imageUrl"];
 };
 
 export type StoreOfferPriceFormData = Pick<
   OfferDto,
-  "id" | "offer_type" | "price"
+  "id" | "offerType" | "price"
 > & {
-  carrier_id: CarrierDto["id"];
-  carrier_name: CarrierDto["name"];
-  model_id: PhoneModelDto["id"];
-  model_name: PhoneModelDto["name_ko"];
-  storage_id: PhoneStorageDto["id"];
+  carrierId: CarrierDto["id"];
+  carrierName: CarrierDto["name"];
+  modelId: PhoneModelDto["id"];
+  modelName: PhoneModelDto["name_ko"];
+  storageId: PhoneStorageDto["id"];
   storage: PhoneStorageDto["storage"];
-  manufacturer_id: PhoneManufacturerDto["id"];
+  manufacturerId: PhoneManufacturerDto["id"];
 };
 
 //Store Page의 시세표 출력을 위한 커스텀 타입 start
 type StoreOfferType = {
-  offer_type: "MNP" | "CHG";
+  offerType: "MNP" | "CHG";
   price: OfferDto["price"];
 };
 
 type StoreOfferCarrier = {
-  carrier_id: CarrierDto["id"];
-  carrier_name: CarrierDto["name"];
-  offer_types: StoreOfferType[];
+  carrierId: CarrierDto["id"];
+  carrierName: CarrierDto["name"];
+  offerTypes: StoreOfferType[];
 };
 
 type StoreOfferStorage = {
-  storage_id: PhoneStorageDto["id"];
+  storageId: PhoneStorageDto["id"];
   storage: PhoneStorageDto["storage"];
   carriers: StoreOfferCarrier[];
 };
 
 export type StoreOfferModel = {
-  manufacturer_id: PhoneManufacturerDto["id"];
-  model_id: PhoneModelDto["id"];
-  model_name: PhoneModelDto["name_ko"];
+  manufacturerId: PhoneManufacturerDto["id"];
+  modelId: PhoneModelDto["id"];
+  modelName: PhoneModelDto["name_ko"];
   storages: StoreOfferStorage[];
 };
 //Store Page의 시세표 출력을 위한 커스텀 타입 end

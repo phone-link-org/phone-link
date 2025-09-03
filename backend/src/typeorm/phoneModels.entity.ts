@@ -14,15 +14,15 @@ import { PhoneManufacturer } from "./phoneManufacturers.entity";
 import { PhoneDevice } from "./phoneDevices.entity";
 
 @Entity("phone_models")
-@Unique("uk_name_ko_manufacturer", ["name_ko", "manufacturer_id"])
-@Unique("uk_name_en_manufacturer", ["name_en", "manufacturer_id"])
+@Unique("uk_name_ko_manufacturer", ["name_ko", "manufacturerId"])
+@Unique("uk_name_en_manufacturer", ["name_en", "manufacturerId"])
 export class PhoneModel {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "int", nullable: false })
+  @Column({ name: "manufacturer_id", type: "int", nullable: false })
   @Index()
-  manufacturer_id: number;
+  manufacturerId: number;
 
   @Column({ type: "varchar", length: 100, nullable: false })
   name_ko: string;
@@ -32,19 +32,20 @@ export class PhoneModel {
   name_en: string;
 
   @Column({
+    name: "image_url",
     type: "varchar",
     length: 2048,
   })
-  image_url: string;
+  imageUrl: string;
 
-  @Column({ type: "date" })
-  release_date: Date;
+  @Column({ name: "release_date", type: "date" })
+  releaseDate: Date;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => PhoneManufacturer, (manufacturer) => manufacturer.models)
   @JoinColumn({ name: "manufacturer_id" })

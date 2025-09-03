@@ -26,12 +26,12 @@ router.post("/", async (req, res) => {
             continue;
 
           const newAddon = new Addon();
-          newAddon.store_id = priceInputs[i].storeId;
-          newAddon.carrier_id = parseInt(addons[i].carrier);
-          newAddon.addon_name = addons[i].name;
-          newAddon.monthly_fee = addons[i].monthlyFee;
-          newAddon.req_duration = addons[i].requiredDuration;
-          newAddon.penalty_fee = addons[i].penaltyFee;
+          newAddon.storeId = priceInputs[i].storeId;
+          newAddon.carrierId = parseInt(addons[i].carrier);
+          newAddon.name = addons[i].name;
+          newAddon.monthlyFee = addons[i].monthlyFee;
+          newAddon.durationMonths = addons[i].requiredDuration;
+          newAddon.penaltyFee = addons[i].penaltyFee;
 
           const savedAddon = await transactionalEntityManager.save(newAddon);
           savedAddons.push(savedAddon);
@@ -61,10 +61,10 @@ router.post("/", async (req, res) => {
         }
 
         const newOffer = new Offer();
-        newOffer.store_id = priceInput.storeId;
-        newOffer.carrier_id = parseInt(priceInput.carrier);
-        newOffer.device_id = phoneDevice.id;
-        newOffer.offer_type = priceInput.buyingType;
+        newOffer.storeId = priceInput.storeId;
+        newOffer.carrierId = parseInt(priceInput.carrier);
+        newOffer.deviceId = phoneDevice.id;
+        newOffer.offerType = priceInput.buyingType;
         newOffer.price = priceInput.typePrice;
         //newOffer.addons = savedAddons;
 
@@ -82,7 +82,7 @@ router.post("/", async (req, res) => {
 router.get("/list-models", async (_, res) => {
   try {
     const phoneModels = await AppDataSource.getRepository(PhoneModel).find({
-      select: ["name_ko", "manufacturer_id"],
+      select: ["name_ko", "manufacturerId"],
     });
     res.status(200).json(phoneModels);
   } catch (e) {
@@ -109,7 +109,7 @@ router.get("/devices", async (_, res) => {
       .createQueryBuilder("device")
       .select([
         'model.name_ko AS "modelName"',
-        "storage.storage AS capacity",
+        "storage.storage AS storage",
         'manufacturer.id AS "manufacturerId"',
       ])
       .innerJoin("device.model", "model")

@@ -4,23 +4,23 @@ export interface StoreDto {
   readonly id: number;
   name: string;
   description?: string;
-  region_code: RegionDto["code"];
+  regionCode: RegionDto["code"];
   address: string;
-  address_detail: string;
+  addressDetail: string;
   latitude?: number;
   longitude?: number;
   contact: string;
-  thumbnail_url?: string;
+  thumbnailUrl?: string;
   link_1?: string;
   link_2?: string;
-  owner_name?: string;
-  is_featured: boolean;
+  ownerName?: string;
+  isFeatured: boolean;
   status: "OPEN" | "CLOSED";
-  approval_status: "PENDING" | "APPROVED" | "REJECTED";
-  created_by?: UserDto["id"];
-  updated_by?: UserDto["id"];
-  readonly created_at: Date;
-  readonly updated_at?: Date;
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
+  createdBy?: UserDto["id"];
+  updatedBy?: UserDto["id"];
+  readonly createdAt: Date;
+  readonly updatedAt?: Date;
 }
 
 // 매장 등록 시 사용할 필드만 선택
@@ -28,23 +28,23 @@ export type StoreRegisterFormData = Pick<
   StoreDto,
   | "name"
   | "description"
-  | "region_code"
+  | "regionCode"
   | "address"
-  | "address_detail"
+  | "addressDetail"
   | "contact"
-  | "thumbnail_url"
+  | "thumbnailUrl"
   | "link_1"
   | "link_2"
-  | "owner_name"
-  | "approval_status"
-  | "created_by"
+  | "ownerName"
+  | "approvalStatus"
+  | "createdBy"
 >;
 
 // 승인 대기 매장 목록 조회용 DTO
 export type PendingStoreDto = Pick<
   StoreDto,
-  "id" | "name" | "region_code" | "contact" | "created_by" | "created_at"
+  "id" | "name" | "regionCode" | "contact" | "createdBy" | "createdAt"
 > & {
-  region_name: RegionDto["name"];
-  user_email: UserDto["email"];
+  regionName: RegionDto["name"];
+  userEmail: UserDto["email"];
 };

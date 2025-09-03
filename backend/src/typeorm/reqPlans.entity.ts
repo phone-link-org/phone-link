@@ -14,16 +14,16 @@ export class ReqPlan {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "bigint", nullable: false })
+  @Column({ name: "store_id", type: "bigint", nullable: false })
   @Index()
-  store_id: number;
+  storeId: number;
 
-  @Column({ type: "int", nullable: false })
+  @Column({ name: "carrier_id", type: "int", nullable: false })
   @Index()
-  carrier_id: number;
+  carrierId: number;
 
-  @Column({ type: "int", nullable: false })
-  monthly_fee: number;
+  @Column({ name: "monthly_fee", type: "int", nullable: false })
+  monthlyFee: number;
 
   @ManyToOne(() => Store, (store) => store.reqPlans)
   @JoinColumn({ name: "store_id" })

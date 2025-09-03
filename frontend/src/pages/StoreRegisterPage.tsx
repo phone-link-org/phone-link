@@ -35,17 +35,17 @@ const StoreRegisterPage: React.FC = () => {
 
   const [formData, setFormData] = useState<StoreRegisterFormData>({
     name: "",
-    region_code: "",
+    regionCode: "",
     address: "",
-    address_detail: "",
+    addressDetail: "",
     contact: "",
-    owner_name: "",
-    thumbnail_url: "",
+    ownerName: "",
+    thumbnailUrl: "",
     link_1: "",
     link_2: "",
     description: "",
-    approval_status: "PENDING",
-    created_by: 0,
+    approvalStatus: "PENDING",
+    createdBy: 0,
   });
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isNameChecked, setIsNameChecked] = useState<boolean>(false);
@@ -103,7 +103,7 @@ const StoreRegisterPage: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       address: fullAddress,
-      region_code: `${data.sigunguCode}00000`,
+      regionCode: `${data.sigunguCode}00000`,
     }));
 
     // 상세 주소 필드로 포커스 이동
@@ -158,7 +158,7 @@ const StoreRegisterPage: React.FC = () => {
       const formData = new FormData();
       formData.append("thumbnail", file);
 
-      const response = await api.post<{ thumbnail_url: string }>(
+      const response = await api.post<{ thumbnailUrl: string }>(
         "/store/upload-image",
         formData,
         {
@@ -168,7 +168,7 @@ const StoreRegisterPage: React.FC = () => {
         },
       );
 
-      return response.thumbnail_url;
+      return response.thumbnailUrl;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         toast.error(
@@ -279,7 +279,7 @@ const StoreRegisterPage: React.FC = () => {
       // 현재 로그인한 사용자의 ID를 formData에 추가
       const requestData = {
         ...formData,
-        created_by: currentUser ? parseInt(currentUser.userId) : 0,
+        createdBy: currentUser ? parseInt(currentUser.userId) : 0,
       };
       await api.post(`/store/register`, requestData);
 
@@ -394,7 +394,7 @@ const StoreRegisterPage: React.FC = () => {
                 {/* 상세주소 */}
                 <div>
                   <label
-                    htmlFor="address_detail"
+                    htmlFor="addressDetail"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     <HiMapPin className="inline h-4 w-4 mr-1" />
@@ -402,9 +402,9 @@ const StoreRegisterPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    id="address_detail"
-                    name="address_detail"
-                    value={formData.address_detail}
+                    id="addressDetail"
+                    name="addressDetail"
+                    value={formData.addressDetail}
                     onChange={handleChange}
                     ref={addressDetailRef}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
@@ -442,7 +442,7 @@ const StoreRegisterPage: React.FC = () => {
                 {/* 대표자명 */}
                 <div>
                   <label
-                    htmlFor="owner_name"
+                    htmlFor="ownerName"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     <HiUser className="inline h-4 w-4 mr-1" />
@@ -450,9 +450,9 @@ const StoreRegisterPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    id="owner_name"
-                    name="owner_name"
-                    value={formData.owner_name}
+                    id="ownerName"
+                    name="ownerName"
+                    value={formData.ownerName}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                     placeholder="대표자명을 입력하세요"
@@ -468,7 +468,7 @@ const StoreRegisterPage: React.FC = () => {
                 {/* 썸네일 이미지 업로드 */}
                 <div>
                   <label
-                    htmlFor="thumbnail_url"
+                    htmlFor="thumbnailUrl"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     <HiPhoto className="inline h-4 w-4 mr-1" />
@@ -504,7 +504,7 @@ const StoreRegisterPage: React.FC = () => {
                               // formData 업데이트 (백엔드 경로)
                               setFormData((prev) => ({
                                 ...prev,
-                                thumbnail_url: thumbnailUrl,
+                                thumbnailUrl: thumbnailUrl,
                               }));
 
                               // 미리보기용 로컬 URL
@@ -529,8 +529,8 @@ const StoreRegisterPage: React.FC = () => {
                   >
                     <input
                       type="file"
-                      id="thumbnail_url"
-                      name="thumbnail_url"
+                      id="thumbnailUrl"
+                      name="thumbnailUrl"
                       accept="image/*"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
@@ -542,7 +542,7 @@ const StoreRegisterPage: React.FC = () => {
                             // formData 업데이트 (백엔드 경로)
                             setFormData((prev) => ({
                               ...prev,
-                              thumbnail_url: thumbnailUrl,
+                              thumbnailUrl: thumbnailUrl,
                             }));
 
                             // 미리보기용 로컬 URL
@@ -558,7 +558,7 @@ const StoreRegisterPage: React.FC = () => {
                             e.target.value = "";
                             setFormData((prev) => ({
                               ...prev,
-                              thumbnail_url: "",
+                              thumbnailUrl: "",
                             }));
                             setPreviewUrl("");
                           }
@@ -581,14 +581,14 @@ const StoreRegisterPage: React.FC = () => {
                           onClick={async () => {
                             try {
                               // 백엔드 파일 삭제
-                              if (formData.thumbnail_url) {
-                                await deleteImage(formData.thumbnail_url);
+                              if (formData.thumbnailUrl) {
+                                await deleteImage(formData.thumbnailUrl);
                               }
 
                               // 상태 초기화
                               setFormData((prev) => ({
                                 ...prev,
-                                thumbnail_url: "",
+                                thumbnailUrl: "",
                               }));
                               setPreviewUrl("");
                             } catch (error) {
@@ -596,7 +596,7 @@ const StoreRegisterPage: React.FC = () => {
                               // 에러가 발생해도 UI는 초기화
                               setFormData((prev) => ({
                                 ...prev,
-                                thumbnail_url: "",
+                                thumbnailUrl: "",
                               }));
                               setPreviewUrl("");
                             }
@@ -615,7 +615,7 @@ const StoreRegisterPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() =>
-                            document.getElementById("thumbnail_url")?.click()
+                            document.getElementById("thumbnailUrl")?.click()
                           }
                           className="px-4 py-2 text-sm font-medium text-white dark:text-black bg-primary-light rounded-md hover:bg-opacity-80 dark:bg-primary-dark mt-1"
                         >

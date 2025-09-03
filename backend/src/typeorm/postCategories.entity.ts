@@ -4,11 +4,11 @@ import { Category } from "./categories.entity";
 
 @Entity("post_categories")
 export class PostCategory {
-  @PrimaryColumn({ type: "bigint", nullable: false })
-  post_id: number;
+  @PrimaryColumn({ name: "post_id", type: "bigint", nullable: false })
+  postId: number;
 
-  @PrimaryColumn({ type: "bigint", nullable: false })
-  category_id: number;
+  @PrimaryColumn({ name: "category_id", type: "bigint", nullable: false })
+  categoryId: number;
 
   @ManyToOne(() => Post, (post) => post.postCategories, {
     onDelete: "CASCADE",

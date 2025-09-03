@@ -27,15 +27,15 @@ export class Store {
   @Column({ type: "text" })
   description: string;
 
-  @Column({ type: "varchar", length: 10, nullable: false })
+  @Column({ name: "region_code", type: "varchar", length: 10, nullable: false })
   @Index()
-  region_code: string;
+  regionCode: string;
 
   @Column({ type: "varchar", length: 255 })
   address: string;
 
-  @Column({ type: "varchar", length: 255 })
-  address_detail: string;
+  @Column({ name: "address_detail", type: "varchar", length: 255 })
+  addressDetail: string;
 
   @Column({ type: "decimal", precision: 10, scale: 7 })
   latitude: number;
@@ -46,8 +46,8 @@ export class Store {
   @Column({ type: "varchar", length: 20 })
   contact: string;
 
-  @Column({ type: "varchar", length: 2048 })
-  thumbnail_url: string;
+  @Column({ name: "thumbnail_url", type: "varchar", length: 2048 })
+  thumbnailUrl: string;
 
   @Column({ type: "varchar", length: 2048 })
   link_1: string;
@@ -55,11 +55,16 @@ export class Store {
   @Column({ type: "varchar", length: 2048 })
   link_2: string;
 
-  @Column({ type: "varchar", length: 50 })
-  owner_name: string;
+  @Column({ name: "owner_name", type: "varchar", length: 50 })
+  ownerName: string;
 
-  @Column({ type: "boolean", nullable: false, default: false })
-  is_featured: boolean;
+  @Column({
+    name: "is_featured",
+    type: "boolean",
+    nullable: false,
+    default: false,
+  })
+  isFeatured: boolean;
 
   @Column({
     type: "enum",
@@ -70,24 +75,25 @@ export class Store {
   status: "OPEN" | "CLOSED";
 
   @Column({
+    name: "approval_status",
     type: "enum",
     enum: ["PENDING", "APPROVED", "REJECTED"],
     nullable: false,
     default: "PENDING",
   })
-  approval_status: "PENDING" | "APPROVED" | "REJECTED";
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
 
-  @Column({ type: "bigint" })
-  created_by: number;
+  @Column({ name: "created_by", type: "bigint" })
+  createdBy: number;
 
-  @Column({ type: "bigint" })
-  updated_by: number;
+  @Column({ name: "updated_by", type: "bigint" })
+  updatedBy: number;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   @ManyToOne(() => Region, (region) => region.stores)
   @JoinColumn({ name: "region_code" })

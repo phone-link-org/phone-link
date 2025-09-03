@@ -13,12 +13,12 @@ import { nanoid } from "nanoid";
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
   provider: string;
-  provider_user_id: string;
+  providerUserId: string;
   email: string;
   name: string;
   gender?: "M" | "F";
-  phone_number?: string;
-  birth_year?: string;
+  phoneNumber?: string;
+  birthYear?: string;
   birthday?: string; // MM-DD
 }
 
@@ -46,7 +46,7 @@ router.post("/signup", async (req, res) => {
           {
             where: {
               provider: decoded.provider,
-              provider_user_id: decoded.provider_user_id,
+              providerUserId: decoded.providerUserId,
             },
           },
         );
@@ -66,13 +66,12 @@ router.post("/signup", async (req, res) => {
           throw new Error("EMAIL_ALREADY_EXISTS");
         }
 
-        const finalPhoneNumber =
-          signupData.phone_number || decoded.phone_number;
+        const finalPhoneNumber = signupData.phoneNumber || decoded.phoneNumber;
         if (finalPhoneNumber) {
           const existingUserByPhone = await transactionalEntityManager.findOne(
             User,
             {
-              where: { phone_number: finalPhoneNumber },
+              where: { phoneNumber: finalPhoneNumber },
             },
           );
           if (existingUserByPhone) {
@@ -105,13 +104,13 @@ router.post("/signup", async (req, res) => {
 
         // SSO 정보 + 사용자가 추가 입력한 정보
         newUser.gender = signupData.gender || decoded.gender;
-        newUser.phone_number = finalPhoneNumber;
+        newUser.phoneNumber = finalPhoneNumber;
 
         // 생년월일 및 연령대 처리
         const birthDate = signupData.birthday; // YYYY-MM-DD
         if (birthDate) {
           const birthYear = Number(birthDate.split("-")[0]);
-          newUser.birth_year = birthYear;
+          newUser.birthYear = birthYear;
           newUser.birthday = `${birthDate.split("-")[1]}-${
             birthDate.split("-")[2]
           }`;
@@ -120,25 +119,25 @@ router.post("/signup", async (req, res) => {
           const age = currentYear - birthYear;
           if (age >= 0) {
             const startOfRange = Math.floor(age / 10) * 10;
-            newUser.age_range = `${startOfRange}-${startOfRange + 9}`;
+            newUser.ageRange = `${startOfRange}-${startOfRange + 9}`;
           }
-        } else if (decoded.birth_year && decoded.birthday) {
-          const birthYear = Number(decoded.birth_year);
-          newUser.birth_year = birthYear;
+        } else if (decoded.birthYear && decoded.birthday) {
+          const birthYear = Number(decoded.birthYear);
+          newUser.birthYear = birthYear;
           newUser.birthday = decoded.birthday;
 
           const currentYear = new Date().getFullYear();
           const age = currentYear - birthYear;
           if (age >= 0) {
             const startOfRange = Math.floor(age / 10) * 10;
-            newUser.age_range = `${startOfRange}-${startOfRange + 9}`;
+            newUser.ageRange = `${startOfRange}-${startOfRange + 9}`;
           }
         }
 
         newUser.role = signupData.role;
         newUser.address = signupData.address;
-        newUser.address_detail = signupData.address_detail;
-        newUser.postal_code = signupData.postal_code;
+        newUser.addressDetail = signupData.addressDetail;
+        newUser.postalCode = signupData.postalCode;
         newUser.sido = signupData.sido;
         newUser.sigungu = signupData.sigungu;
         // SSO 가입 시 password는 null
@@ -151,16 +150,16 @@ router.post("/signup", async (req, res) => {
             throw new Error("STORE_ID_REQUIRED");
           }
           const newSeller = new Seller();
-          newSeller.user_id = savedUser.id;
-          newSeller.store_id = storeId;
+          newSeller.userId = savedUser.id;
+          newSeller.storeId = storeId;
           await transactionalEntityManager.save(newSeller);
         }
 
         // 3. SocialAccounts 테이블에 데이터 생성
         const newSocialAccount = new SocialAccount();
-        newSocialAccount.user_id = savedUser.id;
+        newSocialAccount.userId = savedUser.id;
         newSocialAccount.provider = decoded.provider;
-        newSocialAccount.provider_user_id = decoded.provider_user_id;
+        newSocialAccount.providerUserId = decoded.providerUserId;
 
         await transactionalEntityManager.save(newSocialAccount);
       });
@@ -228,9 +227,9 @@ router.post("/signup", async (req, res) => {
         }
 
         // 2. 전화번호 중복 확인 (입력된 경우)
-        if (signupData.phone_number) {
+        if (signupData.phoneNumber) {
           const existingUserByPhone = await userRepo.findOne({
-            where: { phone_number: signupData.phone_number },
+            where: { phoneNumber: signupData.phoneNumber },
           });
           if (existingUserByPhone) {
             throw new Error("PHONE_ALREADY_EXISTS");
@@ -267,11 +266,11 @@ router.post("/signup", async (req, res) => {
 
         // 선택 정보
         newUser.gender = signupData.gender;
-        newUser.phone_number = signupData.phone_number;
+        newUser.phoneNumber = signupData.phoneNumber;
         const birthDate = signupData.birthday; // YYYY-MM-DD
         if (birthDate) {
           const birthYear = Number(birthDate.split("-")[0]);
-          newUser.birth_year = birthYear;
+          newUser.birthYear = birthYear;
           newUser.birthday = `${birthDate.split("-")[1]}-${
             birthDate.split("-")[2]
           }`;
@@ -280,13 +279,13 @@ router.post("/signup", async (req, res) => {
           const age = currentYear - birthYear;
           if (age >= 0) {
             const startOfRange = Math.floor(age / 10) * 10;
-            newUser.age_range = `${startOfRange}-${startOfRange + 9}`;
+            newUser.ageRange = `${startOfRange}-${startOfRange + 9}`;
           }
         }
         newUser.role = signupData.role;
         newUser.address = signupData.address;
-        newUser.address_detail = signupData.address_detail;
-        newUser.postal_code = signupData.postal_code;
+        newUser.addressDetail = signupData.addressDetail;
+        newUser.postalCode = signupData.postalCode;
         newUser.sido = signupData.sido;
         newUser.sigungu = signupData.sigungu;
 
@@ -299,8 +298,8 @@ router.post("/signup", async (req, res) => {
           }
           const sellerRepo = transactionalEntityManager.getRepository(Seller);
           const newSeller = new Seller();
-          newSeller.user_id = savedUser.id;
-          newSeller.store_id = storeId;
+          newSeller.userId = savedUser.id;
+          newSeller.storeId = storeId;
           await sellerRepo.save(newSeller);
         }
       });
@@ -389,7 +388,7 @@ router.post("/login", async (req, res) => {
     //user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
     if (user.role === "SELLER") {
       const seller = await AppDataSource.getRepository(Seller).findOne({
-        where: { user_id: user.id },
+        where: { userId: user.id },
       });
       if (!seller) {
         return res.status(202).json({
@@ -477,7 +476,7 @@ router.post("/auth/callback/:provider", async (req, res) => {
     const socialAccount = await socialAccountRepo.findOne({
       where: {
         provider: provider,
-        provider_user_id: userProfile.sso_id,
+        providerUserId: userProfile.sso_id,
       },
       relations: ["user"],
     });
@@ -500,14 +499,14 @@ router.post("/auth/callback/:provider", async (req, res) => {
 
       if (formattedPhoneNumber) {
         const existingUserByPhone = await userRepo.findOne({
-          where: { phone_number: formattedPhoneNumber },
+          where: { phoneNumber: formattedPhoneNumber },
         });
 
         if (existingUserByPhone) {
           const newSocialAccount = new SocialAccount();
           newSocialAccount.user = existingUserByPhone;
           newSocialAccount.provider = provider;
-          newSocialAccount.provider_user_id = userProfile.sso_id;
+          newSocialAccount.providerUserId = userProfile.sso_id;
           await socialAccountRepo.save(newSocialAccount);
           user = existingUserByPhone;
         }
@@ -526,7 +525,7 @@ router.post("/auth/callback/:provider", async (req, res) => {
       // user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
       if (user.role === "SELLER") {
         const seller = await AppDataSource.getRepository(Seller).findOne({
-          where: { user_id: user.id },
+          where: { userId: user.id },
         });
         if (!seller) {
           return res.status(202).json({
@@ -561,13 +560,13 @@ router.post("/auth/callback/:provider", async (req, res) => {
     } else {
       // 신규 가입 처리
       const ssoData = {
-        provider_user_id: userProfile.sso_id,
+        providerUserId: userProfile.sso_id,
         provider: provider,
         email: userProfile.email,
         name: userProfile.name,
         gender: userProfile.gender,
-        phone_number: userProfile.phone_number,
-        birth_year: userProfile.birthyear,
+        phoneNumber: userProfile.phone_number,
+        birthYear: userProfile.birthyear,
         birthday: userProfile.birthday,
         role: "user",
       };

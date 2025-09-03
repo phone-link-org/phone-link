@@ -15,7 +15,7 @@ import { SocialAccount } from "./socialAccounts.entity";
 
 @Entity("users")
 @Index("idx_status", ["status"])
-@Index("idx_deleted_at", ["deleted_at"])
+@Index("idx_deleted_at", ["deletedAt"])
 export class User {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
@@ -32,26 +32,26 @@ export class User {
   @Column({ type: "varchar", length: 50, unique: true })
   nickname?: string;
 
-  @Column({ type: "varchar", length: 2048 })
-  profile_image_url?: string;
+  @Column({ name: "profile_image_url", type: "varchar", length: 2048 })
+  profileImageUrl?: string;
 
   @Column({ type: "enum", enum: ["M", "F"] })
   gender?: "M" | "F";
 
-  @Column({ type: "year" })
-  birth_year?: number;
+  @Column({ name: "birth_year", type: "year" })
+  birthYear?: number;
 
   @Column({ type: "varchar", length: 5 })
   birthday?: string;
 
-  @Column({ type: "varchar", length: 10 })
-  age_range?: string;
+  @Column({ name: "age_range", type: "varchar", length: 10 })
+  ageRange?: string;
 
-  @Column({ type: "varchar", length: 20, unique: true })
-  phone_number?: string;
+  @Column({ name: "phone_number", type: "varchar", length: 20, unique: true })
+  phoneNumber?: string;
 
-  @Column({ type: "varchar", length: 10 })
-  postal_code?: string;
+  @Column({ name: "postal_code", type: "varchar", length: 10 })
+  postalCode?: string;
 
   @Column({ type: "varchar", length: 50 })
   sido?: string;
@@ -62,8 +62,8 @@ export class User {
   @Column({ type: "varchar", length: 255 })
   address?: string;
 
-  @Column({ type: "varchar", length: 255 })
-  address_detail?: string;
+  @Column({ name: "address_detail", type: "varchar", length: 255 })
+  addressDetail?: string;
 
   @Column({
     type: "enum",
@@ -81,21 +81,21 @@ export class User {
   })
   status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
 
-  @Column({ type: "datetime" })
-  last_login_at?: Date;
+  @Column({ name: "last_login_at", type: "datetime" })
+  lastLoginAt?: Date;
 
-  @DeleteDateColumn({ type: "datetime" })
-  deleted_at?: Date;
+  @DeleteDateColumn({ name: "deleted_at", type: "datetime" })
+  deletedAt?: Date;
 
-  @CreateDateColumn({ type: "datetime" })
-  created_at: Date;
+  @CreateDateColumn({ name: "created_at", type: "datetime" })
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at: Date;
+  @UpdateDateColumn({ name: "updated_at", type: "datetime" })
+  updatedAt: Date;
 
   // --- Relationships ---
   @OneToMany(() => SocialAccount, (socialAccount) => socialAccount.user)
-  social_accounts: SocialAccount[];
+  socialAccounts: SocialAccount[];
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];

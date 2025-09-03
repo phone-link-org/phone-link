@@ -8,7 +8,7 @@ const StorePage: React.FC = () => {
     "prices" | "excel" | "addon" | "requiredPlan"
   >("prices");
 
-  const storeId = 4; //TODO: 매장 ID 가져오기
+  const storeId = 3; //TODO: 매장 ID 가져오기
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">

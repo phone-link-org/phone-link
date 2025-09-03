@@ -8,7 +8,7 @@ import { PendingStoreDto } from "../../../shared/store.types";
 import { Addon } from "../typeorm/addons.entity";
 import { AddonFormData } from "shared/addon.types";
 import { Offer } from "../typeorm/offers.entity";
-import { StoreOfferPriceFormData } from "shared/offer.types";
+import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
 
 const router = Router();
 
@@ -359,9 +359,12 @@ router.get("/:storeId/offers", async (req, res) => {
       .createQueryBuilder("o")
       .select([
         "o.id as id",
+        "c.id as carrier_id",
         "c.name as carrier_name",
         "o.offer_type as offer_type",
+        "pm.id as model_id",
         "pm.name_ko as model_name",
+        "ps.id as storage_id",
         "ps.storage as storage",
         "o.price as price",
         "pm2.id as manufacturer_id",
@@ -381,9 +384,56 @@ router.get("/:storeId/offers", async (req, res) => {
       .addOrderBy("o.offer_type", "ASC")
       .getRawMany<StoreOfferPriceFormData>();
 
+    // 🔹 계층 구조로 가공
+    const response: StoreOfferModel[] = [];
+
+    for (const row of offers) {
+      // 모델 찾기
+      let model = response.find((m) => m.model_id === row.model_id);
+      if (!model) {
+        model = {
+          manufacturer_id: row.manufacturer_id,
+          model_id: row.model_id,
+          model_name: row.model_name,
+          storages: [],
+        };
+        response.push(model);
+      }
+
+      // 스토리지 찾기
+      let storage = model.storages.find((s) => s.storage_id === row.storage_id);
+      if (!storage) {
+        storage = {
+          storage_id: row.storage_id,
+          storage: row.storage,
+          carriers: [],
+        };
+        model.storages.push(storage);
+      }
+
+      // 통신사 찾기
+      let carrier = storage.carriers.find(
+        (c) => c.carrier_id === row.carrier_id,
+      );
+      if (!carrier) {
+        carrier = {
+          carrier_id: row.carrier_id,
+          carrier_name: row.carrier_name,
+          offer_types: [],
+        };
+        storage.carriers.push(carrier);
+      }
+
+      // 조건 추가
+      carrier.offer_types.push({
+        offer_type: row.offer_type,
+        price: row.price,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: offers,
+      data: response,
     });
   } catch (error) {
     console.error("Error during fetching addons", error);

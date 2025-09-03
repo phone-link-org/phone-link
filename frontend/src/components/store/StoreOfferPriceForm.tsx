@@ -1,37 +1,33 @@
-import React, { useState, useEffect, useMemo } from "react";
-import type {
-  CarrierDto,
-  PriceInput,
-  PriceSubmissionData,
-  StoreOfferPriceFormData,
-} from "../../../../shared/types";
+import React, { useState, useEffect } from "react";
+import type { CarrierDto, StoreOfferModel } from "../../../../shared/types";
 import apiClient, { api } from "../../api/axios";
 import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 
-const offerTypes = [
+const offerTypes: { value: "MNP" | "CHG"; label: string }[] = [
   { value: "MNP", label: "번호이동" },
   { value: "CHG", label: "기기변경" },
 ];
 
-interface Device {
-  manufacturerId: string;
-  modelName: string;
-  capacity: string;
-}
+// interface Device {
+//   manufacturerId: string;
+//   modelName: string;
+//   capacity: string;
+// }
 
-interface TableRowData {
-  manufacturerId: string;
-  modelName: string;
-  capacity: string;
-}
+// interface TableRowData {
+//   manufacturerId: string;
+//   modelName: string;
+//   capacity: string;
+// }
 
 const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
-  const [tableRows, setTableRows] = useState<TableRowData[]>([]);
-  const [prices, setPrices] = useState<
-    Record<string, Record<string, number | "">>
-  >({});
+  const [offers, setOffers] = useState<StoreOfferModel[]>([]);
+  // const [tableRows, setTableRows] = useState<TableRowData[]>([]);
+  // const [prices, setPrices] = useState<
+  //   Record<string, Record<string, number | "">>
+  // >({});
 
   // 통신사 정보 조회
   useEffect(() => {
@@ -51,10 +47,11 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   useEffect(() => {
     try {
       const fetchPriceTableData = async () => {
-        const response = await api.get<StoreOfferPriceFormData[]>(
+        const response = await api.get<StoreOfferModel[]>(
           `/store/${storeId}/offers`,
         );
         console.log(response);
+        setOffers(response);
       };
       fetchPriceTableData();
     } catch (error) {
@@ -63,41 +60,76 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchDevices = async () => {
-      try {
-        const response = await apiClient.get<Device[]>("/price-input/devices");
-        console.log(response.data);
-        setTableRows(response.data);
-      } catch (error) {
-        toast.error("기기 정보를 불러오는 데 실패했습니다.");
-        console.error("Error fetching devices:", error);
-      }
-    };
-    fetchDevices();
-  }, []);
+  // useEffect(() => {
+  //   const fetchDevices = async () => {
+  //     try {
+  //       const response = await apiClient.get<Device[]>("/price-input/devices");
+  //       console.log(response.data);
+  //       setTableRows(response.data);
+  //     } catch (error) {
+  //       toast.error("기기 정보를 불러오는 데 실패했습니다.");
+  //       console.error("Error fetching devices:", error);
+  //     }
+  //   };
+  //   fetchDevices();
+  // }, []);
 
-  const handleRemoveRow = (index: number) => {
-    setTableRows(tableRows.filter((_, i) => i !== index));
+  const handleRemoveRow = (modelId: number, storageId: number) => {
+    setOffers((prev) =>
+      prev
+        .map((model) =>
+          model.model_id === modelId
+            ? {
+                ...model,
+                storages: model.storages.filter(
+                  (storage) => storage.storage_id !== storageId,
+                ),
+              }
+            : model,
+        )
+        // 🔹 storages 가 비어 있으면 모델 자체도 제거
+        .filter((model) => model.storages.length > 0),
+    );
   };
 
   const handlePriceChange = (
-    modelName: string,
-    capacity: string,
-    carrier: number,
-    buyingType: string,
-    value: string,
+    modelId: number,
+    storageId: number,
+    carrierId: number,
+    offerType: "MNP" | "CHG",
+    newValue: string,
   ) => {
-    if (value.length > 3) return;
-    const price = value === "" ? "" : Number(value);
-    const key = `${modelName}-${capacity}`;
-    setPrices((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        [`${carrier}-${buyingType}`]: price,
-      },
-    }));
+    if (newValue.length > 3) return;
+    const price = newValue === "" ? "" : Number(newValue);
+
+    setOffers((prev) =>
+      prev.map((model) =>
+        model.model_id === modelId
+          ? {
+              ...model,
+              storages: model.storages.map((storage) =>
+                storage.storage_id === storageId
+                  ? {
+                      ...storage,
+                      carriers: storage.carriers.map((carrier) =>
+                        carrier.carrier_id === carrierId
+                          ? {
+                              ...carrier,
+                              offerTypes: carrier.offer_types.map((ot) =>
+                                ot.offer_type === offerType
+                                  ? { ...ot, price: Number(price) }
+                                  : ot,
+                              ),
+                            }
+                          : carrier,
+                      ),
+                    }
+                  : storage,
+              ),
+            }
+          : model,
+      ),
+    );
   };
 
   const getCarrierImageUrl = (carrierName: string) => {
@@ -109,15 +141,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
       return "https://placehold.co/500x500";
     }
   };
-
-  // modelName별로 차지할 행의 개수(rowspan)를 미리 계산
-  const modelRowSpans = useMemo(() => {
-    const counts: Record<string, number> = {};
-    tableRows.forEach(({ modelName }) => {
-      counts[modelName] = (counts[modelName] || 0) + 1;
-    });
-    return counts;
-  }, [tableRows]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +155,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
             model,
             capacity,
             carrier,
-            buyingType: buyingType as "MNP" | "CHG",
+            buyingType: buyingType,
             typePrice: Number(typePrice),
           });
         }
@@ -204,78 +227,64 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-[#292929]">
-              {tableRows.map(
-                ({ modelName, capacity, manufacturerId }, rowIndex) => {
-                  const showSeparator =
-                    rowIndex > 0 &&
-                    manufacturerId !== tableRows[rowIndex - 1].manufacturerId;
-
-                  const borderClass = showSeparator
-                    ? "border-t-[2px] border-[#a8a8a8] dark:border-[#737373]"
-                    : rowIndex > 0
-                      ? "border-t border-gray-200 dark:border-gray-600"
-                      : "";
-
-                  const isFirstInGroup =
-                    rowIndex === 0 ||
-                    tableRows[rowIndex - 1].modelName !== modelName;
-
+              {offers.map((model, modelIndex) => {
+                return model.storages.map((storage, storageIndex) => {
                   return (
-                    <tr key={rowIndex} className={borderClass}>
-                      {/* 3. 첫 번째 행일 때만 modelName 셀을 렌더링합니다. */}
-                      {isFirstInGroup && (
+                    <tr
+                      key={`${model.model_id}-${storage.storage_id}`}
+                      className={
+                        modelIndex > 0 || storageIndex > 0
+                          ? "border-t border-gray-200 dark:border-gray-600"
+                          : ""
+                      }
+                    >
+                      {/* 모델명: storage 개수만큼 rowSpan */}
+                      {storageIndex === 0 && (
                         <td
+                          rowSpan={model.storages.length}
                           className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600"
-                          rowSpan={modelRowSpans[modelName]} // 계산된 rowspan 값을 적용합니다.
                         >
-                          {modelName}
+                          {model.model_name}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                        {capacity}
-                      </td>
-                      {carriers.map((carrier, carrierIndex) =>
-                        offerTypes.map((type, typeIndex) => {
-                          const numInputColsPerRow =
-                            carriers.length * offerTypes.length;
-                          const tabIndex =
-                            rowIndex * numInputColsPerRow +
-                            carrierIndex * offerTypes.length +
-                            typeIndex +
-                            1;
 
-                          return (
-                            <td
-                              key={`td-${carrier.id}-${type.value}`}
-                              className="px-4 py-4 whitespace-nowrap"
-                            >
-                              <input
-                                type="number"
-                                tabIndex={tabIndex}
-                                className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
-                                value={
-                                  prices[`${modelName}-${capacity}`]?.[
-                                    `${carrier.id}-${type.value}`
-                                  ] ?? ""
-                                }
-                                onChange={(e) =>
-                                  handlePriceChange(
-                                    modelName,
-                                    capacity,
-                                    carrier.id,
-                                    type.value,
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </td>
-                          );
-                        }),
+                      {/* 스토리지명 */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
+                        {storage.storage}
+                      </td>
+
+                      {/* carrier × offerType 가격들 */}
+                      {storage.carriers.map((carrier) =>
+                        carrier.offer_types.map((offerType) => (
+                          <td
+                            key={`cell-${storage.storage_id}-${carrier.carrier_id}-${offerType.offer_type}`}
+                            className="px-4 py-4 whitespace-nowrap"
+                          >
+                            <input
+                              type="number"
+                              className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                              value={offerType.price}
+                              onChange={(e) =>
+                                handlePriceChange(
+                                  model.model_id,
+                                  storage.storage_id,
+                                  carrier.carrier_id,
+                                  offerType.offer_type,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                        )),
                       )}
+
+                      {/* 삭제 버튼 */}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
                           type="button"
-                          onClick={() => handleRemoveRow(rowIndex)}
+                          onClick={() =>
+                            handleRemoveRow(model.model_id, storage.storage_id)
+                          }
                           tabIndex={-1}
                           className="text-gray-400 hover:text-red-500 transition-colors"
                         >
@@ -284,8 +293,8 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
                       </td>
                     </tr>
                   );
-                },
-              )}
+                });
+              })}
             </tbody>
           </table>
         </div>

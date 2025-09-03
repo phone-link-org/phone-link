@@ -614,7 +614,7 @@ const SignupPage: React.FC = () => {
             type="submit"
             className={`w-full px-4 py-2 ${
               formData.role === "SELLER" ? "mt-2" : "mt-4"
-            } font-bold text-white bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80`}
+            } font-bold text-white dark:text-black bg-primary-light rounded-md hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80`}
           >
             {isSsoSignup ? "가입 완료" : "가입하기"}
           </button>

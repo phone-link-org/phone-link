@@ -2,17 +2,14 @@ import React, { useContext } from "react";
 import ThemeToggleButton from "./ThemeToggleButton";
 import { IoMenuOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { useAuthStore } from "../store/authStore";
 
 const Navbar: React.FC = () => {
-  const authContext = useContext(AuthContext);
   const navigate = useNavigate();
-
+  const { user, isAuthenticated, logout } = useAuthStore();
   const handleLogout = () => {
-    if (authContext) {
-      authContext.logout();
-      navigate("/");
-    }
+    logout();
+    navigate("/");
   };
 
   return (
@@ -33,15 +30,17 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          <li>
-            <Link to="/store">
-              <button
-                className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
-              >
-                매장 관리
-              </button>
-            </Link>
-          </li>
+          {user?.role === "SELLER" && user.storeId && (
+            <li>
+              <Link to="/store">
+                <button
+                  className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
+                >
+                  매장 관리
+                </button>
+              </Link>
+            </li>
+          )}
           <li>
             <a
               href="#"
@@ -59,20 +58,22 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          <li>
-            <Link to="/admin">
-              <button
-                className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
-              >
-                관리자
-              </button>
-            </Link>
-          </li>
+          {user?.role === "ADMIN" && (
+            <li>
+              <Link to="/admin">
+                <button
+                  className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
+                >
+                  관리자
+                </button>
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggleButton />
-        {authContext?.user ? (
+        {isAuthenticated ? (
           <>
             <Link to="/mypage">
               <button className="hidden md:block px-4 py-2 rounded bg-primary-light hover:bg-[#3d5e33] dark:bg-primary-dark dark:hover:bg-[#759161] text-white dark:text-foreground-light text-base font-medium transition-colors">

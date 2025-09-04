@@ -1,3 +1,5 @@
+import type { StoreDto } from "./store.types";
+
 export interface UserDto {
   readonly id: number;
   email: string;
@@ -50,3 +52,7 @@ export type SignupFormData = Omit<
 
 //Pick은 특정 타입에서 특정 키를 선택한 타입을 생성하는 타입
 export type LoginFormData = Pick<Required<UserDto>, "email" | "password">;
+
+export type UserAuthData = Pick<UserDto, "id" | "nickname" | "role"> & {
+  storeId?: StoreDto["id"];
+};

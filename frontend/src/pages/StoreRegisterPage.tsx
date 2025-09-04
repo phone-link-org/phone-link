@@ -1,4 +1,5 @@
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef } from "react";
+import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import { toast } from "sonner";
@@ -15,7 +16,6 @@ import type { StoreRegisterFormData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import Swal from "sweetalert2";
 import { useTheme } from "../hooks/useTheme";
-import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 
 interface DaumPostcodeData {
@@ -30,8 +30,7 @@ interface DaumPostcodeData {
 
 const StoreRegisterPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
-  const authContext = useContext(AuthContext);
-  const currentUser = authContext?.user;
+  const { user } = useAuthStore();
 
   const [formData, setFormData] = useState<StoreRegisterFormData>({
     name: "",
@@ -255,13 +254,6 @@ const StoreRegisterPage: React.FC = () => {
       return;
     }
 
-    // 로그인 상태 확인
-    if (!currentUser) {
-      toast.error("로그인이 필요합니다.");
-      navigate("/login");
-      return;
-    }
-
     // 매장명 중복 확인 여부 검증
     if (!isNameChecked) {
       toast.error("매장명 중복 확인을 진행하세요.");
@@ -279,7 +271,7 @@ const StoreRegisterPage: React.FC = () => {
       // 현재 로그인한 사용자의 ID를 formData에 추가
       const requestData = {
         ...formData,
-        createdBy: currentUser ? parseInt(currentUser.userId) : 0,
+        createdBy: user ? user.id : 0,
       };
       await api.post(`/store/register`, requestData);
 

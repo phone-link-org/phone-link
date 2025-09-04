@@ -1,8 +1,6 @@
-import React, { useContext, useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
-import axios from "axios";
-import apiClient from "../api/axios";
+import { useAuthStore } from "../store/authStore";
 import { toast } from "sonner";
 import { ssoConfig } from "../config/sso-config";
 
@@ -24,10 +22,10 @@ const LoginPage: React.FC = () => {
     email: "",
     password: "",
   });
+  const { login, isLoading, error: storeError, clearError } = useAuthStore();
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const authContext = useContext(AuthContext);
   const navigate = useNavigate();
 
   // 미입력 시 포커스를 주기 위한 ref
@@ -35,19 +33,16 @@ const LoginPage: React.FC = () => {
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const clearInputErrors = (fieldName: "email" | "password") => {
-    if (fieldName === "email" && emailError) {
-      setEmailError(false);
-    }
-    if (fieldName === "password" && passwordError) {
-      setPasswordError(false);
-    }
-    if (errorMessage) {
-      setErrorMessage("");
-    }
+    if (fieldName === "email" && emailError) setEmailError(false);
+    if (fieldName === "password" && passwordError) setPasswordError(false);
+    if (errorMessage) setErrorMessage("");
+    if (storeError) clearError();
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+    e.preventDefault();
+    clearError();
+
     const isEmailEmpty = !loginData.email;
     const isPasswordEmpty = !loginData.password;
 
@@ -57,14 +52,13 @@ const LoginPage: React.FC = () => {
     setErrorMessage("");
 
     if (isEmailEmpty || isPasswordEmpty) {
-      // DOM 업데이트 후 상태를 다시 설정하여 애니메이션 재시작 및 메시지 표시
       setTimeout(() => {
         setEmailError(isEmailEmpty);
         setPasswordError(isPasswordEmpty);
 
-        if (isEmailEmpty && isPasswordEmpty) {
+        if (isEmailEmpty && isPasswordEmpty)
           setErrorMessage("이메일과 비밀번호를 입력해주세요.");
-        } else if (isEmailEmpty) {
+        else if (isEmailEmpty) {
           setErrorMessage("이메일을 입력해주세요.");
         } else {
           setErrorMessage("비밀번호를 입력해주세요.");
@@ -80,43 +74,16 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      const response = await apiClient.post(`/user/login`, loginData);
-
-      if (response.status === 200) {
-        const { user, token } = response.data?.data || {};
-        if (authContext) {
-          authContext.login({
-            userId: user.id.toString(),
-            nickname: user.nickname,
-            userType: user.role,
-            token,
-          });
-          toast.success("로그인에 성공했습니다!");
-          navigate("/");
-        }
-      } else if (response.status === 202) {
-        const { user, token } = response.data?.data || {};
-        if (authContext) {
-          authContext.login({
-            userId: user.id.toString(),
-            nickname: user.nickname,
-            userType: user.role,
-            token,
-          });
-          toast.warning(response.data.message);
-          navigate("/store/register");
-        }
+      const { status } = await login(loginData);
+      if (status === 200) {
+        toast.success("로그인 되었습니다.");
+        navigate("/");
+      } else if (status === 202) {
+        toast.success("매장 등록 페이지로 이동합니다.");
+        navigate("/store/register");
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          toast.error("이메일 또는 비밀번호가 올바르지 않습니다.");
-        } else {
-          toast.error("로그인 중 오류가 발생했습니다.");
-        }
-      } else {
-        toast.error("알 수 없는 오류가 발생했습니다.");
-      }
+      console.error("Error logging in:", error);
     }
   };
 
@@ -205,15 +172,16 @@ const LoginPage: React.FC = () => {
             </div>
           </div>
           <div>
-            <p className="text-sm text-red-500 dark:text-red-400 text-center pb-2">
-              {errorMessage || " "}
+            <p className="text-sm text-red-500 dark:text-red-400 text-center pb-2 h-5 mt-4 mb-2">
+              {errorMessage || storeError || " "}
             </p>
 
             <button
               type="submit"
+              disabled={isLoading}
               className="w-full px-4 py-2 font-bold text-white rounded-lg bg-primary-light hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:bg-primary-dark dark:hover:bg-opacity-80 dark:text-[#292929]"
             >
-              로그인
+              {isLoading ? "로그인 중..." : "로그인"}
             </button>
           </div>
         </form>

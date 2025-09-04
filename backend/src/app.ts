@@ -10,6 +10,7 @@ import storeRoutes from "./routes/store.routes";
 import adminRoutes from "./routes/admin.routes";
 import regionRoutes from "./routes/region.routes";
 import phoneRoutes from "./routes/phone.routes";
+import authRoutes from "./routes/auth.routes";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/offer", offerRoutes);
 app.use("/api/price-input", priceInputRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/store", storeRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/region", regionRoutes);

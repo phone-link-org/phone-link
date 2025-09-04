@@ -5,6 +5,8 @@ import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 import { produce } from "immer";
 import LoadingSpinner from "../LoadingSpinner";
+import { ClipLoader } from "react-spinners";
+import { useTheme } from "../../hooks/useTheme";
 
 const offerTypes: { value: "MNP" | "CHG"; label: string }[] = [
   { value: "MNP", label: "번호이동" },
@@ -15,6 +17,8 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [offers, setOffers] = useState<StoreOfferModel[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { theme } = useTheme();
 
   // 통신사 정보 조회
   useEffect(() => {
@@ -32,20 +36,23 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
 
   // 시세표 조회
   useEffect(() => {
-    try {
-      const fetchPriceTableData = async () => {
+    const fetchPriceTableData = async () => {
+      setIsLoading(true);
+      try {
         const response = await api.get<StoreOfferModel[]>(
           `/store/${storeId}/offers`,
         );
         console.log(response);
         setOffers(response);
-      };
-      fetchPriceTableData();
-    } catch (error) {
-      console.error("Error fetching price table data:", error);
-      toast.error("가격 정보를 불러오는 중 오류가 발생했습니다.");
-    }
-  }, []);
+      } catch (error) {
+        console.error("Error fetching price table data:", error);
+        toast.error("가격 정보를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPriceTableData();
+  }, [storeId]);
 
   const handleRemoveRow = (modelId: number, storageId: number) => {
     setOffers((prev) =>
@@ -184,74 +191,104 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-[#292929]">
-                {offers.map((model, modelIndex) => {
-                  return model.storages.map((storage, storageIndex) => {
-                    return (
-                      <tr
-                        key={`${model.modelId}-${storage.storageId}`}
-                        className={
-                          modelIndex > 0 || storageIndex > 0
-                            ? "border-t border-gray-200 dark:border-gray-600"
-                            : ""
-                        }
-                      >
-                        {/* 모델명: storage 개수만큼 rowSpan */}
-                        {storageIndex === 0 && (
-                          <td
-                            rowSpan={model.storages.length}
-                            className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600"
-                          >
-                            {model.modelName}
-                          </td>
-                        )}
-
-                        {/* 스토리지명 */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
-                          {storage.storage}
-                        </td>
-
-                        {/* carrier × offerType 가격들 */}
-                        {storage.carriers.map((carrier) =>
-                          carrier.offerTypes.map((offerType) => (
+                {isLoading ? (
+                  <tr>
+                    <td
+                      colSpan={carriers.length * offerTypes.length + 3}
+                      className="px-6 py-20"
+                    >
+                      <div className="flex items-center justify-center">
+                        <ClipLoader
+                          size={48}
+                          color={theme === "light" ? "#4F7942" : "#9DC183"}
+                          loading={true}
+                          className="animate-pulse"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ) : offers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={carriers.length * offerTypes.length + 3}
+                      className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                    >
+                      등록된 가격 정보가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  offers.map((model, modelIndex) => {
+                    return model.storages.map((storage, storageIndex) => {
+                      return (
+                        <tr
+                          key={`${model.modelId}-${storage.storageId}`}
+                          className={
+                            modelIndex > 0 || storageIndex > 0
+                              ? "border-t border-gray-200 dark:border-gray-600"
+                              : ""
+                          }
+                        >
+                          {/* 모델명: storage 개수만큼 rowSpan */}
+                          {storageIndex === 0 && (
                             <td
-                              key={`cell-${storage.storageId}-${carrier.carrierId}-${offerType.offerType}`}
-                              className="px-4 py-4 whitespace-nowrap"
+                              rowSpan={model.storages.length}
+                              className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600"
                             >
-                              <input
-                                type="number"
-                                className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
-                                value={offerType.price ?? ""}
-                                onChange={(e) =>
-                                  handlePriceChange(
-                                    model.modelId,
-                                    storage.storageId,
-                                    carrier.carrierId,
-                                    offerType.offerType,
-                                    e.target.value,
-                                  )
-                                }
-                              />
+                              {model.modelName}
                             </td>
-                          )),
-                        )}
+                          )}
 
-                        {/* 삭제 버튼 */}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveRow(model.modelId, storage.storageId)
-                            }
-                            tabIndex={-1}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  });
-                })}
+                          {/* 스토리지명 */}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
+                            {storage.storage}
+                          </td>
+
+                          {/* carrier × offerType 가격들 */}
+                          {storage.carriers.map((carrier) =>
+                            carrier.offerTypes.map((offerType) => (
+                              <td
+                                key={`cell-${storage.storageId}-${carrier.carrierId}-${offerType.offerType}`}
+                                className="px-4 py-4 whitespace-nowrap"
+                              >
+                                <input
+                                  type="number"
+                                  className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                  value={offerType.price ?? ""}
+                                  onChange={(e) =>
+                                    handlePriceChange(
+                                      model.modelId,
+                                      storage.storageId,
+                                      carrier.carrierId,
+                                      offerType.offerType,
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </td>
+                            )),
+                          )}
+
+                          {/* 삭제 버튼 */}
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveRow(
+                                  model.modelId,
+                                  storage.storageId,
+                                )
+                              }
+                              tabIndex={-1}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })
+                )}
               </tbody>
             </table>
           </div>

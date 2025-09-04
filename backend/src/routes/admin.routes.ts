@@ -4,24 +4,38 @@ import { AppDataSource } from "../db";
 import { Region } from "../typeorm/regions.entity";
 import { RegionDto } from "shared/region.types";
 import { Store } from "../typeorm/stores.entity";
+import { Seller } from "../typeorm/sellers.entity";
 
 const router = Router();
 
 router.post("/store-confirm", async (req, res) => {
-  const { storeId, approvalStatus } = req.body;
+  const { storeId, approvalStatus, sellerId } = req.body;
   try {
-    const store = await AppDataSource.getRepository(Store).findOne({
-      where: { id: storeId },
-    });
-    if (!store) {
-      return res.status(404).json({
-        success: false,
-        message: "해당 매장의 데이터을 찾을 수 없습니다.",
-      });
-    }
+    await AppDataSource.transaction(async (transactionalEntityManager) => {
+      const storeRepo = transactionalEntityManager.getRepository(Store);
+      const sellerRepo = transactionalEntityManager.getRepository(Seller);
 
-    store.approvalStatus = approvalStatus;
-    await AppDataSource.getRepository(Store).save(store);
+      const store = await storeRepo.findOne({ where: { id: storeId } });
+
+      if (!store) {
+        throw new Error("해당 매장을 찾을 수 없습니다.");
+      }
+
+      // 거부가 아닌 승인일 경우, Seller에 새로운 데이터 추가
+      if (approvalStatus === "APPROVED") {
+        const newSeller = sellerRepo.create({
+          userId: sellerId,
+          storeId: storeId,
+          status: "ACTIVE",
+        });
+        await sellerRepo.save(newSeller);
+      }
+
+      store.approvalStatus = approvalStatus;
+      await storeRepo.save(store);
+    });
+
+    // 3. 트랜잭션 성공 후 최종 응답 전송
     res.status(200).json({
       success: true,
       message:
@@ -30,7 +44,7 @@ router.post("/store-confirm", async (req, res) => {
           : "매장 거부 처리가 완료되었습니다.",
     });
   } catch (error) {
-    console.error("Error during store confirm", error);
+    console.error("Error during store confirm transaction:", error);
     res.status(500).json({
       success: false,
       message: "매장 승인 처리 중 오류가 발생했습니다.",

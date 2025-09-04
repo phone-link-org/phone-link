@@ -55,6 +55,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
           await api.post(`/admin/store-confirm`, {
             storeId,
             approvalStatus,
+            sellerId: storeDetail?.createdBy,
           });
           toast.success(
             approvalStatus === "APPROVED"

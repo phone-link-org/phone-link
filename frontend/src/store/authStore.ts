@@ -1,115 +1,124 @@
+// src/stores/authStore.ts
 import { create } from "zustand";
-import api from "../api/axios"; // 미리 설정된 Axios 인스턴스
+import apiClient from "../api/axios"; // 제공해주신 axios 인스턴스 경로
+import type { UserAuthData, LoginFormData } from "../../../shared/types"; // DTO 경로
 
-// 사용자 정보 타입 정의
-interface User {
-  id: number;
-  name: string;
-  nickname: string;
-  email: string;
-  role: "USER" | "SELLER" | "ADMIN";
-  storeId: number | null;
+// API의 data 필드에 담겨 오는 성공 응답의 타입을 정의합니다.
+interface LoginSuccessData {
+  token: string;
+  userAuthData: UserAuthData;
 }
 
-// Store의 상태와 액션에 대한 타입 정의
+// 스토어의 상태(state) 타입 정의
 interface AuthState {
+  user: UserAuthData | null;
   isAuthenticated: boolean;
-  user: User | null;
   isLoading: boolean;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
-  handleSocialLogin: (
-    provider: "kakao" | "naver" | "google" | "apple",
-    code: string,
-  ) => Promise<void>;
-  logout: () => void;
-  checkAuthStatus: () => Promise<void>;
+  error: string | null;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  // 초기 상태
-  isAuthenticated: false,
-  user: null,
-  isLoading: true, // 앱 시작 시 인증 상태를 확인하므로 true로 시작
+// 스토어의 액션(action) 타입 정의
+interface AuthActions {
+  login: (credentials: LoginFormData) => Promise<{ status: number }>;
+  logout: () => Promise<void>;
+  checkAuthStatus: () => Promise<void>;
+  clearError: () => void;
+}
 
-  // 로그인 액션
-  login: async (credentials) => {
-    set({ isLoading: true });
+// 최종 스토어 타입
+type AuthStore = AuthState & AuthActions;
+
+export const useAuthStore = create<AuthStore>((set) => ({
+  // 초기 상태 (Initial State)
+  user: null,
+  isAuthenticated: false,
+  isLoading: true, // 앱 시작 시 인증 상태 확인을 위해 true로 설정
+  error: null,
+
+  // Action: 일반 로그인
+  login: async (credentials: LoginFormData) => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await api.post<{ user: User; token: string }>(
+      // 서버의 로그인 API 호출 (/api/auth/login)
+      // 성공 시 { token: string, user: UserAuthData } 형태의 응답을 기대
+      const response = await apiClient.post<{ data: LoginSuccessData }>(
         "/auth/login",
         credentials,
       );
-      const { user, token } = response.data;
 
-      // Axios 인스턴스의 기본 헤더에 토큰 설정
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      // 필요하다면 localStorage에 토큰 저장 (보안 고려 필요)
-      localStorage.setItem("token", token);
+      const loginData = response.data.data;
+      const status = response.status;
 
-      set({ isAuthenticated: true, user, isLoading: false });
-    } catch (error) {
-      console.error("Login failed:", error);
-      set({ isAuthenticated: false, user: null, isLoading: false });
-      // 에러를 다시 던져서 로그인 폼에서 처리할 수 있게 함
-      throw error;
+      // localStorage에 토큰 저장
+      localStorage.setItem("token", loginData.token);
+
+      // Axios 인스턴스 헤더에 인증 토큰 설정 (이미 인터셉터에서 처리하지만, 즉시 적용을 위해 추가)
+      apiClient.defaults.headers.common["Authorization"] =
+        `Bearer ${loginData.token}`;
+
+      // 스토어 상태 업데이트
+      set({
+        user: loginData.userAuthData,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      return { status };
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "로그인에 실패했습니다.";
+      set({ error: errorMessage, isLoading: false, isAuthenticated: false });
+      // 에러를 다시 throw하여 컴포넌트 단에서 후속 처리를 할 수 있도록 함
+      throw new Error(errorMessage);
     }
   },
 
-  // 소셜 로그인(SSO) 처리 액션 구현
-  handleSocialLogin: async (provider, code) => {
+  // Action: 로그아웃
+  logout: async () => {
     set({ isLoading: true });
-    try {
-      // 우리 백엔드에 인가 코드를 보내 최종 인증을 요청
-      const response = await api.post<{ user: User; token: string }>(
-        `/auth/${provider}/callback`,
-        { code }, // 백엔드에 { "code": "ABCDEFG..." } 형태로 전송
-      );
-      const { user, token } = response.data;
+    // 서버에 로그아웃 요청 (선택 사항)
+    // await apiClient.post('/auth/logout');
 
-      // 이후 로직은 일반 로그인과 동일
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      localStorage.setItem("token", token);
-
-      set({ isAuthenticated: true, user, isLoading: false });
-    } catch (error) {
-      console.error("Social login failed:", error);
-      set({ isAuthenticated: false, user: null, isLoading: false });
-      throw error;
-    }
-  },
-
-  // 로그아웃 액션
-  logout: () => {
-    // 토큰 및 인증 정보 제거
+    // localStorage에서 토큰 제거
     localStorage.removeItem("token");
-    delete api.defaults.headers.common["Authorization"];
-    set({ isAuthenticated: false, user: null });
+
+    // Axios 인스턴스 헤더에서 토큰 제거
+    delete apiClient.defaults.headers.common["Authorization"];
+
+    // 스토어 상태 초기화
+    set({ user: null, isAuthenticated: false, isLoading: false });
+
+    // 로그인 페이지로 리디렉션
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
   },
 
-  // 앱 로드 시 인증 상태 확인 액션
+  // Action: 앱 로드 시 또는 페이지 새로고침 시 인증 상태를 확인
   checkAuthStatus: async () => {
-    set({ isLoading: true });
     const token = localStorage.getItem("token");
+
+    // 토큰이 없으면 비로그인 상태로 확정
     if (!token) {
-      set({ isAuthenticated: false, user: null, isLoading: false });
+      set({ isLoading: false, isAuthenticated: false, user: null });
       return;
     }
 
     try {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      const response = await api.get<{ user: User }>("/auth/me"); // 현재 사용자 정보를 가져오는 엔드포인트
-
-      set({
-        isAuthenticated: true,
-        user: response.data.user,
-        isLoading: false,
-      });
+      // 토큰이 유효한지 확인하기 위해 사용자 프로필 정보를 요청하는 API 호출
+      // (/api/auth/profile 또는 /api/users/me)
+      const response = await apiClient.get<UserAuthData>("/auth/profile");
+      set({ user: response.data, isAuthenticated: true, isLoading: false });
     } catch (error) {
-      // 토큰이 유효하지 않은 경우
       console.error("Auth check failed:", error);
+      // 토큰이 유효하지 않은 경우 (ex: 만료)
       localStorage.removeItem("token");
-      delete api.defaults.headers.common["Authorization"];
-      set({ isAuthenticated: false, user: null, isLoading: false });
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
+  },
+
+  // Action: 에러 메시지 초기화
+  clearError: () => {
+    set({ error: null });
   },
 }));

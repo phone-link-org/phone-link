@@ -3,8 +3,40 @@ import axios from "axios";
 import { AppDataSource } from "../db";
 import { Region } from "../typeorm/regions.entity";
 import { RegionDto } from "shared/region.types";
+import { Store } from "../typeorm/stores.entity";
 
 const router = Router();
+
+router.post("/store-confirm", async (req, res) => {
+  const { storeId, approvalStatus } = req.body;
+  try {
+    const store = await AppDataSource.getRepository(Store).findOne({
+      where: { id: storeId },
+    });
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 매장의 데이터을 찾을 수 없습니다.",
+      });
+    }
+
+    store.approvalStatus = approvalStatus;
+    await AppDataSource.getRepository(Store).save(store);
+    res.status(200).json({
+      success: true,
+      message:
+        approvalStatus === "APPROVED"
+          ? "매장 승인 처리가 완료되었습니다."
+          : "매장 거부 처리가 완료되었습니다.",
+    });
+  } catch (error) {
+    console.error("Error during store confirm", error);
+    res.status(500).json({
+      success: false,
+      message: "매장 승인 처리 중 오류가 발생했습니다.",
+    });
+  }
+});
 
 router.get("/region", async (req, res) => {
   try {

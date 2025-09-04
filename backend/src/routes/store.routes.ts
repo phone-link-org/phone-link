@@ -4,7 +4,10 @@ import path from "path";
 import fs from "fs";
 import { AppDataSource } from "../db";
 import { Store } from "../typeorm/stores.entity";
-import { PendingStoreDto } from "../../../shared/store.types";
+import {
+  PendingStoreDto,
+  StoreRegisterFormData,
+} from "../../../shared/store.types";
 import { Addon } from "../typeorm/addons.entity";
 import { AddonFormData } from "shared/addon.types";
 import { Offer } from "../typeorm/offers.entity";
@@ -317,7 +320,7 @@ router.post("/register", async (req, res) => {
 });
 
 // 승인 대기 상태인 매장 데이터 조회 엔드포인트
-router.get("/pending-stores", async (req, res) => {
+router.get("/pending", async (req, res) => {
   try {
     const storeRepo = AppDataSource.getRepository(Store);
 
@@ -601,6 +604,52 @@ router.get("/:storeId/addons", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "부가서비스 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/:storeId/detail", async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const storeRepo = AppDataSource.getRepository(Store);
+    const store = await storeRepo.findOne({
+      where: { id: parseInt(storeId) },
+      select: [
+        "name",
+        "description",
+        "regionCode",
+        "address",
+        "addressDetail",
+        "contact",
+        "thumbnailUrl",
+        "link_1",
+        "link_2",
+        "ownerName",
+        "approvalStatus",
+        "createdBy",
+      ],
+    });
+
+    if (!store) {
+      res.status(404).json({
+        success: false,
+        message: "매장 상세정보 조회 중 오류가 발생했습니다.",
+        error: "Not Found",
+      });
+    } else {
+      const responseData: StoreRegisterFormData = store;
+
+      res.status(200).json({
+        success: true,
+        data: responseData,
+      });
+    }
+  } catch (error) {
+    console.error("Error during fetching store detail", error);
+    res.status(500).json({
+      success: false,
+      message: "매장 상세정보 조회 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

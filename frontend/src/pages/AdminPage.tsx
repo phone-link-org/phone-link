@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../api/axios";
-import { useTheme } from "../hooks/useTheme";
 import { TbReload } from "react-icons/tb";
-import { HiX } from "react-icons/hi";
 import type { PendingStoreDto } from "../../../shared/store.types";
+import StoreDetailModal from "../components/admin/StoreDetailModal";
 
 const AdminPage: React.FC = () => {
-  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<
     "store-approval" | "user-management" | "system-region"
   >("store-approval");
@@ -17,43 +15,19 @@ const AdminPage: React.FC = () => {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   // 매장 승인 대기 관련 상태
-  const [pendingStores, setPendingStores] = useState<PendingStoreDto[]>([
-    {
-      id: 1,
-      name: "스마트폰 전문점 A",
-      regionCode: "11000",
-      regionName: "서울시",
-      contact: "02-1234-5678",
-      userEmail: "test01@test.com",
-      createdBy: 101,
-      createdAt: new Date("2024-01-15T09:15:00Z"),
-    },
-    {
-      id: 2,
-      name: "휴대폰 갤러리 B",
-      regionCode: "26000",
-      regionName: "부산시",
-      userEmail: "test02@test.com",
-      contact: "051-9876-5432",
-      createdBy: 102,
-      createdAt: new Date("2024-01-16T09:15:00Z"),
-    },
-    {
-      id: 3,
-      name: "모바일 스토어 C",
-      regionCode: "41000",
-      regionName: "울산시",
-      userEmail: "test03@test.com",
-      contact: "031-5555-7777",
-      createdBy: 103,
-      createdAt: new Date("2024-01-17T16:45:00Z"),
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
+  const [pendingStores, setPendingStores] = useState<PendingStoreDto[]>([]);
   const [selectedStore, setSelectedStore] = useState<PendingStoreDto | null>(
     null,
   );
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    const fetchPendingStores = async () => {
+      const response = await api.get<PendingStoreDto[]>("/store/pending");
+      setPendingStores(response);
+    };
+    fetchPendingStores();
+  }, []);
 
   const syncRegionDataToDb = async () => {
     setSyncing(true);
@@ -138,35 +112,29 @@ const AdminPage: React.FC = () => {
                 </button>
               </div>
 
-              {loading ? (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    데이터를 불러오는 중...
-                  </p>
-                </div>
-              ) : pendingStores.length === 0 ? (
+              {pendingStores.length === 0 ? (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
                   <p className="text-gray-500 dark:text-gray-400">
                     승인 대기 중인 매장이 없습니다.
                   </p>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-[#454545] overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-[#454545]">
+                      <thead className="bg-gray-50 dark:bg-[#454545]">
                         <tr>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             매장명
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            지역코드
+                            지역
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             연락처
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            등록자 ID
+                            사용자 이메일
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             등록일
@@ -177,7 +145,7 @@ const AdminPage: React.FC = () => {
                         {pendingStores.map((store) => (
                           <tr
                             key={store.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
+                            className="hover:bg-gray-50 dark:hover:bg-primary-dark/10 cursor-pointer"
                             onClick={() => {
                               setSelectedStore(store);
                               setShowModal(true);
@@ -187,13 +155,13 @@ const AdminPage: React.FC = () => {
                               {store.name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {store.regionCode}
+                              {store.regionName}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {store.contact}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {store.createdBy}
+                              {store.userEmail}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {new Date(store.createdAt).toLocaleDateString(
@@ -262,102 +230,11 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* 매장 상세정보 모달 */}
-      {showModal && selectedStore && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                매장 상세정보
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <HiX className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  매장명
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.name}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  지역코드
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.regionCode}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  연락처
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.contact}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  등록자 ID
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {selectedStore.createdBy}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  등록일
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {new Date(selectedStore.createdAt).toLocaleDateString(
-                    "ko-KR",
-                    {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  // TODO: 승인 기능
-                  console.log("승인:", selectedStore.id);
-                  setShowModal(false);
-                }}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors duration-200"
-              >
-                승인
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: 거부 기능
-                  console.log("거부:", selectedStore.id);
-                  setShowModal(false);
-                }}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors duration-200"
-              >
-                거부
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StoreDetailModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        storeId={selectedStore?.id ?? -1}
+      />
     </div>
   );
 };

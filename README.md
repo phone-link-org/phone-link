@@ -32,7 +32,7 @@ graph TB
         B1["다크/라이트 모드"]
     end
 
-    subgraph Backend["Backend (Node.js + Express)"]
+    subgraph Backend["Backend<br>(Node.js + Express)"]
         E["REST API"]
         F["인증/인가 미들웨어"]
         G["비즈니스 로직"]
@@ -54,8 +54,6 @@ graph TB
         M["SSO (Google, Kakao, Naver, Apple)"]
         N["주소 검색 API"]
         O["파일 업로드"]
-        M1["이메일 서비스"]
-        N1["결제 시스템"]
     end
 
     A --> E
@@ -81,8 +79,7 @@ graph TB
     F --> M
     G --> N
     G --> O
-    F --> M1
-    G --> N1
+
 ```
 
 ## 🚀 핵심 기능

@@ -9,6 +9,7 @@ import { LoginFormData, UserAuthData } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
 import { isAuthenticated } from "../middlewares/auth.middleware";
+import { ROLES, SSO_PROVIDERS } from "../../../shared/constants";
 
 const router = Router();
 
@@ -82,7 +83,7 @@ router.post("/login", async (req, res) => {
     let isNewStore: boolean = false;
     let storeId: number | undefined;
 
-    if (user.role === "SELLER") {
+    if (user.role === ROLES.SELLER) {
       const sellerRepository = await AppDataSource.getRepository(Seller);
       // user.id를 기준으로 해당하는 판매자(상점) 정보를 찾습니다.
       const seller = await sellerRepository.findOne({
@@ -168,7 +169,11 @@ router.get(
       };
 
       // 판매자이고, 유효한 매장이 있으면 storeId를 추가
-      if (user.role === "SELLER" && user.sellers && user.sellers.length > 0) {
+      if (
+        user.role === ROLES.SELLER &&
+        user.sellers &&
+        user.sellers.length > 0
+      ) {
         const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
         if (activeSeller) {
           userAuthData.storeId = activeSeller.storeId;
@@ -253,7 +258,11 @@ router.post("/callback/:provider", async (req, res) => {
     if (user) {
       // [기존 사용자 로그인 처리]
       let storeId: number | undefined;
-      if (user.role === "SELLER" && user.sellers && user.sellers.length > 0) {
+      if (
+        user.role === ROLES.SELLER &&
+        user.sellers &&
+        user.sellers.length > 0
+      ) {
         const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
         if (activeSeller) {
           storeId = activeSeller.storeId;
@@ -268,7 +277,7 @@ router.post("/callback/:provider", async (req, res) => {
         storeId,
       };
 
-      if (user.role === "SELLER" && !storeId) {
+      if (user.role === ROLES.SELLER && !storeId) {
         return res.status(202).json({
           success: true,
           data: { isNewUser: false, token, userAuthData },
@@ -315,9 +324,9 @@ async function getUserProfile(
   code: string,
 ): Promise<UserProfile | null> {
   switch (provider) {
-    case "naver":
+    case SSO_PROVIDERS.NAVER:
       return await getNaverUserProfile(code);
-    case "kakao":
+    case SSO_PROVIDERS.KAKAO:
       return await getKakaoUserProfile(code);
     default:
       console.warn(`지원하지 않는 SSO 프로바이더입니다: ${provider}`);

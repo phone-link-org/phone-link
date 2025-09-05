@@ -18,6 +18,7 @@ import SsoCallbackPage from "./pages/SsoCallbackPage";
 import AdminPage from "./pages/AdminPage";
 
 import { useAuthStore } from "./store/authStore";
+import { ROLES } from "../../shared/constants";
 
 function App() {
   const { checkAuthStatus, isLoading } = useAuthStore();
@@ -72,12 +73,12 @@ function App() {
         </Route>
 
         {/* SELLER */}
-        <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.SELLER]} />}>
           <Route path="/store/register" element={<StoreRegisterPage />} />
         </Route>
 
         {/* ADMIN */}
-        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 

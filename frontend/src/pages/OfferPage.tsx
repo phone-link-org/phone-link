@@ -18,6 +18,13 @@ import type {
   PhoneStorageDto,
   OfferSearchRequest,
 } from "../../../shared/types";
+import {
+  CARRIERS,
+  OFFER_TYPES,
+  SORT_ORDER,
+  type OfferType,
+  type SortOrder,
+} from "../../../shared/constants";
 
 const OfferPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
@@ -32,17 +39,13 @@ const OfferPage: React.FC = () => {
 
   const [selectedModels, setSelectedModels] = useState<OfferModelDto[]>([]);
   const [selectedCarriers, setSelectedCarriers] = useState<CarrierDto[]>([]);
-  const [selectedOfferTypes, setSelectedOfferTypes] = useState<
-    ("MNP" | "CHG")[]
-  >([]);
+  const [selectedOfferTypes, setSelectedOfferTypes] = useState<OfferType[]>([]);
 
   const [offerDatas, setOfferDatas] = useState<OfferSearchResult[]>([]);
   const pageRef = useRef(1); // 페이지 번호를 ref로 관리
   const [hasNextPage, setHasNextPage] = useState(true); // 다음 페이지 존재 여부
   const [loading, setLoading] = useState(false); // 데이터 로딩 상태
-  const [sortOrder, setSortOrder] = useState<
-    "default" | "price_asc" | "price_desc"
-  >("default"); // 정렬 순서 상태
+  const [sortOrder, setSortOrder] = useState<SortOrder>(SORT_ORDER.DEFAULT); // 정렬 순서 상태
   const SERVER = import.meta.env.VITE_API_URL;
 
   const fetchOfferDatas = useCallback(
@@ -177,7 +180,7 @@ const OfferPage: React.FC = () => {
         setSelectedModels([]);
         setSelectedCarriers([]);
         setSelectedOfferTypes([]);
-        setSortOrder("default"); // 정렬 순서도 초기화
+        setSortOrder(SORT_ORDER.DEFAULT); // 정렬 순서도 초기화
       }
     });
   };
@@ -186,9 +189,9 @@ const OfferPage: React.FC = () => {
   // --- 정렬 버튼 토글 핸들러 ---
   const handleSortToggle = () => {
     setSortOrder((currentOrder) => {
-      if (currentOrder === "default") return "price_asc";
-      if (currentOrder === "price_asc") return "price_desc";
-      return "default";
+      if (currentOrder === SORT_ORDER.DEFAULT) return SORT_ORDER.PRICE_ASC;
+      if (currentOrder === SORT_ORDER.PRICE_ASC) return SORT_ORDER.PRICE_DESC;
+      return SORT_ORDER.DEFAULT;
     });
   };
 
@@ -403,7 +406,7 @@ const OfferPage: React.FC = () => {
                     key={offerType}
                     className="flex items-center text-sm bg-purple-100 dark:bg-purple-700 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full"
                   >
-                    {offerType === "MNP" ? "번호이동" : "기기변경"}
+                    {offerType === OFFER_TYPES.MNP ? "번호이동" : "기기변경"}
                     <button
                       onClick={() =>
                         setSelectedOfferTypes((prev) =>
@@ -459,11 +462,11 @@ const OfferPage: React.FC = () => {
                 // 통신사별 색상 설정
                 const getCarrierBadgeColor = (carrier: string) => {
                   switch (carrier) {
-                    case "KT":
+                    case CARRIERS.KT:
                       return "bg-[#5EDFDE] text-white";
-                    case "SKT":
+                    case CARRIERS.SKT:
                       return "bg-[#3618CE] text-white";
-                    case "LG U+":
+                    case CARRIERS.LG:
                       return "bg-[#E2207E] text-white";
                     default:
                       return "bg-gray-400 text-white";

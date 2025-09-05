@@ -1,3 +1,4 @@
+import type { OfferType, SortOrder } from "./constants";
 import type {
   CarrierDto,
   OfferModelDto,
@@ -16,7 +17,7 @@ export interface OfferDto {
   storeId: StoreDto["id"];
   carrierId: CarrierDto["id"];
   deviceId: PhoneDeviceDto["id"];
-  offerType: "MNP" | "CHG";
+  offerType: OfferType;
   price?: number | null;
   sortOrder?: number;
   updatedBy?: UserDto["id"];
@@ -28,10 +29,10 @@ export type OfferSearchRequest = {
   regions: OfferRegionDto[];
   models: OfferModelDto[];
   carriers: CarrierDto[];
-  offerTypes: ("MNP" | "CHG")[];
+  offerTypes: OfferType[];
   page: number;
   limit: number;
-  sortOrder: "default" | "price_asc" | "price_desc";
+  sortOrder: SortOrder;
 };
 
 export type OfferSearchResult = Pick<OfferDto, "id" | "offerType" | "price"> & {
@@ -57,7 +58,7 @@ export type StoreOfferPriceFormData = Pick<
 
 //Store Page의 시세표 출력을 위한 커스텀 타입 start
 type StoreOfferType = {
-  offerType: "MNP" | "CHG";
+  offerType: OfferType;
   price: OfferDto["price"];
 };
 

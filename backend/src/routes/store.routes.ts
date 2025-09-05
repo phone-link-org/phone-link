@@ -16,6 +16,7 @@ import { PhoneDevice } from "../typeorm/phoneDevices.entity";
 import { OfferDto } from "shared/offer.types";
 import { PhoneDeviceDto } from "shared/phone.types";
 import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
+import { ROLES } from "../../../shared/constants";
 
 const router = Router();
 
@@ -112,7 +113,7 @@ router.get("/stores", async (req, res) => {
 router.get(
   "/check-name",
   isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole(["SELLER"]), // 권한 확인 미들웨어
+  hasRole([ROLES.SELLER]), // 권한 확인 미들웨어
   async (req, res) => {
     try {
       const { inputStoreName } = req.query;
@@ -171,7 +172,7 @@ router.get(
 router.post(
   "/upload-image",
   isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole(["SELLER"]), // 권한 확인 미들웨어
+  hasRole([ROLES.SELLER]), // 권한 확인 미들웨어
   upload.single("thumbnail"),
   handleUploadErrors,
   async (req: Request, res: Response) => {
@@ -208,7 +209,7 @@ router.post(
 router.post(
   "/delete-image",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER]),
   async (req, res) => {
     try {
       const { filename } = req.body;
@@ -254,7 +255,7 @@ router.post(
 router.post(
   "/register",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER]),
   async (req, res) => {
     try {
       const {
@@ -343,7 +344,7 @@ router.post(
 router.get(
   "/pending",
   isAuthenticated,
-  hasRole(["ADMIN"]),
+  hasRole([ROLES.ADMIN]),
   async (req, res) => {
     try {
       const storeRepo = AppDataSource.getRepository(Store);
@@ -477,7 +478,7 @@ router.get("/:storeId/offers", async (req, res) => {
 router.post(
   "/:storeId/offers",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER]),
   async (req, res) => {
     const { storeId } = req.params;
     const { offers } = req.body;
@@ -688,7 +689,7 @@ router.get("/:storeId/detail", async (req, res) => {
 router.post(
   "/:storeId/addon-save",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER]),
   async (req, res) => {
     try {
       const { storeId } = req.params;

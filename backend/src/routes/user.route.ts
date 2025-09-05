@@ -7,6 +7,7 @@ import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { Seller } from "../typeorm/sellers.entity";
 import { SignupFormData } from "../../../shared/types";
 import { nanoid } from "nanoid";
+import { ROLES } from "../../../shared/constants";
 
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
@@ -143,7 +144,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await transactionalEntityManager.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "SELLER" && storeId !== -8574) {
+        if (savedUser.role === ROLES.SELLER && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -290,7 +291,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await userRepo.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "SELLER" && storeId !== -8574) {
+        if (savedUser.role === ROLES.SELLER && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }

@@ -8,6 +8,7 @@ import {
   OfferSearchResult,
   PhoneStorageDto,
 } from "shared/types";
+import { SORT_ORDER } from "../../../shared/constants";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.post("/search", async (req, res) => {
       offerTypes,
       page = 1,
       limit = 20,
-      sortOrder = "default",
+      sortOrder = SORT_ORDER.DEFAULT,
     } = req.body;
 
     interface DynamicParams {
@@ -175,9 +176,9 @@ router.post("/search", async (req, res) => {
     }
 
     // 정렬 조건 적용
-    if (sortOrder === "price_asc") {
+    if (sortOrder === SORT_ORDER.PRICE_ASC) {
       qb.orderBy("o.price", "ASC");
-    } else if (sortOrder === "price_desc") {
+    } else if (sortOrder === SORT_ORDER.PRICE_DESC) {
       qb.orderBy("o.price", "DESC");
     }
 

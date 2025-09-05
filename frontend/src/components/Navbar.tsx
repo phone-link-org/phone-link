@@ -1,8 +1,9 @@
-import React, { useContext } from "react";
+import React from "react";
 import ThemeToggleButton from "./ThemeToggleButton";
 import { IoMenuOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { ROLES } from "../../../shared/constants";
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          {user?.role === "SELLER" && user.storeId && (
+          {user?.role === ROLES.SELLER && user.storeId && (
             <li>
               <Link to="/store">
                 <button
@@ -58,7 +59,7 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          {user?.role === "ADMIN" && (
+          {user?.role === ROLES.ADMIN && (
             <li>
               <Link to="/admin">
                 <button

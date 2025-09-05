@@ -11,6 +11,7 @@ import { Store } from "./stores.entity";
 import { PhoneDevice } from "./phoneDevices.entity";
 import { Carrier } from "./carriers.entity";
 import { User } from "./users.entity";
+import { OFFER_TYPES, OfferType } from "../../../shared/constants";
 
 @Entity("offers")
 export class Offer {
@@ -29,10 +30,10 @@ export class Offer {
   @Column({
     name: "offer_type",
     type: "enum",
-    enum: ["MNP", "CHG"],
+    enum: [OFFER_TYPES.MNP, OFFER_TYPES.CHG],
     nullable: false,
   })
-  offerType: "MNP" | "CHG";
+  offerType: OfferType;
 
   @Column({ type: "int" })
   price: number | null;

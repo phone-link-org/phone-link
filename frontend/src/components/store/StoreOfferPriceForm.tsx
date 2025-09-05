@@ -7,10 +7,11 @@ import { produce } from "immer";
 import LoadingSpinner from "../LoadingSpinner";
 import { ClipLoader } from "react-spinners";
 import { useTheme } from "../../hooks/useTheme";
+import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
 
-const offerTypes: { value: "MNP" | "CHG"; label: string }[] = [
-  { value: "MNP", label: "번호이동" },
-  { value: "CHG", label: "기기변경" },
+const offerTypes: { value: OfferType; label: string }[] = [
+  { value: OFFER_TYPES.MNP, label: "번호이동" },
+  { value: OFFER_TYPES.CHG, label: "기기변경" },
 ];
 
 const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
@@ -76,7 +77,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
     modelId: number,
     storageId: number,
     carrierId: number,
-    offerType: "MNP" | "CHG",
+    offerType: OfferType,
     newValue: string,
   ) => {
     const price = newValue === "" ? null : Number(newValue);

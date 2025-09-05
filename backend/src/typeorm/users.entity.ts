@@ -12,6 +12,7 @@ import { Comment } from "./comments.entity";
 import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
+import { ROLES, Role } from "../../../shared/constants";
 
 @Entity("users")
 @Index("idx_status", ["status"])
@@ -67,11 +68,11 @@ export class User {
 
   @Column({
     type: "enum",
-    enum: ["USER", "SELLER", "ADMIN"],
+    enum: [ROLES.USER, ROLES.SELLER, ROLES.SELLER],
     nullable: false,
-    default: "USER",
+    default: ROLES.USER,
   })
-  role: "USER" | "SELLER" | "ADMIN";
+  role: Role;
 
   @Column({
     type: "enum",

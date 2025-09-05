@@ -9,12 +9,13 @@ import googleLogo from "../assets/images/google.png";
 import kakaoLogo from "../assets/images/kakao.png";
 import naverLogo from "../assets/images/naver.png";
 import type { LoginFormData } from "../../../shared/types";
+import { SSO_PROVIDERS, type SsoProvider } from "../../../shared/constants";
 
 const ssoProviders = [
-  { name: "apple", logo: appleLogo, alt: "Apple 로그인" },
-  { name: "google", logo: googleLogo, alt: "Google 로그인" },
-  { name: "kakao", logo: kakaoLogo, alt: "Kakao 로그인" },
-  { name: "naver", logo: naverLogo, alt: "Naver 로그인" },
+  { name: SSO_PROVIDERS.APPLE, logo: appleLogo, alt: "Apple 로그인" },
+  { name: SSO_PROVIDERS.GOOGLE, logo: googleLogo, alt: "Google 로그인" },
+  { name: SSO_PROVIDERS.KAKAO, logo: kakaoLogo, alt: "Kakao 로그인" },
+  { name: SSO_PROVIDERS.NAVER, logo: naverLogo, alt: "Naver 로그인" },
 ];
 
 const LoginPage: React.FC = () => {
@@ -97,14 +98,14 @@ const LoginPage: React.FC = () => {
     return state;
   };
 
-  const handleSsoLogin = (provider: string) => {
-    if (provider === "naver") {
+  const handleSsoLogin = (provider: SsoProvider) => {
+    if (provider === SSO_PROVIDERS.NAVER) {
       const { clientId, redirectUri, authUrl } = ssoConfig.naver;
       const state = getState();
       sessionStorage.setItem("naver_oauth_state", state);
       const naverAuthUrl = `${authUrl}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
       window.location.href = naverAuthUrl;
-    } else if (provider === "kakao") {
+    } else if (provider === SSO_PROVIDERS.KAKAO) {
       const { clientId, redirectUri, authUrl } = ssoConfig.kakao;
       const state = getState();
       sessionStorage.setItem("kakao_oauth_state", state);

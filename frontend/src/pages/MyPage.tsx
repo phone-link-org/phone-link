@@ -7,6 +7,7 @@ import ImageUpload from "../components/ImageUpload";
 import axios from "axios";
 import type { UserDto } from "../../../shared/types";
 import { useAuthStore } from "../store/authStore";
+import { ROLES } from "../../../shared/constants";
 
 interface DaumPostcodeData {
   address: string;
@@ -245,7 +246,7 @@ const MyPage: React.FC = () => {
       if (!previous) return previous;
       return {
         ...previous,
-        role: previous.role === "SELLER" ? "USER" : "SELLER",
+        role: previous.role === ROLES.SELLER ? ROLES.USER : ROLES.SELLER,
       } as UserDto;
     });
   };
@@ -477,7 +478,7 @@ const MyPage: React.FC = () => {
                       name="role"
                       type="checkbox"
                       className="sr-only peer"
-                      checked={formData?.role === "SELLER"}
+                      checked={formData?.role === ROLES.SELLER}
                       onChange={toggleRole}
                     />
                     <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
@@ -487,7 +488,7 @@ const MyPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {formData?.role === "SELLER"
+                  {formData?.role === ROLES.SELLER
                     ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
                     : "일반 사용자 계정입니다."}
                 </p>

@@ -6,6 +6,7 @@ import type {
   Addon,
   PriceSubmissionData,
 } from "../../../../shared/types";
+import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
 
 type TableRow = {
   model: string;
@@ -145,12 +146,12 @@ const ExcelUpload: React.FC = () => {
       }
 
       const priceByCarrier = [
-        { carrier: "1", type: "MNP", price: row[1] },
-        { carrier: "1", type: "CHG", price: row[2] },
-        { carrier: "2", type: "MNP", price: row[3] },
-        { carrier: "2", type: "CHG", price: row[4] },
-        { carrier: "3", type: "MNP", price: row[5] },
-        { carrier: "3", type: "CHG", price: row[6] },
+        { carrier: "1", type: OFFER_TYPES.MNP, price: row[1] },
+        { carrier: "1", type: OFFER_TYPES.CHG, price: row[2] },
+        { carrier: "2", type: OFFER_TYPES.MNP, price: row[3] },
+        { carrier: "2", type: OFFER_TYPES.CHG, price: row[4] },
+        { carrier: "3", type: OFFER_TYPES.MNP, price: row[5] },
+        { carrier: "3", type: OFFER_TYPES.CHG, price: row[6] },
       ];
 
       for (const c of priceByCarrier) {
@@ -164,7 +165,7 @@ const ExcelUpload: React.FC = () => {
             model: modelName,
             capacity: storage || "",
             carrier: c.carrier,
-            buyingType: c.type as "MNP" | "CHG",
+            buyingType: c.type as OfferType,
             typePrice: Number(c.price),
           });
         }
@@ -255,7 +256,7 @@ const ExcelUpload: React.FC = () => {
 
   // header 구조
   const columns = [
-    { carrier: "SK", mnp: "sk_mnp", chg: "sk_chg" } as const,
+    { carrier: "SKT", mnp: "sk_mnp", chg: "sk_chg" } as const,
     { carrier: "KT", mnp: "kt_mnp", chg: "kt_chg" } as const,
     { carrier: "LG", mnp: "lg_mnp", chg: "lg_chg" } as const,
   ];

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload, VerifyErrors } from "jsonwebtoken";
 import { UserAuthData } from "../../../shared/types"; // 프론트/백엔드 공유 타입
+import { Role } from "../../../shared/constants";
 
 // Express의 Request 인터페이스를 확장하여 user 속성을 추가
 export interface AuthenticatedRequest extends Request {
@@ -52,7 +53,7 @@ export const isAuthenticated = (
  * 필요한 역할(role)들을 배열로 받아, 해당 역할을 가진 사용자인지 확인하는 미들웨어를 반환
  * @param requiredRoles 허용할 역할의 배열 (예: ['ADMIN'], ['SELLER', 'ADMIN'])
  */
-export const hasRole = (requiredRoles: Array<"USER" | "SELLER" | "ADMIN">) => {
+export const hasRole = (requiredRoles: Array<Role>) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // 이 미들웨어는 isAuthenticated 뒤에 실행되므로 req.user는 항상 존재해야 함.
     if (!req.user?.role) {
@@ -65,7 +66,7 @@ export const hasRole = (requiredRoles: Array<"USER" | "SELLER" | "ADMIN">) => {
     const userRole = req.user.role;
 
     // 사용자의 역할이 필요한 역할 중 하나에 포함되는지 확인
-    if (requiredRoles.includes(userRole as "USER" | "SELLER" | "ADMIN")) {
+    if (requiredRoles.includes(userRole as Role)) {
       next(); // 권한이 있으면 다음 미들웨어로 진행
     } else {
       // 권한이 없으면 403 Forbidden 에러를 반환

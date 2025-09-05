@@ -1,12 +1,12 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
 import { api } from "../api/axios";
 import { toast } from "sonner";
 import AddressSearchButton from "../components/AddressSearchButton";
 import ImageUpload from "../components/ImageUpload";
 import axios from "axios";
 import type { UserDto } from "../../../shared/types";
+import { useAuthStore } from "../store/authStore";
 
 interface DaumPostcodeData {
   address: string;
@@ -28,27 +28,12 @@ interface UserUpdateData {
 }
 
 const MyPage: React.FC = () => {
-  const authContext = useContext(AuthContext);
-  const user = authContext?.user;
   const navigate = useNavigate();
   const addressDetailRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuthStore();
 
-  const [formData, setFormData] = useState<UserDto>({
-    id: 999,
-    nickname: "테스트용",
-    email: "test@test.com",
-    password: "",
-    profileImageUrl: "",
-    address: "서울특별시 도봉구 도봉로 169길 31",
-    addressDetail: "102동 110호",
-    role: "USER",
-    status: "ACTIVE",
-    name: "홍길동",
-    gender: "M",
-    birthday: "1998-03-09",
-    phoneNumber: "010-1234-5678",
-    createdAt: new Date(),
-  });
+  const [formData, setFormData] = useState<UserDto | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [errors, setErrors] = useState<
     Partial<Record<keyof UserUpdateData | "passwordConfirm", string>>
@@ -56,16 +41,19 @@ const MyPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // AuthProvider가 로드되고 user 상태가 확정된 후, 비로그인 상태라면 리다이렉트
-    if (authContext !== null && !user) {
-      navigate("/login", { replace: true });
-    }
-  }, [user, navigate, authContext]);
-
-  // 리다이렉션이 실행되기 전에 컴포넌트 내용이 잠시 보이는 것을 방지
-  if (!user) {
-    return null;
-  }
+    const fetchUserData = async () => {
+      try {
+        const userId = user?.id;
+        const response = await api.get<UserDto>("/user/profile", {
+          params: { userId },
+        });
+        setFormData(response);
+      } catch (error) {
+        console.error("User data fetch", error);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -73,10 +61,18 @@ const MyPage: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // Password is managed separately
+    if (name === "password") {
+      setNewPassword(value);
+    } else {
+      setFormData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [name]: value,
+        } as UserDto;
+      });
+    }
 
     // 에러 메시지 제거
     if (errors[name as keyof typeof errors]) {
@@ -99,17 +95,20 @@ const MyPage: React.FC = () => {
       fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      address: fullAddress,
-    }));
+    setFormData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        address: fullAddress,
+      } as UserDto;
+    });
 
     // 상세 주소 필드로 포커스 이동
     addressDetailRef.current?.focus();
   };
 
   const validatePassword = () => {
-    const { password } = formData;
+    const password = newPassword;
     let errorMessage = "";
 
     if (password && password.length > 0) {
@@ -129,14 +128,14 @@ const MyPage: React.FC = () => {
   };
 
   const validatePasswordConfirm = () => {
-    if (formData.password && !passwordConfirm) {
+    if (newPassword && !passwordConfirm) {
       setErrors((prev) => ({
         ...prev,
         passwordConfirm: "비밀번호를 다시 한번 입력해주세요.",
       }));
       return false;
     }
-    if (formData.password && formData.password !== passwordConfirm) {
+    if (newPassword && newPassword !== passwordConfirm) {
       setErrors((prev) => ({
         ...prev,
         passwordConfirm: "비밀번호가 일치하지 않습니다.",
@@ -167,7 +166,7 @@ const MyPage: React.FC = () => {
     let formIsValid = true;
 
     // 비밀번호 변경 시에만 유효성 검사
-    if (formData.password) {
+    if (newPassword) {
       const isPasswordValid = validatePassword();
       const isPasswordConfirmValid = validatePasswordConfirm();
       if (!isPasswordValid || !isPasswordConfirmValid) {
@@ -185,9 +184,17 @@ const MyPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      if (!formData) {
+        toast.error("사용자 정보를 불러오는 중입니다.");
+        return;
+      }
       // 비밀번호가 비어있으면 제외
-      const updateData = { ...formData };
-      if (!updateData.password) {
+      const updateData: Partial<UserDto & { password?: string }> = {
+        ...formData,
+      };
+      if (newPassword) {
+        updateData.password = newPassword;
+      } else {
         delete updateData.password;
       }
 
@@ -196,7 +203,7 @@ const MyPage: React.FC = () => {
       toast.success("프로필이 성공적으로 수정되었습니다.");
 
       // 비밀번호 필드 초기화
-      setFormData((prev) => ({ ...prev, password: "" }));
+      setNewPassword("");
       setPasswordConfirm("");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
@@ -233,6 +240,16 @@ const MyPage: React.FC = () => {
     }
   };
 
+  const toggleRole = () => {
+    setFormData((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        role: previous.role === "SELLER" ? "USER" : "SELLER",
+      } as UserDto;
+    });
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark pt-[63px] pb-6">
       <div className="w-full max-w-4xl p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
@@ -254,7 +271,7 @@ const MyPage: React.FC = () => {
                 <input
                   type="email"
                   id="email"
-                  value={formData.email}
+                  value={formData?.email ?? ""}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -272,7 +289,7 @@ const MyPage: React.FC = () => {
                   type="password"
                   id="password"
                   name="password"
-                  value={""}
+                  value={newPassword}
                   onChange={handleChange}
                   onBlur={validatePassword}
                   onFocus={handleFocus}
@@ -318,7 +335,7 @@ const MyPage: React.FC = () => {
                   type="text"
                   id="nickname"
                   name="nickname"
-                  value={formData.nickname}
+                  value={formData?.nickname ?? ""}
                   onChange={handleChange}
                   onFocus={handleFocus}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
@@ -332,7 +349,7 @@ const MyPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData.gender}
+                  value={formData?.gender ?? ""}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -350,7 +367,7 @@ const MyPage: React.FC = () => {
                   type="date"
                   id="birthday"
                   name="birthday"
-                  value={formData.birthday}
+                  value={formData?.birthday ?? ""}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -367,7 +384,7 @@ const MyPage: React.FC = () => {
                 <input
                   type="tel"
                   id="phoneNumber"
-                  value={formData.phoneNumber}
+                  value={formData?.phoneNumber ?? ""}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -381,15 +398,21 @@ const MyPage: React.FC = () => {
             <div className="space-y-4">
               {/* Profile Image */}
               <ImageUpload
-                currentImageUrl={formData.profileImageUrl}
+                currentImageUrl={formData?.profileImageUrl ?? ""}
                 onImageChange={(imageUrl) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    profileImageUrl: imageUrl,
-                  }))
+                  setFormData((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      profileImageUrl: imageUrl,
+                    } as UserDto;
+                  })
                 }
                 onImageRemove={() =>
-                  setFormData((prev) => ({ ...prev, profileImageUrl: "" }))
+                  setFormData((prev) => {
+                    if (!prev) return prev;
+                    return { ...prev, profileImageUrl: "" } as UserDto;
+                  })
                 }
                 label="프로필 이미지"
               />
@@ -407,7 +430,7 @@ const MyPage: React.FC = () => {
                     type="text"
                     id="address"
                     name="address"
-                    value={formData.address}
+                    value={formData?.address ?? ""}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     readOnly
@@ -431,7 +454,7 @@ const MyPage: React.FC = () => {
                   type="text"
                   id="addressDetail"
                   name="addressDetail"
-                  value={formData.addressDetail}
+                  value={formData?.addressDetail ?? ""}
                   onChange={handleChange}
                   onFocus={handleFocus}
                   ref={addressDetailRef}
@@ -454,8 +477,8 @@ const MyPage: React.FC = () => {
                       name="role"
                       type="checkbox"
                       className="sr-only peer"
-                      checked={formData.role === "SELLER"}
-                      onChange={handleChange}
+                      checked={formData?.role === "SELLER"}
+                      onChange={toggleRole}
                     />
                     <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                   </label>
@@ -464,7 +487,7 @@ const MyPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {formData.role === "SELLER"
+                  {formData?.role === "SELLER"
                     ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
                     : "일반 사용자 계정입니다."}
                 </p>
@@ -486,7 +509,7 @@ const MyPage: React.FC = () => {
             <button
               type="button"
               onClick={handleWithdrawal}
-              className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 underline"
+              className="text-sm text-gray-400 hover:text-red-700 dark:text-white-900 dark:hover:text-red-300 underline"
             >
               회원 탈퇴
             </button>

@@ -33,8 +33,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       const fetchManufacturers = async () => {
         const response =
           await api.get<PhoneManufacturerDto[]>(`/phone/manufacturers`);
-        console.log(response);
-
         setManufacturers(response);
       };
       fetchManufacturers();

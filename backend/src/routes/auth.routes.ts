@@ -1,6 +1,6 @@
-import { NextFunction, Request, Response, Router } from "express";
+import { Request, Response, Router } from "express";
 import bcrypt from "bcrypt";
-import jwt, { JwtPayload, VerifyErrors } from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { AppDataSource } from "../db";
 import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
@@ -8,6 +8,7 @@ import { Seller } from "../typeorm/sellers.entity";
 import { LoginFormData, UserAuthData } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
+import { isAuthenticated } from "../middlewares/auth.middleware";
 
 const router = Router();
 
@@ -15,35 +16,16 @@ interface AuthenticatedRequest extends Request {
   user?: UserAuthData & JwtPayload; // 토큰에서 디코딩된 사용자 정보
 }
 
-const isAuthenticated = (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction,
-) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "인증 토큰이 필요합니다." });
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  jwt.verify(
-    token,
-    process.env.JWT_SECRET!,
-    (err: VerifyErrors | null, decodedUser) => {
-      if (err) {
-        if (err.name === "TokenExpiredError") {
-          return res.status(401).json({ message: "토큰이 만료되었습니다." });
-        }
-        return res.status(403).json({ message: "유효하지 않은 토큰입니다." });
-      }
-      // 요청 객체에 디코딩된 사용자 정보를 첨부합니다.
-      req.user = decodedUser as UserAuthData & JwtPayload;
-      next();
-    },
-  );
-};
+// 소셜 서비스로부터 가져온 정규화된 프로필 타입
+interface UserProfile {
+  sso_id: string;
+  name: string;
+  email: string;
+  phone_number?: string;
+  birthyear?: string;
+  birthday?: string;
+  gender?: "M" | "F";
+}
 
 /**
  * 사용자 정보를 바탕으로 JWT를 생성합니다.
@@ -159,9 +141,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// 토큰을 기반으로 현재 로그인된 사용자의 정보를 반환합니다.
+// 토큰을 기반으로 현재 로그인된 사용자의 정보를 반환
 router.get(
-  "/auth/profile",
+  "/profile",
   isAuthenticated,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
@@ -185,7 +167,7 @@ router.get(
         role: user.role,
       };
 
-      // 판매자이고, 활성화된 상점이 있다면 storeId를 추가
+      // 판매자이고, 유효한 매장이 있으면 storeId를 추가
       if (user.role === "SELLER" && user.sellers && user.sellers.length > 0) {
         const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
         if (activeSeller) {
@@ -193,7 +175,6 @@ router.get(
         }
       }
 
-      // 최종적으로 프론트엔드가 기대하는 UserAuthData 형태로 응답
       res.status(200).json(userAuthData);
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -202,8 +183,7 @@ router.get(
   },
 );
 
-// 기존 /auth/naver/callback 라우트를 범용 라우트로 변경
-router.post("/auth/callback/:provider", async (req, res) => {
+router.post("/callback/:provider", async (req, res) => {
   const { provider } = req.params;
   const { code } = req.body;
 
@@ -211,54 +191,35 @@ router.post("/auth/callback/:provider", async (req, res) => {
     return res.status(400).json({
       success: false,
       message: "Authorization code is missing.",
-      error: "Bad Request",
     });
   }
 
   try {
-    let userProfile;
-
-    switch (provider) {
-      case "naver":
-        userProfile = await getNaverUserProfile(code);
-        break;
-      case "kakao":
-        userProfile = await getKakaoUserProfile(code);
-        break;
-      // TODO: case "kakao": ... 등 다른 프로바이더 추가
-      default:
-        return res.status(400).json({
-          success: false,
-          message: "지원하지 않는 SSO 프로바이더입니다.",
-          error: "Bad Request",
-        });
-    }
+    // 소셜 프로필 정보 가져오기
+    const userProfile = await getUserProfile(provider, code);
 
     if (!userProfile) {
       return res.status(500).json({
         success: false,
-        message: "SSO 사용자 프로필을 가져오는데 실패했습니다.",
-        error: "Internal Server Error",
+        message: "SSO 사용자 프로필을 가져오는 데 실패했습니다.",
       });
     }
 
-    // --- 여기부터는 기존의 사용자 조회/연동/생성 로직과 거의 동일 ---
-
-    // 1. 소셜 계정 정보로 기존 사용자 찾기
+    // 기존 사용자 조회 또는 계정 연동
     const socialAccountRepo = AppDataSource.getRepository(SocialAccount);
+    const userRepo = AppDataSource.getRepository(User);
+    let user: User | null = null;
+
     const socialAccount = await socialAccountRepo.findOne({
-      where: {
-        provider: provider,
-        providerUserId: userProfile.sso_id,
-      },
-      relations: ["user"],
+      where: { provider, providerUserId: userProfile.sso_id },
+      relations: ["user", "user.sellers"],
     });
 
-    let user = socialAccount?.user;
-
-    // 2. 소셜 계정이 없으면, 전화번호로 기존 사용자를 찾아 연동
-    if (!user && userProfile.phone_number) {
-      const userRepo = AppDataSource.getRepository(User);
+    if (socialAccount) {
+      user = socialAccount.user;
+    } else if (userProfile.phone_number) {
+      // 소셜 연동 데이터는 없는데 기존 사용자면 자동 연동
+      // TODO: 이런 식으로 처리해도 되는지 검토 후 개선 필요!!
       let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
       formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
       if (formattedPhoneNumber.length === 11) {
@@ -271,107 +232,101 @@ router.post("/auth/callback/:provider", async (req, res) => {
       }
 
       if (formattedPhoneNumber) {
-        const existingUserByPhone = await userRepo.findOne({
+        const existingUser = await userRepo.findOne({
           where: { phoneNumber: formattedPhoneNumber },
+          relations: ["sellers"],
         });
 
-        if (existingUserByPhone) {
-          const newSocialAccount = new SocialAccount();
-          newSocialAccount.user = existingUserByPhone;
-          newSocialAccount.provider = provider;
-          newSocialAccount.providerUserId = userProfile.sso_id;
+        if (existingUser) {
+          const newSocialAccount = socialAccountRepo.create({
+            user: existingUser,
+            provider,
+            providerUserId: userProfile.sso_id,
+          });
           await socialAccountRepo.save(newSocialAccount);
-          user = existingUserByPhone;
+          user = existingUser;
         }
       }
     }
 
-    // 3. 최종 분기 처리
+    // 사용자 존재 여부에 따라 분기 처리
     if (user) {
-      // 로그인 처리
-      const token = jwt.sign(
-        { user_id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET!,
-        { expiresIn: "1h" },
-      );
-
-      // user role이 seller인데 매장 등록이 안되어있으면 매장 등록 페이지로 이동
-      if (user.role === "SELLER") {
-        const seller = await AppDataSource.getRepository(Seller).findOne({
-          where: { userId: user.id },
-        });
-        if (!seller) {
-          return res.status(202).json({
-            success: true,
-            message: `매장 등록 페이지로 이동합니다.`,
-            data: {
-              user: {
-                id: user.id,
-                email: user.email,
-                nickname: user.nickname,
-                role: user.role,
-              },
-              token,
-            },
-          });
+      // [기존 사용자 로그인 처리]
+      let storeId: number | undefined;
+      if (user.role === "SELLER" && user.sellers && user.sellers.length > 0) {
+        const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
+        if (activeSeller) {
+          storeId = activeSeller.storeId;
         }
+      }
+
+      const token = createToken(user, storeId);
+      const userAuthData: UserAuthData = {
+        id: user.id,
+        nickname: user.nickname,
+        role: user.role,
+        storeId,
+      };
+
+      if (user.role === "SELLER" && !storeId) {
+        return res.status(202).json({
+          success: true,
+          data: { isNewUser: false, token, userAuthData },
+        });
       }
 
       return res.status(200).json({
         success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            nickname: user.nickname,
-            role: user.role,
-          },
-          token,
-          isNewUser: false,
-        },
+        data: { isNewUser: false, token, userAuthData },
       });
     } else {
-      // 신규 가입 처리
+      // [신규 사용자 가입 처리]
       const ssoData = {
+        provider,
         providerUserId: userProfile.sso_id,
-        provider: provider,
         email: userProfile.email,
         name: userProfile.name,
         gender: userProfile.gender,
         phoneNumber: userProfile.phone_number,
         birthYear: userProfile.birthyear,
         birthday: userProfile.birthday,
-        role: "user",
       };
       const signupToken = jwt.sign(
         ssoData,
         process.env.JWT_SIGNUP_SECRET || "default_signup_secret",
         { expiresIn: "10m" },
       );
+
       return res.status(200).json({
         success: true,
-        message: "New SSO user. Additional info required.",
-        data: {
-          ssoData,
-          signupToken,
-          isNewUser: true,
-        },
+        data: { isNewUser: true, ssoData, signupToken },
       });
     }
   } catch (error) {
     console.error(`${provider} callback error:`, error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error.",
-      error: "Internal Server Error",
-    });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error." });
   }
 });
 
-// --- Helper Functions ---
+async function getUserProfile(
+  provider: string,
+  code: string,
+): Promise<UserProfile | null> {
+  switch (provider) {
+    case "naver":
+      return await getNaverUserProfile(code);
+    case "kakao":
+      return await getKakaoUserProfile(code);
+    default:
+      console.warn(`지원하지 않는 SSO 프로바이더입니다: ${provider}`);
+      return null;
+  }
+}
 
 // 네이버 사용자 프로필을 가져오는 함수
-async function getNaverUserProfile(code: string) {
+async function getNaverUserProfile(code: string): Promise<UserProfile | null> {
   try {
     const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
       ssoConfig.naver;
@@ -394,7 +349,7 @@ async function getNaverUserProfile(code: string) {
     // 응답 데이터와 그 안의 response 객체가 존재하는지 확인
     if (profileResponse?.data?.response) {
       const naverProfile = profileResponse.data.response;
-      const userProfile = {
+      const userProfile: UserProfile = {
         sso_id: naverProfile.id,
         name: naverProfile.name,
         email: naverProfile.email,
@@ -425,7 +380,7 @@ async function getNaverUserProfile(code: string) {
   }
 }
 
-async function getKakaoUserProfile(code: string) {
+async function getKakaoUserProfile(code: string): Promise<UserProfile | null> {
   try {
     const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
       ssoConfig.kakao;
@@ -453,7 +408,7 @@ async function getKakaoUserProfile(code: string) {
     if (profileResponse?.data) {
       const kakaoProfile = profileResponse.data;
       console.log(kakaoProfile);
-      const userProfile = {
+      const userProfile: UserProfile = {
         sso_id: kakaoProfile.id,
         name: kakaoProfile.kakao_account.name,
         email: kakaoProfile.kakao_account.email,

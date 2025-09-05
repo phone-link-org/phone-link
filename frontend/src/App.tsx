@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { ClipLoader } from "react-spinners";
 import { Toaster } from "sonner";
 import { useContext, useEffect, useRef } from "react";
 import { ThemeContext } from "./context/ThemeContext";
@@ -43,7 +44,12 @@ function App() {
           height: "100vh",
         }}
       >
-        <h2>앱을 준비 중입니다...</h2>
+        <ClipLoader
+          size={48}
+          color={theme === "light" ? "#4F7942" : "#9DC183"}
+          loading={true}
+          className="animate-pulse"
+        />
       </div>
     );
   }
@@ -54,16 +60,24 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback/:provider" element={<SsoCallbackPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/offer" element={<OfferPage />} />
+        <Route path="/store" element={<StorePage />} />
         <Route path="/community" element={<CommunityPage />} />
-        <Route path="/auth/callback/:provider" element={<SsoCallbackPage />} />
 
-        {/* 로그인 필수 페이지 */}
+        {/* role 상관없이 로그인만 체크 */}
         <Route element={<ProtectedRoute />}>
           <Route path="/mypage" element={<MyPage />} />
-          <Route path="/store" element={<StorePage />} />
+        </Route>
+
+        {/* SELLER */}
+        <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
           <Route path="/store/register" element={<StoreRegisterPage />} />
+        </Route>
+
+        {/* ADMIN */}
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 

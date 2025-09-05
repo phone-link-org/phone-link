@@ -273,12 +273,12 @@ const SignupPage: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark pt-[63px] pb-6">
-      <div className="w-full max-w-4xl p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
-        <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
+      <div className="w-full max-w-4xl p-4 sm:p-6 lg:p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
           {isSsoSignup ? "추가 정보 입력" : "회원가입"}
         </h1>
         <form onSubmit={handleSignup} noValidate>
-          <div className="grid grid-cols-1 gap-y-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-x-8">
+          <div className="grid grid-cols-1 gap-y-6 md:grid-cols-[1fr_auto_1fr] md:gap-x-8">
             {/* --- Left Column --- */}
             <div className="space-y-4">
               {/* Email */}
@@ -353,7 +353,7 @@ const SignupPage: React.FC = () => {
                 </>
               )}
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Name */}
                 <div>
                   <label
@@ -441,11 +441,11 @@ const SignupPage: React.FC = () => {
             </div>
 
             {/* --- Divider --- */}
-            <div className="hidden lg:block w-px bg-background-light dark:bg-background-dark" />
+            <div className="hidden md:block w-px bg-background-light dark:bg-background-dark" />
 
             {/* --- Right Column --- */}
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Birthday */}
                 <div>
                   <label

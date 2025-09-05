@@ -5,8 +5,12 @@ import { Region } from "../typeorm/regions.entity";
 import { RegionDto } from "shared/region.types";
 import { Store } from "../typeorm/stores.entity";
 import { Seller } from "../typeorm/sellers.entity";
+import { isAuthenticated, hasRole } from "../middlewares/auth.middleware";
 
 const router = Router();
+
+// 토큰 확인 & 권한 인증 미들웨어 일괄 적용
+router.use(isAuthenticated, hasRole(["ADMIN"]));
 
 router.post("/store-confirm", async (req, res) => {
   const { storeId, approvalStatus, sellerId } = req.body;

@@ -3,6 +3,7 @@ import { Router } from "express";
 import { AppDataSource } from "../db";
 import { Offer } from "../typeorm/offers.entity";
 import {
+  OfferDetailFormData,
   OfferModelDto,
   OfferRegionDto,
   OfferSearchResult,
@@ -11,6 +12,66 @@ import {
 import { SORT_ORDER } from "../../../shared/constants";
 
 const router = Router();
+
+router.get("/:offerId", async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const offerRepo = AppDataSource.getRepository(Offer);
+    const sql = `
+      SELECT 
+        o.id AS "offerId", 
+        s.id AS "storeId",
+        s.name AS "storeName", 
+        s.thumbnail_url AS "storeThumbnailUrl",
+        CONCAT_WS(' ', s.address, s.address_detail) AS "storeAddress",
+        s.contact AS "storeContact",
+        s.link_1 AS "storeLink_1",
+        s.link_2 AS "storeLink_2",
+        CONCAT_WS(' ', pm.name_ko, ps.storage) AS "modelName",
+        pm.image_url AS "modelImageUrl",
+        pm.release_date AS "modelReleaseDate",
+        c.name AS "carrierName",
+        o.offer_type AS "offerType",
+        o.price AS "price",
+        pd.retail_price AS "retailPrice",
+        pd.coupang_link AS "coupangLink",
+        pd.unlocked_price AS "unlockedPrice",
+        rp.monthly_fee AS "monthlyFee"
+      FROM offers o
+      JOIN stores s ON o.store_id = s.id
+      JOIN req_plans rp ON (s.id = rp.store_id AND o.carrier_id = rp.carrier_id)
+      JOIN phone_devices pd ON o.device_id = pd.id
+      JOIN phone_models pm ON pd.model_id = pm.id
+      JOIN phone_storages ps ON pd.storage_id = ps.id 
+      JOIN carriers c ON o.carrier_id = c.id 
+      WHERE o.id = ?;
+    `;
+
+    const result = await offerRepo.query<OfferDetailFormData[]>(sql, [offerId]);
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Not Found",
+        message: "해당 판매 정보를 찾을 수 없습니다.",
+      });
+    }
+
+    const offerDetail = result[0];
+
+    res.status(200).json({
+      success: true,
+      data: offerDetail,
+    });
+  } catch (error) {
+    console.error("Error fetching offer detail data:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "판매 정보를 불러오던 중 오류가 발생했습니다.",
+    });
+  }
+});
 
 router.post("/search", async (req, res) => {
   try {
@@ -137,6 +198,7 @@ router.post("/search", async (req, res) => {
       .createQueryBuilder("o")
       .select([
         "o.id AS id",
+        "s.id AS storeId",
         "s.name AS storeName",
         "r.name AS regionName",
         "c.name AS carrierName",

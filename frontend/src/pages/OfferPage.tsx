@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
@@ -28,6 +29,7 @@ import {
 
 const OfferPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
     "region" | "model" | "carrier" | "offerType"
@@ -479,20 +481,23 @@ const OfferPage: React.FC = () => {
                     ? "bg-emerald-500 text-white"
                     : "bg-amber-500 text-white";
                 };
-
                 return (
                   <div
                     ref={isLastElement ? lastOfferElementRef : null}
                     key={`offer_${data.id}_${index}`}
-                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
+                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:border-primary-light dark:hover:border-primary-dark transition-shadow duration-300 p-4 sm:p-6 cursor-pointer"
+                    onClick={() => navigate(`/offer/${data.id}`)}
                   >
-                    {/* 상단: 대리점명 / 지역 */}
-                    <div className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    {/* 상단: 대리점명 / 지역 (클릭 시 매장 상세로 이동) */}
+                    <Link
+                      to={`/store/${data.storeId}`}
+                      className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4 hover:opacity-90"
+                    >
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                         {data.storeName}
                       </span>
                       <span className="mt-1 sm:mt-0">{data.regionName}</span>
-                    </div>
+                    </Link>
 
                     {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
                     <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">

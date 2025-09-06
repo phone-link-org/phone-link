@@ -8,6 +8,7 @@ import type {
   PhoneModelDto,
   PhoneStorageDto,
   RegionDto,
+  ReqPlanDto,
   StoreDto,
   UserDto,
 } from "./types";
@@ -36,11 +37,33 @@ export type OfferSearchRequest = {
 };
 
 export type OfferSearchResult = Pick<OfferDto, "id" | "offerType" | "price"> & {
+  storeId: StoreDto["id"];
   storeName: StoreDto["name"];
   regionName: RegionDto["name"];
   carrierName: CarrierDto["name"];
   modelName: string;
   imageUrl: PhoneModelDto["imageUrl"];
+};
+
+export type OfferDetailFormData = {
+  offerId: OfferDto["id"];
+  storeId: StoreDto["id"];
+  storeName: StoreDto["name"];
+  storeThumbnailUrl: StoreDto["thumbnailUrl"];
+  storeAddress: StoreDto["address"];
+  storeContact: StoreDto["contact"];
+  storeLink_1: StoreDto["link_1"];
+  storeLink_2: StoreDto["link_2"];
+  modelName: PhoneModelDto["name_ko"];
+  modelImageUrl: PhoneModelDto["imageUrl"];
+  modelReleaseDate: PhoneModelDto["releaseDate"];
+  carrierName: CarrierDto["name"];
+  offerType: OfferDto["offerType"];
+  price: OfferDto["price"];
+  retailPrice: PhoneDeviceDto["retailPrice"];
+  coupangLink: PhoneDeviceDto["coupangLink"];
+  unlockedPrice: PhoneDeviceDto["unlockedPrice"];
+  monthlyFee: ReqPlanDto["monthlyFee"];
 };
 
 export type StoreOfferPriceFormData = Pick<

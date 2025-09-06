@@ -6,6 +6,7 @@ import { ThemeContext } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import OfferPage from "./pages/OfferPage";
+import OfferDetailPage from "./pages/OfferDetailPage";
 import NotFound from "./pages/NotFound";
 import MainPage from "./pages/MainPage";
 import CommunityPage from "./pages/CommunityPage";
@@ -64,6 +65,7 @@ function App() {
         <Route path="/auth/callback/:provider" element={<SsoCallbackPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/offer" element={<OfferPage />} />
+        <Route path="/offer/:id" element={<OfferDetailPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/community" element={<CommunityPage />} />
 
@@ -84,7 +86,15 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Toaster position="top-center" duration={3000} richColors theme={theme} />
+      <Toaster
+        position="top-center"
+        duration={3000}
+        richColors
+        theme={theme}
+        toastOptions={{
+          style: { background: theme === "dark" ? "#292929" : "white" },
+        }}
+      />
     </div>
   );
 }

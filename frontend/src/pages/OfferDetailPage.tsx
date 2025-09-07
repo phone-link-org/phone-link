@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api/axios";
 import { format } from "date-fns";
 import type { OfferDetailFormData } from "../../../shared/types";
@@ -8,6 +8,10 @@ import {
   FiPhone,
   FiMessageSquare,
   FiExternalLink,
+  FiThumbsUp,
+  FiInfo,
+  // FiChevronDown,
+  // FiChevronUp,
 } from "react-icons/fi";
 import { CARRIERS, OFFER_TYPES } from "../../../shared/constants";
 
@@ -22,15 +26,13 @@ const formatOfferType = (type?: string): string => {
   }
 };
 
-// 개통방식별 색상 설정
-const getOfferTypeBadgeColor = (offerType: string) => {
+const getOfferTypeBadgeColor = (offerType?: string) => {
   return offerType === OFFER_TYPES.MNP
     ? "bg-emerald-500 text-white"
     : "bg-amber-500 text-white";
 };
 
-// 통신사별 색상 설정
-const getCarrierBadgeColor = (carrier: string) => {
+const getCarrierBadgeColor = (carrier?: string) => {
   switch (carrier) {
     case CARRIERS.KT:
       return "bg-[#5EDFDE] text-white";
@@ -49,8 +51,12 @@ const OfferDetailPage: React.FC = () => {
 
   const [offerFormData, setOfferFormData] =
     useState<OfferDetailFormData | null>(null);
+  const [mvnoPlan, setMvnoPlan] = useState(30000);
+  const [mnoPlan, setMnoPlan] = useState(45000);
+  const [unlockedPrice, setUnlockedPrice] = useState(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  // const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
   useEffect(() => {
     const fetchOfferData = async () => {
@@ -59,6 +65,9 @@ const OfferDetailPage: React.FC = () => {
       try {
         const response = await api.get<OfferDetailFormData>(`/offer/${id}`);
         setOfferFormData(response);
+        if (response.unlockedPrice) {
+          setUnlockedPrice(response.unlockedPrice);
+        }
       } catch (err) {
         console.error("Error fetching offer data:", err);
         setError("판매 정보를 불러오는 데 실패했습니다.");
@@ -72,7 +81,6 @@ const OfferDetailPage: React.FC = () => {
     }
   }, [id]);
 
-  // 로딩 상태 UI
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -81,7 +89,6 @@ const OfferDetailPage: React.FC = () => {
     );
   }
 
-  // 에러 상태 UI
   if (error || !offerFormData) {
     return (
       <div className="flex flex-col justify-center items-center h-screen gap-4">
@@ -98,195 +105,379 @@ const OfferDetailPage: React.FC = () => {
     );
   }
 
-  // API의 기본 URL 환경 변수 (이미지 경로를 위해)
+  const selfPurchaseTotal = unlockedPrice + mvnoPlan * 24;
+  const offerTotal =
+    offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000;
+  const difference = selfPurchaseTotal - offerTotal;
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
-      {/* 헤더 */}
-      {/* <div className="mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors mb-4"
-        >
-          <FiChevronLeft className="w-5 h-5" />
-          뒤로가기
-        </button>
-      </div> */}
-
-      {/* 메인 컨텐츠 영역 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 왼쪽: 상품 정보 */}
-        <div className="lg:col-span-2">
-          {/* 상품 정보 */}
-          <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              상품 정보
-            </h2>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              <div className="w-36 h-36 rounded-lg flex-shrink-0">
-                {offerFormData.modelImageUrl ? (
-                  <img
-                    src={`${API_BASE_URL}${offerFormData.modelImageUrl}`}
-                    alt={offerFormData.modelName}
-                    className="w-full h-full object-contain rounded-lg"
-                  />
-                ) : (
+    <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
+      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="w-36 flex-shrink-0">
+            <div className="h-36 rounded-lg">
+              {offerFormData.modelImageUrl ? (
+                <img
+                  src={`${API_BASE_URL}${offerFormData.modelImageUrl}`}
+                  alt={offerFormData.modelName}
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                   <FiSmartphone className="w-16 h-16 text-gray-400" />
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  {offerFormData.modelName}
-                </h3>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {/* 통신사 뱃지 */}
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${getCarrierBadgeColor(offerFormData.carrierName)}`}
-                  >
-                    {offerFormData.carrierName}
-                  </span>
-
-                  {/* 개통방식 뱃지 */}
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${getOfferTypeBadgeColor(offerFormData.offerType)}`}
-                  >
-                    {formatOfferType(offerFormData.offerType)}
-                  </span>
-                </div>
-                <p
-                  className={`text-3xl font-bold ${
-                    offerFormData?.price && offerFormData?.price < 0
-                      ? "text-red-500 dark:text-red-400"
-                      : "text-primary-light dark:text-primary-dark"
-                  }`}
-                >
-                  {/* offerFormData.price가 null이나 undefined이면 'N/A'를, 아니면 원래 값을 사용 */}
-                  {`${offerFormData?.price ?? "N/A"}만원`}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  (요금제: 월 {offerFormData.monthlyFee.toLocaleString("ko-KR")}
-                  원)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 가격 정보 */}
-          <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              가격 상세
-            </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">
-                  출고가:
-                </span>
-                <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                  {offerFormData.retailPrice.toLocaleString("ko-KR")}원
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">
-                  자급제 최저가:
-                </span>
-                <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                  {offerFormData?.unlockedPrice &&
-                    offerFormData?.unlockedPrice.toLocaleString("ko-KR")}
-                  원
-                </span>
-              </div>
-              {offerFormData.coupangLink && (
-                <div className="pt-2">
-                  <a
-                    href={offerFormData.coupangLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <FiExternalLink />
-                    쿠팡에서 자급제 가격 확인하기
-                  </a>
                 </div>
               )}
             </div>
+            {offerFormData.modelReleaseDate && (
+              <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                {format(offerFormData.modelReleaseDate, "yyyy.MM.dd")} 출시
+              </p>
+            )}
           </div>
 
-          {/* 매장 정보 */}
-          <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              매장 정보
-            </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  매장명:
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {offerFormData.storeName}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">주소:</span>
-                <span className="font-semibold text-right text-gray-900 dark:text-gray-100">
-                  {offerFormData.storeAddress}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  출시일:
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {offerFormData.modelReleaseDate &&
-                    format(offerFormData.modelReleaseDate, "yyyy년 MM월 dd일")}
-                </span>
-              </div>
+          <div className="flex-1 w-full">
+            <Link
+              to={`/store/${offerFormData.storeId}`}
+              className="w-fit block"
+            >
+              <p className="font-medium text-md text-gray-500 dark:text-gray-400 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
+                {offerFormData.storeName}
+              </p>
+            </Link>
+
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-semibold ${getCarrierBadgeColor(offerFormData.carrierName)}`}
+              >
+                {offerFormData.carrierName}
+              </span>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-semibold ${getOfferTypeBadgeColor(offerFormData.offerType)}`}
+              >
+                {formatOfferType(offerFormData.offerType)}
+              </span>
             </div>
+
+            <div className="mt-1 flex flex-wrap justify-between items-baseline gap-x-4">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                {offerFormData.modelName}
+              </h2>
+              <p
+                className={`text-4xl font-bold ${offerFormData?.price && offerFormData.price < 0 ? "text-red-500 dark:text-red-400" : "text-primary-light dark:text-primary-dark"}`}
+              >
+                {`${offerFormData?.price ?? "N/A"}만원`}
+              </p>
+            </div>
+            {/* <div className="mt-3 flex flex-wrap justify-end items-baseline gap-x-4">
+              <button
+                onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
+                className="flex items-center gap-2 py-2 px-4 bg-primary-light dark:bg-primary-dark text-background-light dark:text-background-dark hover:opacity-75 rounded-lg transition-colors text-sm"
+              >
+                유지비 계산해보기
+                {isCalculatorOpen ? <FiChevronUp /> : <FiChevronDown />}
+              </button>
+            </div> */}
           </div>
         </div>
 
-        {/* 오른쪽: 연락처 및 관련 오퍼 */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-24">
-            {/* 연락처 정보 */}
-            <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 mb-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                매장에 문의하기
-              </h3>
-              <div className="space-y-3">
-                {offerFormData.storeContact && (
-                  <a
-                    href={`tel:${offerFormData.storeContact}`}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary-light dark:bg-primary-dark text-white rounded-lg hover:opacity-90 transition-opacity"
-                  >
-                    <FiPhone />
-                    전화걸기 ({offerFormData.storeContact})
-                  </a>
-                )}
-                {offerFormData.storeLink_1 && (
-                  <a
-                    href={offerFormData.storeLink_1}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <FiMessageSquare />
-                    카카오톡 문의
-                  </a>
-                )}
+        <div className="mt-6 bg-gray-50 dark:bg-background-dark rounded-lg p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  출고가:{" "}
+                </span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {offerFormData.retailPrice.toLocaleString("ko-KR")}원
+                </span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  쿠팡 자급제:{" "}
+                </span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {offerFormData.unlockedPrice
+                    ? `${offerFormData.unlockedPrice.toLocaleString("ko-KR")}원`
+                    : "정보 없음"}
+                </span>
+              </div>
+            </div>
+            {offerFormData.coupangLink && (
+              <a
+                href={offerFormData.coupangLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 flex items-center justify-center gap-2 text-sm py-2 px-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <FiExternalLink />
+                쿠팡 가격 확인
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* {isCalculatorOpen && ( */}
+        <div className="my-8 p-4 border border-gray-200 dark:border-gray-200 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-gray-200 dark:md:divide-gray-400">
+            {/* --- 왼쪽: 자급제 구매 시 --- */}
+            <div className="p-2 sm:p-4 flex flex-col h-full">
+              <div>
+                <h3 className="text-base font-semibold text-primary-light dark:text-primary-dark mb-4 text-center break-keep">
+                  자급제 + 알뜰폰 요금제 24개월 사용
+                </h3>
+                <div className="space-y-2 text-gray-700 dark:text-gray-300">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm">자급제 기기값</p>
+                    <div className="flex items-center max-w-[115px] border-b">
+                      <input
+                        type="text"
+                        value={unlockedPrice.toLocaleString("ko-KR")}
+                        onChange={(e) => {
+                          const value = Number(
+                            e.target.value.replace(/[^0-9]/g, ""),
+                          );
+                          setUnlockedPrice(isNaN(value) ? 0 : value);
+                        }}
+                        className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        원
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm">알뜰 요금제 (24개월)</p>
+                    <div className="flex items-center gap-2">
+                      <span>+</span>
+                      <div className="flex items-center max-w-[90px] border-b">
+                        <input
+                          type="text"
+                          value={mvnoPlan.toLocaleString("ko-KR")}
+                          onChange={(e) => {
+                            const value = Number(
+                              e.target.value.replace(/[^0-9]/g, ""),
+                            );
+                            setMvnoPlan(isNaN(value) ? 0 : value);
+                          }}
+                          className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          원
+                        </span>
+                      </div>
+                      <span className="font-mono">x 24</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <hr className="my-3 border-gray-300 dark:border-gray-200" />
+                <div className="flex justify-between items-baseline">
+                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                    총
+                  </p>
+                  <p className="font-bold text-2xl text-gray-800 dark:text-gray-200">
+                    {(unlockedPrice + mvnoPlan * 24).toLocaleString("ko-KR")}원
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* 관련 오퍼 (현재는 정적 UI) */}
-            <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                관련 오퍼
-              </h3>
-              <div className="space-y-3 text-center text-gray-500">
-                {/* TODO: 관련 오퍼 API 연동 */}
-                <p>관련 오퍼 정보가 없습니다.</p>
+            {/* --- 오른쪽: 해당 조건 구매 시 --- */}
+            <div className="p-2 sm:p-4 mt-4 md:mt-0 border-t md:border-t-0 border-gray-200 dark:border-gray-700 flex flex-col h-full">
+              <div>
+                <h3 className="text-base font-semibold text-primary-light dark:text-primary-dark mb-4 text-center break-keep">
+                  해당 구매 조건으로 개통 시
+                </h3>
+                <div className="space-y-2 text-gray-700 dark:text-gray-300">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm">필수 요금제 (6개월)</p>
+                    <p className="font-mono">
+                      {offerFormData.monthlyFee.toLocaleString("ko-KR")}원 x 6
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm">변경 요금제 (18개월)</p>
+                    <div className="flex items-center gap-2">
+                      <span>+</span>
+                      <div className="flex items-center max-w-[90px] border-b">
+                        <input
+                          type="text"
+                          value={mnoPlan.toLocaleString("ko-KR")}
+                          onChange={(e) => {
+                            const value = Number(
+                              e.target.value.replace(/[^0-9]/g, ""),
+                            );
+                            setMnoPlan(isNaN(value) ? 0 : value);
+                          }}
+                          className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          원
+                        </span>
+                      </div>
+                      <span className="font-mono">x 18</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    {offerFormData.price! < 0 ? (
+                      <>
+                        <p className="text-sm">개통 시 지원금 (페이백)</p>
+                        <p className="font-mono text-red-500">
+                          -{" "}
+                          {Math.abs(
+                            offerFormData.price! * 10000,
+                          ).toLocaleString("ko-KR")}
+                          원
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm">개통 시 기기값 (선납)</p>
+                        <p className="font-mono text-blue-500">
+                          +{" "}
+                          {(offerFormData.price! * 10000).toLocaleString(
+                            "ko-KR",
+                          )}
+                          원
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <hr className="my-3 border-gray-300 dark:border-gray-200" />
+                <div className="flex justify-between items-baseline">
+                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                    총
+                  </p>
+                  <p className="font-bold text-2xl text-gray-800 dark:text-gray-200">
+                    {(
+                      offerFormData.monthlyFee * 6 +
+                      mnoPlan * 18 +
+                      offerFormData.price! * 10000
+                    ).toLocaleString("ko-KR")}
+                    원
+                  </p>
+                </div>
               </div>
             </div>
+          </div>
+          <div className="mt-6">
+            {difference > 0 && (
+              <div className="bg-blue-50 dark:bg-background-dark/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-center justify-center gap-4 text-center">
+                <FiThumbsUp className="text-blue-500 w-8 h-8 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-blue-800 dark:text-blue-200">
+                    자급제보다{" "}
+                    <span className="text-2xl font-bold">
+                      {difference.toLocaleString("ko-KR")}원
+                    </span>{" "}
+                    더 저렴해요!
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    (24개월 총 유지비 기준)
+                  </p>
+                </div>
+              </div>
+            )}
+            {difference < 0 && (
+              <div className="bg-orange-50 dark:bg-background-dark/50 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex items-center justify-center gap-4 text-center">
+                <FiInfo className="text-orange-500 w-8 h-8 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-orange-800 dark:text-orange-200">
+                    자급제가{" "}
+                    <span className="text-2xl font-bold">
+                      {Math.abs(difference).toLocaleString("ko-KR")}원
+                    </span>{" "}
+                    더 저렴해요.
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                    (24개월 총 유지비 기준)
+                  </p>
+                </div>
+              </div>
+            )}
+            {difference === 0 && (
+              <div className="bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
+                <p className="font-semibold text-gray-700 dark:text-gray-300">
+                  두 조건의 24개월 총 유지비가 동일합니다.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* )} */}
+
+        <hr className="my-8 border-gray-200 dark:border-gray-700" />
+
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            판매처 정보
+          </h3>
+          <div className="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
+                판매처
+              </span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right">
+                {offerFormData.storeName}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
+                주소
+              </span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right">
+                {offerFormData.storeAddress}
+              </span>
+            </div>
+            {offerFormData.storeContact && (
+              <div className="flex flex-col sm:flex-row sm:justify-between">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
+                  연락처
+                </span>
+                <a
+                  href={`tel:${offerFormData.storeContact}`}
+                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
+                >
+                  {offerFormData.storeContact}
+                </a>
+              </div>
+            )}
+            {offerFormData.storeLink_1 && (
+              <div className="flex flex-col sm:flex-row sm:justify-between">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
+                  온라인 문의
+                </span>
+                <a
+                  href={offerFormData.storeLink_1}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
+                >
+                  바로가기
+                </a>
+              </div>
+            )}
+            {offerFormData.storeLink_2 && (
+              <div className="flex flex-col sm:flex-row sm:justify-between">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
+                  추가 링크
+                </span>
+                <a
+                  href={offerFormData.storeLink_2}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
+                >
+                  바로가기
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>

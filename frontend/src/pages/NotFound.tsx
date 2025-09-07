@@ -4,10 +4,10 @@ import { IoHome, IoArrowBack } from "react-icons/io5";
 
 const NotFound: React.FC = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
       <div className="max-w-md mx-auto text-center px-4">
         {/* 404 숫자 */}
-        <div className="text-9xl font-bold text-gray-300 dark:text-gray-700 mb-4">
+        <div className="text-9xl font-bold text-gray-300 dark:text-gray-500 mb-4">
           404
         </div>
 
@@ -17,7 +17,7 @@ const NotFound: React.FC = () => {
         </h1>
 
         {/* 설명 */}
-        <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
+        <p className="text-gray-600 dark:text-gray-300 mb-8 text-md">
           요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.
         </p>
 

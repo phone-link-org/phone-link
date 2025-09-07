@@ -63,7 +63,7 @@ function App() {
         <Route path="/auth/callback/:provider" element={<SsoCallbackPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/offer" element={<OfferPage />} />
-        <Route path="/store" element={<StorePage />} />
+        <Route path="/store/:storeId" element={<StorePage />} />
         <Route path="/community" element={<CommunityPage />} />
 
         {/* role 상관없이 로그인만 체크 */}

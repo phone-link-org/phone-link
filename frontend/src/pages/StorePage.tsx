@@ -2,13 +2,29 @@ import { useState } from "react";
 import ExcelUpload from "../components/store/ExcelUpload";
 import StoreAddonForm from "../components/store/StoreAddonForm";
 import StoreOfferPriceForm from "../components/store/StoreOfferPriceForm";
+import { useParams } from "react-router-dom";
+import StoreReqPlanForm from "../components/store/StoreReqPlanForm";
 
 const StorePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "prices" | "excel" | "addon" | "requiredPlan"
   >("prices");
 
-  const storeId = 3; //TODO: 매장 ID 가져오기
+  const { storeId: storeIdString } = useParams<{ storeId: string }>();
+
+  // storeId가 유효하지 않은 경우(undefined 등) 에러 메시지를 표시
+  if (!storeIdString) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
+        <h1 className="text-2xl font-bold text-red-500">
+          잘못된 접근입니다. 매장 ID가 없습니다.
+        </h1>
+      </div>
+    );
+  }
+
+  // useParams에서 가져온 storeId는 문자열이므로, 정수로 변환합니다.
+  const storeId = parseInt(storeIdString, 10);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
@@ -98,11 +114,7 @@ const StorePage: React.FC = () => {
           </nav>
         </div>
         {activeTab === "prices" && <StoreOfferPriceForm storeId={storeId} />}
-        {activeTab === "requiredPlan" && (
-          <p className="text-black dark:text-white p-6">
-            필수 요금제 설정 화면
-          </p>
-        )}
+        {activeTab === "requiredPlan" && <StoreReqPlanForm storeId={storeId} /> }
         {activeTab === "addon" && <StoreAddonForm storeId={storeId} />}
         {activeTab === "excel" && (
           <div className="p-6">

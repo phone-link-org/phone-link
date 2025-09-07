@@ -22,8 +22,14 @@ export class ReqPlan {
   @Index()
   carrierId: number;
 
+  @Column({ name: "name", type: "varchar", nullable: false })
+  name: string;
+
   @Column({ name: "monthly_fee", type: "int", nullable: false })
   monthlyFee: number;
+
+  @Column({ name: "duration", type: "int", nullable: false })
+  duration: number;
 
   @ManyToOne(() => Store, (store) => store.reqPlans)
   @JoinColumn({ name: "store_id" })

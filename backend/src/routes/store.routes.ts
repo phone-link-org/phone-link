@@ -15,7 +15,9 @@ import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
 import { PhoneDevice } from "../typeorm/phoneDevices.entity";
 import { OfferDto } from "shared/offer.types";
 import { PhoneDeviceDto } from "shared/phone.types";
+import ReqPlanDto from "shared/reqPlan.types";
 import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
+import { ReqPlan } from "../typeorm/reqPlans.entity";
 
 const router = Router();
 
@@ -743,5 +745,53 @@ router.post(
     }
   },
 );
+
+router.post("/:storeId/req-plans", isAuthenticated, hasRole(["SELLER"]), async (req, res) => {
+  try {
+    const storeIdString: string = req.params.storeId;
+    const plans: ReqPlanDto[] = req.body;
+
+      const result = await AppDataSource.transaction(
+        async (transactionEntityManager) => {
+          const storeId: number = parseInt(storeIdString);
+
+          // 1. 기존 데이터 삭제
+          await transactionEntityManager.delete(ReqPlan, { storeId: storeId });
+
+          if (plans.length === 0) {
+            return [];
+          }
+
+          // 2. 새 데이터 추가
+          const newReqPlans = plans.map((plan: ReqPlanDto) => ({
+            storeId: storeId,
+            name: plan.name,
+            monthlyFee: plan.monthlyFee || 0,
+            duration: plan.duration,
+          }));
+          const savedReqPlans = await transactionEntityManager.save(
+            ReqPlan,
+            newReqPlans,
+          );
+
+          return savedReqPlans;
+        },
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "요금제가 성공적으로 저장되었습니다.",
+        data: result,
+      });
+
+  } catch (error) {
+    console.error("Error saving req plans", error)
+    res.status(500).json({
+      success: false,
+      message: "요금제 저장 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    })
+  }
+})
 
 export default router;

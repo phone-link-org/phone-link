@@ -4,14 +4,11 @@ import { api } from "../api/axios";
 import { format } from "date-fns";
 import type { OfferDetailFormData } from "../../../shared/types";
 import {
-  FiSmartphone,
-  FiPhone,
-  FiMessageSquare,
   FiExternalLink,
-  FiThumbsUp,
-  FiInfo,
-  // FiChevronDown,
-  // FiChevronUp,
+  FiMessageCircle,
+  FiPhone,
+  FiLink,
+  FiSmartphone,
 } from "react-icons/fi";
 import { CARRIERS, OFFER_TYPES } from "../../../shared/constants";
 
@@ -57,6 +54,12 @@ const OfferDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   // const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+
+  const kakaoLink = offerFormData?.storeLink_1?.toLowerCase().includes("kakao")
+    ? offerFormData.storeLink_1
+    : offerFormData?.storeLink_2?.toLowerCase().includes("kakao")
+      ? offerFormData.storeLink_2
+      : null;
 
   useEffect(() => {
     const fetchOfferData = async () => {
@@ -114,8 +117,8 @@ const OfferDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
-      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6">
+        <div className="flex flex-col items-center text-center sm:flex-row sm:text-left gap-6">
           <div className="w-36 flex-shrink-0">
             <div className="h-36 rounded-lg">
               {offerFormData.modelImageUrl ? (
@@ -140,14 +143,14 @@ const OfferDetailPage: React.FC = () => {
           <div className="flex-1 w-full">
             <Link
               to={`/store/${offerFormData.storeId}`}
-              className="w-fit block"
+              className="w-fit block mx-auto sm:mx-0"
             >
               <p className="font-medium text-md text-gray-500 dark:text-gray-400 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                 {offerFormData.storeName}
               </p>
             </Link>
 
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
               <span
                 className={`px-3 py-1 rounded-full text-sm font-semibold ${getCarrierBadgeColor(offerFormData.carrierName)}`}
               >
@@ -160,7 +163,7 @@ const OfferDetailPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="mt-1 flex flex-wrap justify-between items-baseline gap-x-4">
+            <div className="mt-1 flex w-full flex-col items-center gap-y-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-baseline sm:gap-x-4">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                 {offerFormData.modelName}
               </h2>
@@ -183,17 +186,18 @@ const OfferDetailPage: React.FC = () => {
         </div>
 
         <div className="mt-6 bg-gray-50 dark:bg-background-dark rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <div className="text-sm">
-                <span className="text-gray-600 dark:text-gray-400">
-                  출고가:{" "}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {offerFormData.retailPrice.toLocaleString("ko-KR")}원
-                </span>
-              </div>
-              <div className="text-sm">
+          <div className="flex flex-col items-center justify-center gap-4 text-sm sm:flex-row sm:gap-x-8">
+            {/* 출고가 */}
+            <div className="text-center">
+              <span className="text-gray-600 dark:text-gray-400">출고가: </span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                {offerFormData.retailPrice.toLocaleString("ko-KR")}원
+              </span>
+            </div>
+
+            {/* 쿠팡 자급제 가격 + 바로가기 버튼 */}
+            <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
+              <div className="text-center">
                 <span className="text-gray-600 dark:text-gray-400">
                   쿠팡 자급제:{" "}
                 </span>
@@ -203,23 +207,55 @@ const OfferDetailPage: React.FC = () => {
                     : "정보 없음"}
                 </span>
               </div>
+              {offerFormData.coupangLink && (
+                <a
+                  href={offerFormData.coupangLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 flex items-center justify-center gap-1 text-xs py-1 px-2 border border-gray-300 dark:border-gray-200 text-gray-700 dark:text-gray-300 rounded-md hover:bg-primary-light hover:text-background-light dark:hover:bg-primary-dark dark:hover:text-background-dark transition-colors"
+                >
+                  <FiExternalLink />
+                  쿠팡 가격 확인해보기
+                </a>
+              )}
             </div>
-            {offerFormData.coupangLink && (
-              <a
-                href={offerFormData.coupangLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 flex items-center justify-center gap-2 text-sm py-2 px-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <FiExternalLink />
-                쿠팡 가격 확인
-              </a>
-            )}
           </div>
         </div>
 
+        {/* 전화, 카카오톡 버튼 */}
+        <div className="mt-4">
+          {kakaoLink ? (
+            <div className="grid grid-cols-2 gap-3">
+              <a
+                href={`tel:${offerFormData.storeContact}`}
+                className="flex items-center justify-center gap-2 w-full text-center py-3 px-4 bg-primary-light dark:bg-primary-dark text-background-light dark:text-background-dark hover:opacity-75 rounded-lg transition-colors font-semibold"
+              >
+                <FiPhone />
+                전화 문의
+              </a>
+              <a
+                href={kakaoLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full text-center py-3 px-4 bg-[#FAE202] text-black hover:opacity-75 rounded-lg transition-colors font-semibold"
+              >
+                <FiMessageCircle />
+                카카오톡 채널
+              </a>
+            </div>
+          ) : (
+            <a
+              href={`tel:${offerFormData.storeContact}`}
+              className="flex items-center justify-center gap-2 w-full text-center py-3 px-4 bg-primary-light dark:bg-primary-dark text-background-light dark:text-background-dark hover:opacity-75 rounded-lg transition-colors font-semibold"
+            >
+              <FiPhone />
+              전화 문의
+            </a>
+          )}
+        </div>
+
         {/* {isCalculatorOpen && ( */}
-        <div className="my-8 p-4 border border-gray-200 dark:border-gray-200 rounded-lg">
+        <div className="my-4 p-4 border border-gray-200 dark:border-gray-200 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-gray-200 dark:md:divide-gray-400">
             {/* --- 왼쪽: 자급제 구매 시 --- */}
             <div className="p-2 sm:p-4 flex flex-col h-full">
@@ -325,7 +361,7 @@ const OfferDetailPage: React.FC = () => {
                     {offerFormData.price! < 0 ? (
                       <>
                         <p className="text-sm">개통 시 지원금 (페이백)</p>
-                        <p className="font-mono text-red-500">
+                        <p className="font-mono text-red-500 dark:text-red-400">
                           -{" "}
                           {Math.abs(
                             offerFormData.price! * 10000,
@@ -336,7 +372,7 @@ const OfferDetailPage: React.FC = () => {
                     ) : (
                       <>
                         <p className="text-sm">개통 시 기기값 (선납)</p>
-                        <p className="font-mono text-blue-500">
+                        <p className="font-mono text-blue-500 dark:text-blue-400">
                           +{" "}
                           {(offerFormData.price! * 10000).toLocaleString(
                             "ko-KR",
@@ -369,10 +405,9 @@ const OfferDetailPage: React.FC = () => {
           <div className="mt-6">
             {difference > 0 && (
               <div className="bg-blue-50 dark:bg-background-dark/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-center justify-center gap-4 text-center">
-                <FiThumbsUp className="text-blue-500 w-8 h-8 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-blue-800 dark:text-blue-200">
-                    자급제보다{" "}
+                    자급제 + 알뜰폰 조합보다{" "}
                     <span className="text-2xl font-bold">
                       {difference.toLocaleString("ko-KR")}원
                     </span>{" "}
@@ -386,10 +421,9 @@ const OfferDetailPage: React.FC = () => {
             )}
             {difference < 0 && (
               <div className="bg-orange-50 dark:bg-background-dark/50 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex items-center justify-center gap-4 text-center">
-                <FiInfo className="text-orange-500 w-8 h-8 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-orange-800 dark:text-orange-200">
-                    자급제가{" "}
+                    자급제 + 알뜰폰 조합이{" "}
                     <span className="text-2xl font-bold">
                       {Math.abs(difference).toLocaleString("ko-KR")}원
                     </span>{" "}
@@ -409,6 +443,10 @@ const OfferDetailPage: React.FC = () => {
               </div>
             )}
           </div>
+          <div className="mt-6 text-red-400">
+            * 부가적인 조건에 따라 실제 유지비는 다를 수 있습니다. 참고용으로만
+            봐주세요.
+          </div>
         </div>
         {/* )} */}
 
@@ -423,17 +461,24 @@ const OfferDetailPage: React.FC = () => {
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
                 판매처
               </span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right">
-                {offerFormData.storeName}
-              </span>
+              <Link to={`/store/${offerFormData.storeId}`}>
+                <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right hover:underline hover:text-primary-light dark:hover:text-primary-dark">
+                  {offerFormData.storeName}
+                </span>
+              </Link>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
                 주소
               </span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right">
+              <a
+                href={`https://map.naver.com/p/search/${offerFormData.storeName}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right  hover:underline hover:text-primary-light dark:hover:text-primary-dark"
+              >
                 {offerFormData.storeAddress}
-              </span>
+              </a>
             </div>
             {offerFormData.storeContact && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
@@ -442,40 +487,49 @@ const OfferDetailPage: React.FC = () => {
                 </span>
                 <a
                   href={`tel:${offerFormData.storeContact}`}
-                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
+                  className="font-semibold text-gray-900 dark:text-gray-100 hover:underline sm:text-right  hover:text-primary-light dark:hover:text-primary-dark"
                 >
                   {offerFormData.storeContact}
                 </a>
               </div>
             )}
-            {offerFormData.storeLink_1 && (
+            {(offerFormData.storeLink_1 || offerFormData.storeLink_2) && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                  온라인 문의
+                  소셜 링크
                 </span>
-                <a
-                  href={offerFormData.storeLink_1}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
-                >
-                  바로가기
-                </a>
-              </div>
-            )}
-            {offerFormData.storeLink_2 && (
-              <div className="flex flex-col sm:flex-row sm:justify-between">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                  추가 링크
-                </span>
-                <a
-                  href={offerFormData.storeLink_2}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-primary-light dark:text-primary-dark hover:underline sm:text-right"
-                >
-                  바로가기
-                </a>
+                <div className="flex flex-wrap items-center gap-x-4 sm:justify-end sm:w-3/4">
+                  {offerFormData.storeLink_1 && (
+                    <a
+                      href={offerFormData.storeLink_1}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
+                    >
+                      <FiLink />
+                      <span className="break-all">
+                        {offerFormData.storeLink_1.length > 27
+                          ? `${offerFormData.storeLink_1.substring(0, 27)}...`
+                          : offerFormData.storeLink_1}
+                      </span>
+                    </a>
+                  )}
+                  {offerFormData.storeLink_2 && (
+                    <a
+                      href={offerFormData.storeLink_2}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
+                    >
+                      <FiLink />
+                      <span className="break-all">
+                        {offerFormData.storeLink_2.length > 27
+                          ? `${offerFormData.storeLink_2.substring(0, 27)}...`
+                          : offerFormData.storeLink_2}
+                      </span>
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { HiPhoto } from "react-icons/hi2";
 import { toast } from "sonner";
 import { api } from "../api/axios";
@@ -11,6 +11,7 @@ interface ImageUploadProps {
   label?: string;
   className?: string;
   disabled?: boolean;
+  uploadType: "store" | "device" | "profile" | "post";
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -20,19 +21,31 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   label = "이미지",
   className = "",
   disabled = false,
+  uploadType,
 }) => {
-  const [previewUrl, setPreviewUrl] = useState<string>(currentImageUrl || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>(
+    currentImageUrl ? `${import.meta.env.VITE_API_URL}${currentImageUrl}` : "",
+  );
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    // currentImageUrl prop이 변경될 때마다 previewUrl 상태를 업데이트합니다.
+    if (currentImageUrl) {
+      setPreviewUrl(`${import.meta.env.VITE_API_URL}${currentImageUrl}`);
+    } else {
+      setPreviewUrl("");
+    }
+  }, [currentImageUrl]);
 
   // 이미지 업로드 함수
   const uploadImage = async (file: File) => {
     try {
       const formData = new FormData();
-      formData.append("thumbnail", file);
-
-      const response = await api.post<{ thumbnailUrl: string }>(
-        "/store/upload-image",
+      formData.append("image", file);
+      const response = await api.post<string>(
+        `/upload/${uploadType}`,
         formData,
         {
           headers: {
@@ -41,7 +54,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         },
       );
 
-      return response.thumbnailUrl;
+      return response;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         toast.error(
@@ -56,15 +69,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   // 이미지 삭제 함수
-  const deleteImage = async (thumbnailUrl: string) => {
+  const deleteImage = async (imageUrl: string) => {
     try {
       // URL에서 파일명 추출
-      const filename = thumbnailUrl.split("/").pop();
-      if (!filename) {
-        throw new Error("파일명을 찾을 수 없습니다.");
-      }
-
-      await api.post("/store/delete-image", { filename });
+      await api.post("/upload/delete", { imageUrl });
 
       toast.success("이미지가 성공적으로 삭제되었습니다.");
     } catch (error) {
@@ -88,10 +96,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setIsUploading(true);
     try {
       // 이미지 업로드
-      const thumbnailUrl = await uploadImage(file);
+      const imageUrl = await uploadImage(file);
 
       // formData 업데이트
-      onImageChange(thumbnailUrl);
+      onImageChange(imageUrl);
 
       // 미리보기용 로컬 URL
       const fileUrl = URL.createObjectURL(file);
@@ -168,6 +176,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         onDrop={handleDrop}
       >
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileInputChange}
@@ -206,9 +215,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             {!disabled && (
               <button
                 type="button"
-                onClick={() =>
-                  document.querySelector('input[type="file"]')?.click()
-                }
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className="px-4 py-2 text-sm font-medium text-white dark:text-black bg-primary-light rounded-md hover:bg-opacity-80 dark:bg-primary-dark mt-1 disabled:opacity-50"
               >

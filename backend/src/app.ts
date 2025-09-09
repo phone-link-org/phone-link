@@ -11,6 +11,7 @@ import adminRoutes from "./routes/admin.routes";
 import regionRoutes from "./routes/region.routes";
 import phoneRoutes from "./routes/phone.routes";
 import authRoutes from "./routes/auth.routes";
+import uploadRoutes from "./routes/upload.routes";
 
 dotenv.config();
 
@@ -38,5 +39,6 @@ app.use("/api/store", storeRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/region", regionRoutes);
 app.use("/api/phone", phoneRoutes);
+app.use("/api/upload", uploadRoutes);
 
 export default app;

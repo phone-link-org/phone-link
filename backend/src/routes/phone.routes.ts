@@ -87,6 +87,25 @@ router.get("/storages", async (req, res) => {
   }
 });
 
+router.get("/allStorages", async (req, res) => {
+  try {
+    const phoneStorageRepo = AppDataSource.getRepository(PhoneStorage);
+    const storages = await phoneStorageRepo.find({ order: { id: "ASC" } });
+
+    res.status(200).json({
+      success: true,
+      data: storages,
+    });
+  } catch (error) {
+    console.error("Error fetching storages:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "핸드폰 용량 정보를 불러오는 중 오류가 발생했습니다.",
+    });
+  }
+});
+
 router.get("/carriers", async (req, res) => {
   try {
     const carrierRepo = AppDataSource.getRepository(Carrier);

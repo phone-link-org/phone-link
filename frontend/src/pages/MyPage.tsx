@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import AddressSearchButton from "../components/AddressSearchButton";
 import ImageUpload from "../components/ImageUpload";
 import axios from "axios";
-import type { UserDto } from "../../../shared/types";
+import type { UserDto, UserUpdateData } from "../../../shared/types";
 import { useAuthStore } from "../store/authStore";
 import { ROLES } from "../../../shared/constants";
 
@@ -17,15 +17,6 @@ interface DaumPostcodeData {
   zonecode: string;
   sido: string;
   sigungu: string;
-}
-
-interface UserUpdateData {
-  nickname?: string;
-  password?: string;
-  profileImageUrl?: string;
-  address?: string;
-  addressDetail?: string;
-  role?: "USER" | "SELLER";
 }
 
 const MyPage: React.FC = () => {
@@ -43,6 +34,8 @@ const MyPage: React.FC = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!user?.id) return;
+
       try {
         const userId = user?.id;
         const response = await api.get<UserDto>("/user/profile", {
@@ -50,7 +43,8 @@ const MyPage: React.FC = () => {
         });
         setFormData(response);
       } catch (error) {
-        console.error("User data fetch", error);
+        toast.error("사용자 정보를 불러오는 중 오류가 발생했습니다.");
+        console.error("User data fetch error:", error);
       }
     };
     fetchUserData();
@@ -190,16 +184,23 @@ const MyPage: React.FC = () => {
         return;
       }
       // 비밀번호가 비어있으면 제외
-      const updateData: Partial<UserDto & { password?: string }> = {
-        ...formData,
+      const updateData: UserUpdateData = {
+        id: formData.id,
+        nickname: formData.nickname,
+        profileImageUrl: formData.profileImageUrl,
+        address: formData.address,
+        addressDetail: formData.addressDetail,
+        postalCode: formData.postalCode,
+        sido: formData.sido,
+        sigungu: formData.sigungu,
+        role: user?.role === ROLES.ADMIN ? ROLES.ADMIN : formData.role,
       };
+
       if (newPassword) {
         updateData.password = newPassword;
-      } else {
-        delete updateData.password;
       }
 
-      //await api.put("/user/profile", updateData);
+      await api.post("/user/profile", updateData);
 
       toast.success("프로필이 성공적으로 수정되었습니다.");
 
@@ -350,7 +351,13 @@ const MyPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData?.gender ?? ""}
+                  value={
+                    formData?.gender === "M"
+                      ? "남성"
+                      : formData?.gender === "F"
+                        ? "여성"
+                        : ""
+                  }
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -416,6 +423,7 @@ const MyPage: React.FC = () => {
                   })
                 }
                 label="프로필 이미지"
+                uploadType="profile"
               />
 
               {/* Address */}

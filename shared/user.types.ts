@@ -51,6 +51,20 @@ export type SignupFormData = Omit<
   | "updatedAt"
 >;
 
+export type UserUpdateData = Pick<
+  UserDto,
+  | "id"
+  | "nickname"
+  | "password"
+  | "profileImageUrl"
+  | "address"
+  | "addressDetail"
+  | "postalCode"
+  | "sido"
+  | "sigungu"
+  | "role"
+>;
+
 //Pick은 특정 타입에서 특정 키를 선택한 타입을 생성하는 타입
 export type LoginFormData = Pick<Required<UserDto>, "email" | "password">;
 

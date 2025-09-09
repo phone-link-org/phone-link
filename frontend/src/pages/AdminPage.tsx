@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../api/axios";
 import { TbReload } from "react-icons/tb";
-import type { PendingStoreDto } from "../../../shared/store.types";
 import StoreDetailModal from "../components/admin/StoreDetailModal";
+import type { PendingStoreDto } from "../../../shared/types";
+import MasterDataManager from "../components/admin/MasterDataManager";
 
 const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    "store-approval" | "user-management" | "system-region"
+    | "store-approval"
+    | "master-data-management"
+    | "user-management"
+    | "system-region"
   >("store-approval");
 
   // 시스템 지역 설정 관련 상태
@@ -62,6 +66,16 @@ const AdminPage: React.FC = () => {
               onClick={() => setActiveTab("store-approval")}
             >
               매장 등록 승인
+            </button>
+            <button
+              className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+                activeTab === "master-data-management"
+                  ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+              }`}
+              onClick={() => setActiveTab("master-data-management")}
+            >
+              기본정보 관리
             </button>
             <button
               className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
@@ -185,6 +199,8 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {activeTab === "master-data-management" && <MasterDataManager />}
 
         {activeTab === "user-management" && (
           <div className="space-y-6">

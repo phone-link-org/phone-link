@@ -22,63 +22,50 @@
 ## 🏗️ 시스템 아키텍처
 
 ```mermaid
-graph TB
-    subgraph Frontend["Frontend (React + TypeScript)"]
-        A["사용자 인터페이스"]
-        B["상태 관리 - Zustand"]
-        C["라우팅 - React Router"]
-        D["UI 컴포넌트 - Tailwind CSS"]
-        A1["반응형 디자인"]
-        B1["다크/라이트 모드"]
+graph TD
+    subgraph "User"
+        U[Browser]
     end
 
-    subgraph Backend["Backend<br>(Node.js + Express)"]
-        E["REST API"]
-        F["인증/인가 미들웨어"]
-        G["비즈니스 로직"]
-        H["데이터 검증"]
-        E1["파일 업로드 처리"]
-        F1["JWT 토큰 관리"]
+    subgraph " "
+        subgraph "Frontend"
+            Nginx[Nginx Static Server]
+        end
+
+        subgraph "Backend"
+            JWT[JWT Middleware]
+            BE[Node.js / Express]
+            FS[Filesystem]
+        end
+
+        subgraph "Database"
+            DB[MySQL]
+        end
     end
 
-    subgraph Database["Database (MySQL)"]
-        I["사용자 데이터"]
-        J["매장/오퍼 데이터"]
-        K["핸드폰 카탈로그"]
-        L["지역/통신사 데이터"]
-        I1["세션 관리"]
-        J1["가격 히스토리"]
-    end
+    U -- "[ Request HTML/JS/CSS ]" --> Nginx
+    Nginx -- "[ Serve Static React App ]" --> U
 
-    subgraph External["External Services"]
-        M["SSO (Google, Kakao, Naver, Apple)"]
-        N["주소 검색 API"]
-        O["파일 업로드"]
-    end
+    %% JWT Middleware Step Added
+    U -- "[ API Request with Token ]" --> JWT
+    JWT -- "[ Token Verified ]" --> BE
+    
+    BE -- "[ API Response ]" --> U
+    BE -- "[ TypeORM ]" --> DB
+    DB -- "[ DB Result ]" --> BE
 
-    A --> E
-    B --> E
-    C --> E
-    D --> E
-    A1 --> E
-    B1 --> E
+    BE -- "[ Multer ]" --> FS
+    FS -- "[ Store/Read Files ]" --> BE
+    
+    BE -- "[ SSO Auth ]" --> SSO[SSO Providers: Naver, Kakao]
 
-    E --> F
-    F --> G
-    G --> H
-    H --> I
-    H --> J
-    H --> K
-    H --> L
-    E1 --> F
-    F1 --> G
-
-    H --> I1
-    H --> J1
-
-    F --> M
-    G --> N
-    G --> O
+    %% Styles
+    style U fill:#f9f,stroke:#333,stroke-width:2px,color:#000
+    style Nginx fill:#269539,stroke:#333,stroke-width:2px,color:#000
+    style JWT fill:#f5a623,stroke:#333,stroke-width:2px,color:#000
+    style BE fill:#8CC84B,stroke:#333,stroke-width:2px,color:#000
+    style DB fill:#336791,stroke:#333,stroke-width:2px,color:#000
+    style FS fill:#999,stroke:#333,stroke-width:2px,color:#000
 
 ```
 

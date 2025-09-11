@@ -472,35 +472,37 @@ const MyPage: React.FC = () => {
               </div>
 
               {/* Role Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  계정 유형
-                </label>
-                <div className="flex items-center justify-center">
-                  <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
-                    일반 사용자
-                  </span>
-                  <label htmlFor="role" className="relative cursor-pointer">
-                    <input
-                      id="role"
-                      name="role"
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={formData?.role === ROLES.SELLER}
-                      onChange={toggleRole}
-                    />
-                    <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              {user && user.role !== ROLES.ADMIN && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    계정 유형
                   </label>
-                  <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
-                    판매자
-                  </span>
+                  <div className="flex items-center justify-center">
+                    <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                      일반 사용자
+                    </span>
+                    <label htmlFor="role" className="relative cursor-pointer">
+                      <input
+                        id="role"
+                        name="role"
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData?.role === ROLES.SELLER}
+                        onChange={toggleRole}
+                      />
+                      <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                    <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                      판매자
+                    </span>
+                  </div>
+                  <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                    {formData?.role === ROLES.SELLER
+                      ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
+                      : "일반 사용자 계정입니다."}
+                  </p>
                 </div>
-                <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {formData?.role === ROLES.SELLER
-                    ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
-                    : "일반 사용자 계정입니다."}
-                </p>
-              </div>
+              )}
             </div>
           </div>
 

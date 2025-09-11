@@ -14,7 +14,7 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
 }) => {
   const offerTypes = [
     { value: OFFER_TYPES.MNP, label: "번호이동", icon: BsArrowRepeat },
-    { value: OFFER_TYPES.MNP, label: "기기변경", icon: BsPhoneFlip },
+    { value: OFFER_TYPES.CHG, label: "기기변경", icon: BsPhoneFlip },
   ];
 
   const handleOfferTypeChange = (offerType: OfferType) => {

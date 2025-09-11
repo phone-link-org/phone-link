@@ -25,8 +25,8 @@ export interface PhoneDeviceDto {
   modelId: PhoneModelDto["id"];
   storageId: PhoneStorageDto["id"];
   retailPrice: number;
-  unlockedPrice?: number;
-  coupangLink?: string;
+  unlockedPrice: number;
+  coupangLink: string;
   readonly createdAt: Date;
   readonly updatedAt?: Date;
 }
@@ -53,7 +53,7 @@ type StorageData = PhoneStorageDto & { devices: DeviceInfoData[] };
 
 //[ AdminPage > 기본정보 관리 > 핸드폰 모델 ] Grid에서 row를 선택하면 출력되는 Modal form data
 export type PhoneDetailFormData = {
-  modelId: PhoneModelDto["id"];
+  modelId: PhoneModelDto["id"] | null;
   manufacturerId: PhoneManufacturerDto["id"];
   manufacturerName: PhoneManufacturerDto["name_ko"];
   modelName_ko: PhoneModelDto["name_ko"];

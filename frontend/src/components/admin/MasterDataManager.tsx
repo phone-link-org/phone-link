@@ -92,18 +92,22 @@ const MasterDataManager: React.FC = () => {
     }
   };
 
-  const handleModalSubmit = async (data: PhoneDetailFormData) => {
-    try {
-      console.log(data);
-    } catch (error) {
-      console.error(error);
-      toast.error("모델 정보를 저장하는 데 실패했습니다.");
-    }
-  };
-
   const handleDataAdd = (menuId: string) => {
-    toast.success("새 모델 추가" + menuId);
-    // TODO: 추가 모달 열기 로직 구현
+    if (menuId === "phone-models") {
+      setSelectedPhoneModel({
+        modelId: null,
+        manufacturerId: 0,
+        manufacturerName: "",
+        modelName_ko: "",
+        modelName_en: "",
+        imageUrl: "",
+        releaseDate: new Date(),
+        storages: [],
+      });
+      setIsModalOpen(true);
+    } else {
+      toast.success(`Current menu: ${menuId}`);
+    }
   };
 
   return (
@@ -185,7 +189,6 @@ const MasterDataManager: React.FC = () => {
         <PhoneModelDetailModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onSubmit={handleModalSubmit}
           phoneModelData={selectedPhoneModel}
         />
       )}

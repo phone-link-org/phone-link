@@ -174,6 +174,7 @@ backend/dist/
 backend/.env
 backend/.env.*.local
 backend/*.tsbuildinfo
+backend/uploads/images/
 
 # ───── OS 편의 ─────
 *.swp

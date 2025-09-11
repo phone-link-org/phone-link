@@ -14,6 +14,7 @@ import {
   PhoneDetailFormData,
 } from "../../../shared/types";
 import { PhoneStorage } from "../typeorm/phoneStorage.entity";
+import { PhoneDevice } from "../typeorm/phoneDevices.entity";
 
 const router = Router();
 
@@ -195,6 +196,166 @@ router.get("/phone-detail/:id", async (req, res) => {
       error: "Internal Server Error",
       message: "핸드폰 모델 상세 정보를 불러오는 중 오류가 발생했습니다.",
     });
+  }
+});
+
+// Phone model information update
+router.post("/phone-detail/:id", async (req, res) => {
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const idParam = req.params.id;
+    const modelId =
+      idParam === "null" || isNaN(parseInt(idParam, 10))
+        ? null
+        : parseInt(idParam);
+    const data: PhoneDetailFormData = req.body;
+
+    // 1. 필수 정보 유효성 검사
+    if (
+      !data.modelName_ko ||
+      !data.modelName_en ||
+      !data.imageUrl ||
+      !data.releaseDate
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Bad Request",
+        message: "필수 정보가 누락되었습니다.",
+      });
+    }
+
+    // 2. 기존 PhoneModel 데이터 확인
+    const modelRepo = queryRunner.manager.getRepository(PhoneModel);
+    const deviceRepo = queryRunner.manager.getRepository(PhoneDevice);
+    const existingModel = modelId
+      ? await modelRepo.findOne({ where: { id: modelId } })
+      : null;
+
+    if (existingModel) {
+      // --- UPDATE LOGIC ---
+      // 3-A. 기존 모델 정보가 변경되었는지 확인하고 업데이트
+      const modelNeedsUpdate =
+        existingModel.manufacturerId !== data.manufacturerId ||
+        existingModel.name_ko !== data.modelName_ko ||
+        existingModel.name_en !== data.modelName_en ||
+        existingModel.imageUrl !== data.imageUrl ||
+        existingModel.releaseDate !== data.releaseDate;
+
+      if (modelNeedsUpdate) {
+        existingModel.manufacturerId = data.manufacturerId;
+        existingModel.name_ko = data.modelName_ko;
+        existingModel.name_en = data.modelName_en;
+        existingModel.imageUrl = data.imageUrl;
+        existingModel.releaseDate = data.releaseDate;
+        await modelRepo.save(existingModel);
+      }
+
+      // 3-B. PhoneDevice 동기화 (추가/수정/삭제)
+      const existingDevices = await deviceRepo.find({
+        where: { modelId: existingModel.id },
+      });
+      const existingDevicesMap = new Map(
+        existingDevices.map((d) => [d.storageId, d]),
+      );
+      const incomingStoragesMap = new Map(data.storages.map((s) => [s.id, s]));
+
+      const devicesToAdd = [];
+      const devicesToUpdate = [];
+      const devicesToDelete = [];
+
+      // 삭제할 디바이스 찾기 (DB에는 있지만, 요청 데이터에는 없는 경우)
+      for (const existingDevice of existingDevices) {
+        if (!incomingStoragesMap.has(existingDevice.storageId)) {
+          devicesToDelete.push(existingDevice);
+        }
+      }
+
+      // 추가 또는 수정할 디바이스 찾기
+      for (const incomingStorage of data.storages) {
+        const existingDevice = existingDevicesMap.get(incomingStorage.id);
+
+        if (existingDevice) {
+          // 수정할 디바이스
+          const deviceNeedsUpdate =
+            existingDevice.retailPrice !==
+              incomingStorage.devices[0].retailPrice ||
+            existingDevice.unlockedPrice !==
+              incomingStorage.devices[0].unlockedPrice ||
+            existingDevice.coupangLink !==
+              incomingStorage.devices[0].coupangLink;
+
+          if (deviceNeedsUpdate) {
+            existingDevice.retailPrice = incomingStorage.devices[0].retailPrice;
+            existingDevice.unlockedPrice =
+              incomingStorage.devices[0].unlockedPrice;
+            existingDevice.coupangLink = incomingStorage.devices[0].coupangLink;
+            devicesToUpdate.push(existingDevice);
+          }
+        } else {
+          // 추가할 디바이스
+          const newDevice = new PhoneDevice();
+          newDevice.modelId = existingModel.id;
+          newDevice.storageId = incomingStorage.id;
+          newDevice.retailPrice = incomingStorage.devices[0].retailPrice;
+          newDevice.unlockedPrice = incomingStorage.devices[0].unlockedPrice;
+          newDevice.coupangLink = incomingStorage.devices[0].coupangLink;
+          devicesToAdd.push(newDevice);
+        }
+      }
+
+      // DB에 변경사항 적용
+      if (devicesToDelete.length > 0) await deviceRepo.remove(devicesToDelete);
+      if (devicesToUpdate.length > 0) await deviceRepo.save(devicesToUpdate);
+      if (devicesToAdd.length > 0) await deviceRepo.save(devicesToAdd);
+
+      await queryRunner.commitTransaction();
+      return res.status(200).json({
+        success: true,
+        message: "핸드폰 모델 정보가 성공적으로 수정되었습니다.",
+      });
+    } else {
+      // 4. 새 모델 생성
+      const newModel = new PhoneModel();
+      newModel.manufacturerId = data.manufacturerId;
+      newModel.name_ko = data.modelName_ko;
+      newModel.name_en = data.modelName_en;
+      newModel.imageUrl = data.imageUrl;
+      newModel.releaseDate = data.releaseDate;
+      const savedModel = await modelRepo.save(newModel);
+
+      const devicesToSave = data.storages.map((storage) => {
+        const deviceData = new PhoneDevice();
+        deviceData.storageId = storage.id;
+        deviceData.modelId = savedModel.id;
+        deviceData.retailPrice = storage.devices[0].retailPrice;
+        deviceData.unlockedPrice = storage.devices[0].unlockedPrice;
+        deviceData.coupangLink = storage.devices[0].coupangLink;
+        return deviceData;
+      });
+
+      if (devicesToSave.length > 0) {
+        await deviceRepo.save(devicesToSave);
+      }
+
+      await queryRunner.commitTransaction();
+      return res.status(201).json({
+        success: true,
+        message: "핸드폰 모델이 성공적으로 생성되었습니다.",
+      });
+    }
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    console.error("Error processing phone model detail:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "요청 처리 중 오류가 발생했습니다.",
+    });
+  } finally {
+    await queryRunner.release();
   }
 });
 

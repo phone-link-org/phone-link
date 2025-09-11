@@ -15,6 +15,7 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
 }) => {
   return (
     <button
+      type="button"
       onClick={onChange}
       className={`
         px-2 py-1 rounded-lg border transition ${

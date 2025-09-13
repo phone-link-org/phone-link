@@ -17,16 +17,18 @@ import CustomCheckbox from "../CustomCheckbox";
 import ImageUpload from "../ImageUpload";
 import { toast } from "sonner";
 
-interface PhoneModelDetailModalProps {
+interface ModelModalProps {
   isOpen: boolean;
   onClose: () => void;
   phoneModelData?: PhoneDetailFormData | null;
+  onSave: () => void;
 }
 
-const PhoneModelDetailModal: React.FC<PhoneModelDetailModalProps> = ({
+const ModelModal: React.FC<ModelModalProps> = ({
   isOpen,
   onClose,
   phoneModelData,
+  onSave,
 }) => {
   const {
     register,
@@ -154,8 +156,8 @@ const PhoneModelDetailModal: React.FC<PhoneModelDetailModalProps> = ({
     }
     try {
       await api.post(`/admin/phone-detail/${data.modelId}`, data);
-
       toast.success("저장되었습니다!");
+      onSave();
       onClose();
     } catch (error) {
       toast.error("저장에 실패했습니다.");
@@ -509,4 +511,4 @@ const PhoneModelDetailModal: React.FC<PhoneModelDetailModalProps> = ({
   );
 };
 
-export default PhoneModelDetailModal;
+export default ModelModal;

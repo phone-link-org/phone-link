@@ -11,7 +11,7 @@ interface ImageUploadProps {
   label?: string;
   className?: string;
   disabled?: boolean;
-  uploadType: "store" | "device" | "profile" | "post";
+  uploadType: "store" | "device" | "profile" | "post" | "carrier";
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({

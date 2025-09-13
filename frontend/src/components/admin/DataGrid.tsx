@@ -1,4 +1,3 @@
-import React from "react";
 import { FaPlus } from "react-icons/fa";
 
 /**
@@ -36,6 +35,7 @@ const DataGrid = <T extends { id: number }>({
   onRowClick,
   onAddItem,
 }: DataGridProps<T>) => {
+  console.log(data);
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">

@@ -13,39 +13,25 @@ export interface AuthenticatedRequest extends Request {
  * JWT 토큰의 유효성을 검증하고, 유효한 경우 req.user에 디코딩된 페이로드를 추가
  * 이 미들웨어를 통과하면, 해당 사용자는 '로그인된 사용자'임이 보장
  */
-export const isAuthenticated = (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ success: false, message: "인증 토큰이 필요합니다." });
+    return res.status(401).json({ success: false, message: "인증 토큰이 필요합니다." });
   }
 
   const token = authHeader.split(" ")[1];
 
-  jwt.verify(
-    token,
-    process.env.JWT_SECRET!,
-    (err: VerifyErrors | null, decodedUser) => {
-      if (err) {
-        if (err.name === "TokenExpiredError") {
-          return res
-            .status(401)
-            .json({ success: false, message: "토큰이 만료되었습니다." });
-        }
-        return res
-          .status(403)
-          .json({ success: false, message: "유효하지 않은 토큰입니다." });
+  jwt.verify(token, process.env.JWT_SECRET!, (err: VerifyErrors | null, decodedUser) => {
+    if (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({ success: false, message: "토큰이 만료되었습니다." });
       }
-      req.user = decodedUser as UserAuthData & JwtPayload;
-      next();
-    },
-  );
+      return res.status(403).json({ success: false, message: "유효하지 않은 토큰입니다." });
+    }
+    req.user = decodedUser as UserAuthData & JwtPayload;
+    next();
+  });
 };
 
 /**
@@ -70,9 +56,7 @@ export const hasRole = (requiredRoles: Array<Role>) => {
       next(); // 권한이 있으면 다음 미들웨어로 진행
     } else {
       // 권한이 없으면 403 Forbidden 에러를 반환
-      return res
-        .status(403)
-        .json({ success: false, message: "요청에 대한 접근 권한이 없습니다." });
+      return res.status(403).json({ success: false, message: "요청에 대한 접근 권한이 없습니다." });
     }
   };
 };

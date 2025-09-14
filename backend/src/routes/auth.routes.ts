@@ -40,6 +40,7 @@ const createToken = (user: User, storeId?: number): string => {
     id: user.id,
     nickname: user.nickname,
     role: user.role,
+    profileImageUrl: user.profileImageUrl,
   };
 
   if (storeId) payload.storeId = storeId;
@@ -115,6 +116,7 @@ router.post("/login", async (req, res) => {
       id: user.id,
       nickname: user.nickname,
       role: user.role,
+      profileImageUrl: user.profileImageUrl,
       storeId: storeId,
     };
 
@@ -162,6 +164,7 @@ router.get("/profile", isAuthenticated, async (req: AuthenticatedRequest, res: R
       id: user.id,
       nickname: user.nickname,
       role: user.role,
+      profileImageUrl: user.profileImageUrl,
     };
 
     // 판매자이고, 유효한 매장이 있으면 storeId를 추가
@@ -265,6 +268,7 @@ router.post("/callback/:provider", async (req, res) => {
         id: user.id,
         nickname: user.nickname,
         role: user.role,
+        profileImageUrl: user.profileImageUrl,
         storeId,
       };
 

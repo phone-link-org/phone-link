@@ -1,6 +1,7 @@
 import React from "react";
 import ThemeToggleButton from "./ThemeToggleButton";
 import { IoMenuOutline } from "react-icons/io5";
+import { FiUser } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { ROLES } from "../../../shared/constants";
@@ -72,9 +73,27 @@ const Navbar: React.FC = () => {
         {isAuthenticated ? (
           <>
             <Link to="/mypage">
-              <button className="hidden md:block px-4 py-2 rounded bg-primary-light hover:bg-[#3d5e33] dark:bg-primary-dark dark:hover:bg-[#759161] text-white dark:text-foreground-light text-base font-medium transition-colors">
-                마이페이지
-              </button>
+              <div className="hidden md:flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer group">
+                {/* 프로필 이미지 */}
+                <div className="flex-shrink-0">
+                  {user?.profileImageUrl ? (
+                    <img
+                      src={`${import.meta.env.VITE_API_URL}${user.profileImageUrl}`}
+                      alt="프로필"
+                      className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                      <FiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* 닉네임 */}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-24 group-hover:underline transition-all duration-200">
+                  {user?.nickname || "사용자"}
+                </span>
+              </div>
             </Link>
             <button
               onClick={() => logout()}

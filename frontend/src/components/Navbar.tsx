@@ -28,7 +28,7 @@ const Navbar: React.FC = () => {
           </li>
           {user?.role === ROLES.SELLER && user.storeId && (
             <li>
-              <Link to="/store">
+              <Link to={`/store/${user.storeId}`}>
                 <button
                   className={`text-base transition-colors text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark`}
                 >

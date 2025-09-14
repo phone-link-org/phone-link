@@ -1,4 +1,5 @@
 import type { StoreDto } from "./store.types";
+import type { Role, SsoProvider } from "./constants";
 
 export interface UserDto {
   readonly id: number;
@@ -17,8 +18,9 @@ export interface UserDto {
   sigungu?: string;
   address?: string;
   addressDetail?: string;
-  role: "USER" | "SELLER" | "ADMIN";
+  role: Role;
   status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
+  lastLoginType: string;
   readonly lastLoginAt?: Date;
   readonly deletedAt?: Date;
   readonly createdAt: Date;
@@ -28,7 +30,7 @@ export interface UserDto {
 export interface SocialAccountDto {
   readonly id: number;
   readonly userId: UserDto["id"];
-  provider: "kakao" | "naver" | "google" | "apple";
+  provider: SsoProvider;
   providerUserId: string;
   accessToken?: string;
   refreshToken?: string;
@@ -48,6 +50,20 @@ export type SignupFormData = Omit<
   | "deletedAt"
   | "createdAt"
   | "updatedAt"
+>;
+
+export type UserUpdateData = Pick<
+  UserDto,
+  | "id"
+  | "nickname"
+  | "password"
+  | "profileImageUrl"
+  | "address"
+  | "addressDetail"
+  | "postalCode"
+  | "sido"
+  | "sigungu"
+  | "role"
 >;
 
 //Pick은 특정 타입에서 특정 키를 선택한 타입을 생성하는 타입

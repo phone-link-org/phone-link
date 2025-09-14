@@ -1,3 +1,4 @@
+import type { OfferType, SortOrder } from "./constants";
 import type {
   CarrierDto,
   OfferModelDto,
@@ -7,6 +8,7 @@ import type {
   PhoneModelDto,
   PhoneStorageDto,
   RegionDto,
+  ReqPlanDto,
   StoreDto,
   UserDto,
 } from "./types";
@@ -16,7 +18,7 @@ export interface OfferDto {
   storeId: StoreDto["id"];
   carrierId: CarrierDto["id"];
   deviceId: PhoneDeviceDto["id"];
-  offerType: "MNP" | "CHG";
+  offerType: OfferType;
   price?: number | null;
   sortOrder?: number;
   updatedBy?: UserDto["id"];
@@ -28,18 +30,40 @@ export type OfferSearchRequest = {
   regions: OfferRegionDto[];
   models: OfferModelDto[];
   carriers: CarrierDto[];
-  offerTypes: ("MNP" | "CHG")[];
+  offerTypes: OfferType[];
   page: number;
   limit: number;
-  sortOrder: "default" | "price_asc" | "price_desc";
+  sortOrder: SortOrder;
 };
 
 export type OfferSearchResult = Pick<OfferDto, "id" | "offerType" | "price"> & {
+  storeId: StoreDto["id"];
   storeName: StoreDto["name"];
   regionName: RegionDto["name"];
   carrierName: CarrierDto["name"];
   modelName: string;
   imageUrl: PhoneModelDto["imageUrl"];
+};
+
+export type OfferDetailFormData = {
+  offerId: OfferDto["id"];
+  storeId: StoreDto["id"];
+  storeName: StoreDto["name"];
+  storeThumbnailUrl: StoreDto["thumbnailUrl"];
+  storeAddress: StoreDto["address"];
+  storeContact: StoreDto["contact"];
+  storeLink_1: StoreDto["link_1"];
+  storeLink_2: StoreDto["link_2"];
+  modelName: PhoneModelDto["name_ko"];
+  modelImageUrl: PhoneModelDto["imageUrl"];
+  modelReleaseDate: PhoneModelDto["releaseDate"];
+  carrierName: CarrierDto["name"];
+  offerType: OfferDto["offerType"];
+  price: OfferDto["price"];
+  retailPrice: PhoneDeviceDto["retailPrice"];
+  coupangLink: PhoneDeviceDto["coupangLink"];
+  unlockedPrice: PhoneDeviceDto["unlockedPrice"];
+  monthlyFee: ReqPlanDto["monthlyFee"];
 };
 
 export type StoreOfferPriceFormData = Pick<
@@ -57,7 +81,7 @@ export type StoreOfferPriceFormData = Pick<
 
 //Store Page의 시세표 출력을 위한 커스텀 타입 start
 type StoreOfferType = {
-  offerType: "MNP" | "CHG";
+  offerType: OfferType;
   price: OfferDto["price"];
 };
 

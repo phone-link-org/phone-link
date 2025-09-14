@@ -1,16 +1,12 @@
-import React, { useContext } from "react";
+import React from "react";
 import ThemeToggleButton from "./ThemeToggleButton";
 import { IoMenuOutline } from "react-icons/io5";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { ROLES } from "../../../shared/constants";
 
 const Navbar: React.FC = () => {
-  const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-8 shadow-sm bg-background-light dark:shadow-[#404040] dark:shadow-sm  dark:bg-background-dark">
@@ -30,7 +26,7 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          {user?.role === "SELLER" && user.storeId && (
+          {user?.role === ROLES.SELLER && user.storeId && (
             <li>
               <Link to={`/store/${user.storeId}`}>
                 <button
@@ -58,7 +54,7 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
           </li>
-          {user?.role === "ADMIN" && (
+          {user?.role === ROLES.ADMIN && (
             <li>
               <Link to="/admin">
                 <button
@@ -81,7 +77,7 @@ const Navbar: React.FC = () => {
               </button>
             </Link>
             <button
-              onClick={handleLogout}
+              onClick={() => logout()}
               className="hidden md:block px-4 py-2 rounded bg-gray-500 hover:bg-gray-600 text-white text-base font-medium transition-colors"
             >
               로그아웃

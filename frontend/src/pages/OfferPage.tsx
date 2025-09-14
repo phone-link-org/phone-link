@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
@@ -18,9 +19,17 @@ import type {
   PhoneStorageDto,
   OfferSearchRequest,
 } from "../../../shared/types";
+import {
+  CARRIERS,
+  OFFER_TYPES,
+  SORT_ORDER,
+  type OfferType,
+  type SortOrder,
+} from "../../../shared/constants";
 
 const OfferPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
     "region" | "model" | "carrier" | "offerType"
@@ -32,17 +41,13 @@ const OfferPage: React.FC = () => {
 
   const [selectedModels, setSelectedModels] = useState<OfferModelDto[]>([]);
   const [selectedCarriers, setSelectedCarriers] = useState<CarrierDto[]>([]);
-  const [selectedOfferTypes, setSelectedOfferTypes] = useState<
-    ("MNP" | "CHG")[]
-  >([]);
+  const [selectedOfferTypes, setSelectedOfferTypes] = useState<OfferType[]>([]);
 
   const [offerDatas, setOfferDatas] = useState<OfferSearchResult[]>([]);
   const pageRef = useRef(1); // 페이지 번호를 ref로 관리
   const [hasNextPage, setHasNextPage] = useState(true); // 다음 페이지 존재 여부
   const [loading, setLoading] = useState(false); // 데이터 로딩 상태
-  const [sortOrder, setSortOrder] = useState<
-    "default" | "price_asc" | "price_desc"
-  >("default"); // 정렬 순서 상태
+  const [sortOrder, setSortOrder] = useState<SortOrder>(SORT_ORDER.DEFAULT); // 정렬 순서 상태
   const SERVER = import.meta.env.VITE_API_URL;
 
   const fetchOfferDatas = useCallback(
@@ -177,7 +182,7 @@ const OfferPage: React.FC = () => {
         setSelectedModels([]);
         setSelectedCarriers([]);
         setSelectedOfferTypes([]);
-        setSortOrder("default"); // 정렬 순서도 초기화
+        setSortOrder(SORT_ORDER.DEFAULT); // 정렬 순서도 초기화
       }
     });
   };
@@ -186,9 +191,9 @@ const OfferPage: React.FC = () => {
   // --- 정렬 버튼 토글 핸들러 ---
   const handleSortToggle = () => {
     setSortOrder((currentOrder) => {
-      if (currentOrder === "default") return "price_asc";
-      if (currentOrder === "price_asc") return "price_desc";
-      return "default";
+      if (currentOrder === SORT_ORDER.DEFAULT) return SORT_ORDER.PRICE_ASC;
+      if (currentOrder === SORT_ORDER.PRICE_ASC) return SORT_ORDER.PRICE_DESC;
+      return SORT_ORDER.DEFAULT;
     });
   };
 
@@ -403,7 +408,7 @@ const OfferPage: React.FC = () => {
                     key={offerType}
                     className="flex items-center text-sm bg-purple-100 dark:bg-purple-700 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full"
                   >
-                    {offerType === "MNP" ? "번호이동" : "기기변경"}
+                    {offerType === OFFER_TYPES.MNP ? "번호이동" : "기기변경"}
                     <button
                       onClick={() =>
                         setSelectedOfferTypes((prev) =>
@@ -420,7 +425,6 @@ const OfferPage: React.FC = () => {
             )}
             <div className="flex justify-end">
               <button
-                // TODO: 검색 기능 연결
                 onClick={handleSearch}
                 className="w-full sm:w-1/4 md:w-1/6 px-4 py-2 text-xl font-medium rounded-lg bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light hover:opacity-90"
               >
@@ -459,11 +463,11 @@ const OfferPage: React.FC = () => {
                 // 통신사별 색상 설정
                 const getCarrierBadgeColor = (carrier: string) => {
                   switch (carrier) {
-                    case "KT":
+                    case CARRIERS.KT:
                       return "bg-[#5EDFDE] text-white";
-                    case "SKT":
+                    case CARRIERS.SKT:
                       return "bg-[#3618CE] text-white";
-                    case "LG U+":
+                    case CARRIERS.LG:
                       return "bg-[#E2207E] text-white";
                     default:
                       return "bg-gray-400 text-white";
@@ -476,20 +480,23 @@ const OfferPage: React.FC = () => {
                     ? "bg-emerald-500 text-white"
                     : "bg-amber-500 text-white";
                 };
-
                 return (
                   <div
                     ref={isLastElement ? lastOfferElementRef : null}
                     key={`offer_${data.id}_${index}`}
-                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 sm:p-6"
+                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:border-primary-light dark:hover:border-primary-dark transition-shadow duration-300 p-4 sm:p-6 cursor-pointer"
+                    onClick={() => navigate(`/offer/${data.id}`)}
                   >
-                    {/* 상단: 대리점명 / 지역 */}
-                    <div className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    {/* 상단: 대리점명 / 지역 (클릭 시 매장 상세로 이동) */}
+                    <Link
+                      to={`/store/${data.storeId}`}
+                      className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4 hover:opacity-90"
+                    >
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                         {data.storeName}
                       </span>
                       <span className="mt-1 sm:mt-0">{data.regionName}</span>
-                    </div>
+                    </Link>
 
                     {/* 본문: 썸네일 / 모델명+뱃지 / 가격+토글 */}
                     <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">

@@ -12,6 +12,7 @@ import { Comment } from "./comments.entity";
 import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
+import { ROLES, Role } from "../../../shared/constants";
 
 @Entity("users")
 @Index("idx_status", ["status"])
@@ -67,12 +68,13 @@ export class User {
 
   @Column({
     type: "enum",
-    enum: ["USER", "SELLER", "ADMIN"],
+    enum: [ROLES.USER, ROLES.SELLER, ROLES.SELLER],
     nullable: false,
-    default: "USER",
+    default: ROLES.USER,
   })
-  role: "USER" | "SELLER" | "ADMIN";
+  role: Role;
 
+  //ACTIVE: 활성화, SUSPENDED: 정지, WITHDRAWN: 탈퇴
   @Column({
     type: "enum",
     enum: ["ACTIVE", "SUSPENDED", "WITHDRAWN"],
@@ -83,6 +85,9 @@ export class User {
 
   @Column({ name: "last_login_at", type: "datetime" })
   lastLoginAt?: Date;
+
+  @Column({ name: "last_login_type", type: "varchar", length: 100 })
+  lastLoginType: string;
 
   @DeleteDateColumn({ name: "deleted_at", type: "datetime" })
   deletedAt?: Date;

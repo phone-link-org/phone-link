@@ -9,11 +9,11 @@ import {
   HiPhone,
   HiUser,
   HiLink,
-  HiPhoto,
   HiMiniInformationCircle,
 } from "react-icons/hi2";
 import type { StoreRegisterFormData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
+import ImageUpload from "../components/ImageUpload";
 import Swal from "sweetalert2";
 import { useTheme } from "../hooks/useTheme";
 import axios from "axios";
@@ -46,14 +46,12 @@ const StoreRegisterPage: React.FC = () => {
     approvalStatus: "PENDING",
     createdBy: 0,
   });
-  const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isNameChecked, setIsNameChecked] = useState<boolean>(false);
 
   const [errors, setErrors] = useState<
     Partial<Record<keyof StoreRegisterFormData, string>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
 
   const navigate = useNavigate();
   const addressDetailRef = useRef<HTMLInputElement>(null);
@@ -149,60 +147,6 @@ const StoreRegisterPage: React.FC = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // 이미지 업로드 함수
-  const uploadImage = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append("thumbnail", file);
-
-      const response = await api.post<{ thumbnailUrl: string }>(
-        "/store/upload-image",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
-
-      return response.thumbnailUrl;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        toast.error(
-          error.response.data.message ||
-            "이미지 업로드 중 오류가 발생했습니다.",
-        );
-      } else {
-        toast.error("이미지 업로드 중 알 수 없는 오류가 발생했습니다.");
-      }
-      throw error;
-    }
-  };
-
-  // 이미지 삭제 함수
-  const deleteImage = async (thumbnailUrl: string) => {
-    try {
-      // URL에서 파일명 추출
-      const filename = thumbnailUrl.split("/").pop();
-      if (!filename) {
-        throw new Error("파일명을 찾을 수 없습니다.");
-      }
-
-      await api.post("/store/delete-image", { filename });
-
-      toast.success("이미지가 성공적으로 삭제되었습니다.");
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        toast.error(
-          error.response.data.message || "이미지 삭제 중 오류가 발생했습니다.",
-        );
-      } else {
-        toast.error("이미지 삭제 중 알 수 없는 오류가 발생했습니다.");
-      }
-      throw error;
-    }
   };
 
   const checkStoreName = async (storeName: string) => {
@@ -458,167 +402,23 @@ const StoreRegisterPage: React.FC = () => {
               {/* --- Right Column --- */}
               <div className="space-y-6">
                 {/* 썸네일 이미지 업로드 */}
-                <div>
-                  <label
-                    htmlFor="thumbnailUrl"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
-                    <HiPhoto className="inline h-4 w-4 mr-1" />
-                    매장 대표 이미지
-                  </label>
-                  <div
-                    className={`w-full h-[147px] px-3 py-2 border-2 border-dashed rounded-md text-center transition-colors flex items-center justify-center ${
-                      isDragOver
-                        ? "border-primary-light bg-primary-light/10 dark:border-primary-dark dark:bg-primary-dark/10"
-                        : "border-gray-300 dark:border-gray-500 hover:border-gray-400 dark:hover:border-gray-400"
-                    }`}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragOver(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      setIsDragOver(false);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragOver(false);
-                      const files = e.dataTransfer.files;
-                      if (files.length > 0) {
-                        const file = files[0];
-                        if (file.type.startsWith("image/")) {
-                          // 비동기 처리를 위한 즉시 실행 함수
-                          (async () => {
-                            try {
-                              // 이미지 업로드
-                              const thumbnailUrl = await uploadImage(file);
-
-                              // formData 업데이트 (백엔드 경로)
-                              setFormData((prev) => ({
-                                ...prev,
-                                thumbnailUrl: thumbnailUrl,
-                              }));
-
-                              // 미리보기용 로컬 URL
-                              const fileUrl = URL.createObjectURL(file);
-                              setPreviewUrl(fileUrl);
-
-                              toast.success(
-                                "이미지가 성공적으로 업로드되었습니다.",
-                              );
-                            } catch (error) {
-                              console.error("이미지 업로드 실패:", error);
-                              toast.error(
-                                "이미지 업로드 중 오류가 발생했습니다.",
-                              );
-                            }
-                          })();
-                        } else {
-                          toast.error("이미지 파일만 업로드 가능합니다.");
-                        }
-                      }
-                    }}
-                  >
-                    <input
-                      type="file"
-                      id="thumbnailUrl"
-                      name="thumbnailUrl"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            // 이미지 업로드
-                            const thumbnailUrl = await uploadImage(file);
-
-                            // formData 업데이트 (백엔드 경로)
-                            setFormData((prev) => ({
-                              ...prev,
-                              thumbnailUrl: thumbnailUrl,
-                            }));
-
-                            // 미리보기용 로컬 URL
-                            const fileUrl = URL.createObjectURL(file);
-                            setPreviewUrl(fileUrl);
-
-                            toast.success(
-                              "이미지가 성공적으로 업로드되었습니다.",
-                            );
-                          } catch (error) {
-                            console.error("이미지 업로드 실패:", error);
-                            // 에러 시 파일 선택 초기화
-                            e.target.value = "";
-                            setFormData((prev) => ({
-                              ...prev,
-                              thumbnailUrl: "",
-                            }));
-                            setPreviewUrl("");
-                          }
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    {previewUrl ? (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <img
-                          src={previewUrl}
-                          alt="썸네일 미리보기"
-                          className="h-12 w-12 object-cover rounded-md"
-                        />
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                          이미지 선택됨
-                        </p>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              // 백엔드 파일 삭제
-                              if (formData.thumbnailUrl) {
-                                await deleteImage(formData.thumbnailUrl);
-                              }
-
-                              // 상태 초기화
-                              setFormData((prev) => ({
-                                ...prev,
-                                thumbnailUrl: "",
-                              }));
-                              setPreviewUrl("");
-                            } catch (error) {
-                              console.error("이미지 제거 실패:", error);
-                              // 에러가 발생해도 UI는 초기화
-                              setFormData((prev) => ({
-                                ...prev,
-                                thumbnailUrl: "",
-                              }));
-                              setPreviewUrl("");
-                            }
-                          }}
-                          className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 mt-1"
-                        >
-                          제거
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <HiPhoto className="h-6 w-6 text-gray-400" />
-                        <p className="text-xs text-gray-600 dark:text-gray-300 my-1">
-                          이미지를 드래그하거나 파일 선택 버튼을 클릭하세요
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            document.getElementById("thumbnailUrl")?.click()
-                          }
-                          className="px-4 py-2 text-sm font-medium text-white dark:text-black bg-primary-light rounded-md hover:bg-opacity-80 dark:bg-primary-dark mt-1"
-                        >
-                          파일 선택
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <p className="h-4 text-xs text-red-500"> </p>
-                </div>
-
+                <ImageUpload
+                  currentImageUrl={formData.thumbnailUrl}
+                  onImageChange={(imageUrl) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      thumbnailUrl: imageUrl,
+                    }))
+                  }
+                  onImageRemove={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      thumbnailUrl: "",
+                    }))
+                  }
+                  label="매장 대표 이미지"
+                  uploadType="store"
+                />
                 {/* 링크 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -656,7 +456,6 @@ const StoreRegisterPage: React.FC = () => {
                     {errors.link_1 || errors.link_2 || " "}
                   </p>
                 </div>
-
                 {/* 매장 소개글 */}
                 <div>
                   <label

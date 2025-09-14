@@ -5,8 +5,11 @@ import { AppDataSource } from "../db";
 import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { Seller } from "../typeorm/sellers.entity";
-import { SignupFormData } from "../../../shared/types";
+import { SignupFormData, UserUpdateData } from "../../../shared/types";
 import { nanoid } from "nanoid";
+import { ROLES } from "../../../shared/constants";
+import { Not } from "typeorm";
+import { isAuthenticated } from "../middlewares/auth.middleware";
 
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
@@ -143,7 +146,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await transactionalEntityManager.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "SELLER" && storeId !== -8574) {
+        if (savedUser.role === ROLES.SELLER && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -290,7 +293,7 @@ router.post("/signup", async (req, res) => {
         const savedUser = await userRepo.save(newUser);
 
         // 판매자일 경우 sellers 테이블에 추가
-        if (savedUser.role === "SELLER" && storeId !== -8574) {
+        if (savedUser.role === ROLES.SELLER && storeId !== -8574) {
           if (!storeId) {
             throw new Error("STORE_ID_REQUIRED");
           }
@@ -362,6 +365,90 @@ router.get("/profile", async (req, res) => {
       success: false,
       error: "Internal Server Error",
       message: "사용자 정보를 불러오는 중 오류가 발생했습니다.",
+    });
+  }
+});
+
+router.post("/profile", isAuthenticated, async (req, res) => {
+  const userUpdateData: UserUpdateData = req.body;
+  if (!userUpdateData.id) {
+    return res
+      .status(401)
+      .json({ success: false, message: "인증 정보가 유효하지 않습니다." });
+  }
+
+  try {
+    const userRepo = AppDataSource.getRepository(User);
+    const userToUpdate = await userRepo.findOne({
+      where: { id: userUpdateData.id },
+    });
+
+    if (!userToUpdate) {
+      return res
+        .status(404)
+        .json({ success: false, message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 닉네임 변경 시 중복 확인
+    if (
+      userUpdateData.nickname &&
+      userUpdateData.nickname !== userToUpdate.nickname
+    ) {
+      const existingUser = await userRepo.findOne({
+        where: {
+          nickname: userUpdateData.nickname,
+          id: Not(userUpdateData.id),
+        },
+      });
+      if (existingUser) {
+        return res
+          .status(409)
+          .json({ success: false, message: "이미 사용 중인 닉네임입니다." });
+      }
+      userToUpdate.nickname = userUpdateData.nickname;
+    }
+
+    // 비밀번호 변경
+    if (userUpdateData.password) {
+      userToUpdate.password = await bcrypt.hash(userUpdateData.password, 10);
+    }
+
+    // 기타 정보 업데이트
+    if (userUpdateData.profileImageUrl !== undefined)
+      userToUpdate.profileImageUrl = userUpdateData.profileImageUrl;
+    if (userUpdateData.address !== undefined)
+      userToUpdate.address = userUpdateData.address;
+    if (userUpdateData.addressDetail !== undefined)
+      userToUpdate.addressDetail = userUpdateData.addressDetail;
+    if (userUpdateData.postalCode !== undefined)
+      userToUpdate.postalCode = userUpdateData.postalCode;
+    if (userUpdateData.sido !== undefined)
+      userToUpdate.sido = userUpdateData.sido;
+    if (userUpdateData.sigungu !== undefined)
+      userToUpdate.sigungu = userUpdateData.sigungu;
+    if (
+      userUpdateData.role &&
+      [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)
+    ) {
+      userToUpdate.role = userUpdateData.role;
+    }
+
+    await userRepo.save(userToUpdate);
+
+    // 응답 데이터에서 비밀번호 필드 제거
+    delete userToUpdate.password;
+
+    res.status(200).json({
+      success: true,
+      message: "프로필이 성공적으로 업데이트되었습니다.",
+      data: userToUpdate,
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({
+      success: false,
+      message: "프로필 업데이트 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
     });
   }
 });

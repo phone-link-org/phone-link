@@ -1,10 +1,11 @@
 import React from "react";
 //import { GiCycle, GiSmartphone } from "react-icons/gi";
 import { BsArrowRepeat, BsPhoneFlip } from "react-icons/bs";
+import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
 
 interface OfferTypeSelectorProps {
-  selectedOfferTypes: ("MNP" | "CHG")[];
-  onOfferTypesChange: (offerTypes: ("MNP" | "CHG")[]) => void;
+  selectedOfferTypes: OfferType[];
+  onOfferTypesChange: (offerTypes: OfferType[]) => void;
 }
 
 const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
@@ -12,11 +13,11 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
   onOfferTypesChange,
 }) => {
   const offerTypes = [
-    { value: "MNP", label: "번호이동", icon: BsArrowRepeat },
-    { value: "CHG", label: "기기변경", icon: BsPhoneFlip },
+    { value: OFFER_TYPES.MNP, label: "번호이동", icon: BsArrowRepeat },
+    { value: OFFER_TYPES.CHG, label: "기기변경", icon: BsPhoneFlip },
   ];
 
-  const handleOfferTypeChange = (offerType: "MNP" | "CHG") => {
+  const handleOfferTypeChange = (offerType: OfferType) => {
     const isSelected = selectedOfferTypes.includes(offerType);
 
     if (isSelected) {
@@ -34,14 +35,12 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
     <div>
       <div className="grid grid-cols-2 gap-3 items-center min-h-60">
         {offerTypes.map(({ value, label, icon: Icon }) => {
-          const isSelected = selectedOfferTypes.includes(
-            value as "MNP" | "CHG",
-          );
+          const isSelected = selectedOfferTypes.includes(value as OfferType);
           return (
             <button
               key={value}
               type="button"
-              onClick={() => handleOfferTypeChange(value as "MNP" | "CHG")}
+              onClick={() => handleOfferTypeChange(value as OfferType)}
               className={`flex flex-col items-center justify-center gap-2 w-full h-full max-h-44 rounded-lg border transition-all shadow-sm cursor-pointer dark:text-gray-100
                 ${
                   isSelected

@@ -1,9 +1,11 @@
+import { OfferType } from "../../../shared/constants";
+
 export interface Input {
   sellerId: number;
   storeId: number;
   devices: string;
   carrier: number;
-  buyingType: "MNP" | "CHG";
+  buyingType: OfferType;
   typePrice: number;
   addons: string;
   addonsFee: number;

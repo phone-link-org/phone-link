@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/authStore";
-
-type SsoProvider = "naver" | "kakao" | "google" | "apple";
+import { SSO_PROVIDERS, type SsoProvider } from "../../../shared/constants";
 
 const SsoCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -27,18 +26,18 @@ const SsoCallbackPage: React.FC = () => {
     }
 
     // state 값 검증
-    if (provider === "naver") {
+    if (provider === SSO_PROVIDERS.NAVER) {
       const storedState = sessionStorage.getItem("naver_oauth_state");
       if (state !== storedState) {
-        toast.error("비정상적인 접근입니다. (state 불일치)");
+        toast.error("비정상적인 접근입니다.");
         navigate("/login");
         return;
       }
       sessionStorage.removeItem("naver_oauth_state");
-    } else if (provider === "kakao") {
+    } else if (provider === SSO_PROVIDERS.KAKAO) {
       const storedState = sessionStorage.getItem("kakao_oauth_state");
       if (state !== storedState) {
-        toast.error("비정상적인 접근입니다. (state 불일치)");
+        toast.error("비정상적인 접근입니다.");
         navigate("/login");
         return;
       }

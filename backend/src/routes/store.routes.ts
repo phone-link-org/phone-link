@@ -1,7 +1,4 @@
-import { NextFunction, Router, Request, Response } from "express";
-import multer, { MulterError } from "multer";
-import path from "path";
-import fs from "fs";
+import { Router } from "express";
 import { AppDataSource } from "../db";
 import { Store } from "../typeorm/stores.entity";
 import {
@@ -18,75 +15,9 @@ import { PhoneDeviceDto } from "shared/phone.types";
 import ReqPlanDto from "shared/reqPlan.types";
 import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
 import { ReqPlan } from "../typeorm/reqPlans.entity";
+import { ROLES } from "../../../shared/constants";
 
 const router = Router();
-
-// 업로드 디렉토리 생성
-const uploadDir = path.join(__dirname, "../../uploads/images/store");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Multer 설정
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // 파일명 중복 방지를 위해 타임스탬프 추가
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
-    );
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB 제한
-  },
-  fileFilter: (req, file, cb) => {
-    // 이미지 파일만 허용
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("이미지 파일만 업로드 가능합니다."));
-    }
-  },
-});
-
-const handleUploadErrors = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  if (err instanceof MulterError) {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        // 이제 이 부분에서 에러가 발생하지 않습니다.
-        success: false,
-        message: "이미지 파일 크기는 5MB를 초과할 수 없습니다.",
-        error: "File Too Large",
-      });
-    }
-    return res.status(400).json({
-      success: false,
-      message: `파일 업로드 중 오류 발생: ${err.message}`,
-      error: "Bad Request",
-    });
-  } else if (err) {
-    // fileFilter에서 발생한 에러 처리
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-      error: "Bad Request",
-    });
-  }
-  next();
-};
 
 router.get("/stores", async (req, res) => {
   try {
@@ -114,7 +45,7 @@ router.get("/stores", async (req, res) => {
 router.get(
   "/check-name",
   isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole(["SELLER"]), // 권한 확인 미들웨어
+  hasRole([ROLES.SELLER, ROLES.ADMIN]), // 권한 확인 미들웨어
   async (req, res) => {
     try {
       const { inputStoreName } = req.query;
@@ -169,94 +100,11 @@ router.get(
   },
 );
 
-// 매장 이미지 업로드 엔드포인트
-router.post(
-  "/upload-image",
-  isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole(["SELLER"]), // 권한 확인 미들웨어
-  upload.single("thumbnail"),
-  handleUploadErrors,
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: "이미지 파일을 선택해주세요.",
-          error: "Bad Request",
-        });
-      }
-
-      // 상대 경로 반환 (프론트엔드에서 접근 가능한 경로)
-      const relativePath = `/uploads/images/store/${req.file.filename}`;
-
-      res.status(200).json({
-        success: true,
-        data: {
-          thumbnailUrl: relativePath,
-        },
-      });
-    } catch (error) {
-      console.error("Error during image upload", error);
-      res.status(500).json({
-        success: false,
-        message: "이미지 업로드 중 오류가 발생했습니다.",
-        error: "Internal Server Error",
-      });
-    }
-  },
-);
-
-// 매장 이미지 삭제 엔드포인트
-router.post(
-  "/delete-image",
-  isAuthenticated,
-  hasRole(["SELLER"]),
-  async (req, res) => {
-    try {
-      const { filename } = req.body;
-
-      if (!filename || typeof filename !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "삭제할 파일명을 확인할 수 없습니다. 다시 시도하세요.",
-          error: "Bad Request",
-        });
-      }
-
-      const filePath = path.join(uploadDir, filename);
-
-      // 파일이 존재하는지 확인
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({
-          success: false,
-          message: "삭제할 파일을 찾을 수 없습니다.",
-          error: "Not Found",
-        });
-      }
-
-      // 파일 삭제
-      fs.unlinkSync(filePath);
-
-      res.status(200).json({
-        success: true,
-        message: "이미지가 성공적으로 삭제되었습니다.",
-      });
-    } catch (error) {
-      console.error("Error during image deletion", error);
-      res.status(500).json({
-        success: false,
-        message: "이미지 삭제 중 오류가 발생했습니다.",
-        error: "Internal Server Error",
-      });
-    }
-  },
-);
-
 // 매장 등록 요청 엔드포인트
 router.post(
   "/register",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER, ROLES.ADMIN]),
   async (req, res) => {
     try {
       const {
@@ -345,7 +193,7 @@ router.post(
 router.get(
   "/pending",
   isAuthenticated,
-  hasRole(["ADMIN"]),
+  hasRole([ROLES.ADMIN]),
   async (req, res) => {
     try {
       const storeRepo = AppDataSource.getRepository(Store);
@@ -479,7 +327,7 @@ router.get("/:storeId/offers", async (req, res) => {
 router.post(
   "/:storeId/offers",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER, ROLES.ADMIN]),
   async (req, res) => {
     const { storeId } = req.params;
     const { offers } = req.body;
@@ -690,7 +538,7 @@ router.get("/:storeId/detail", async (req, res) => {
 router.post(
   "/:storeId/addon-save",
   isAuthenticated,
-  hasRole(["SELLER"]),
+  hasRole([ROLES.SELLER, ROLES.ADMIN]),
   async (req, res) => {
     try {
       const { storeId } = req.params;

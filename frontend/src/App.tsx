@@ -6,6 +6,7 @@ import { ThemeContext } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import OfferPage from "./pages/OfferPage";
+import OfferDetailPage from "./pages/OfferDetailPage";
 import NotFound from "./pages/NotFound";
 import MainPage from "./pages/MainPage";
 import CommunityPage from "./pages/CommunityPage";
@@ -18,6 +19,7 @@ import SsoCallbackPage from "./pages/SsoCallbackPage";
 import AdminPage from "./pages/AdminPage";
 
 import { useAuthStore } from "./store/authStore";
+import { ROLES } from "../../shared/constants";
 
 function App() {
   const { checkAuthStatus, isLoading } = useAuthStore();
@@ -64,6 +66,8 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/offer" element={<OfferPage />} />
         <Route path="/store/:storeId" element={<StorePage />} />
+        <Route path="/offer/:id" element={<OfferDetailPage />} />
+        <Route path="/store" element={<StorePage />} />
         <Route path="/community" element={<CommunityPage />} />
 
         {/* role 상관없이 로그인만 체크 */}
@@ -72,18 +76,26 @@ function App() {
         </Route>
 
         {/* SELLER */}
-        <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.SELLER]} />}>
           <Route path="/store/register" element={<StoreRegisterPage />} />
         </Route>
 
         {/* ADMIN */}
-        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Toaster position="top-center" duration={3000} richColors theme={theme} />
+      <Toaster
+        position="top-center"
+        duration={3000}
+        richColors
+        theme={theme}
+        toastOptions={{
+          style: { background: theme === "dark" ? "#292929" : "white" },
+        }}
+      />
     </div>
   );
 }

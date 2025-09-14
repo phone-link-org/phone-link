@@ -1,10 +1,10 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-
+import type { Role } from "../../../shared/constants";
 // allowedRoles prop이 안넘어오면 로그인만 확인
 interface ProtectedRouteProps {
-  allowedRoles?: Array<"USER" | "SELLER" | "ADMIN">;
+  allowedRoles?: Array<Role>;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {

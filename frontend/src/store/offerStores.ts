@@ -10,14 +10,19 @@ import type {
   OfferSearchRequest,
   OfferSearchResult,
 } from "../../../shared/types";
+import {
+  SORT_ORDER,
+  type OfferType,
+  type SortOrder,
+} from "../../../shared/constants";
 
 // 1. Store의 상태(state)와 액션(actions)에 대한 타입을 정의합니다.
 interface OfferState {
   selectedRegions: OfferRegionDto[];
   selectedModels: OfferModelDto[];
   selectedCarriers: CarrierDto[];
-  selectedOfferTypes: ("MNP" | "CHG")[];
-  sortOrder: "default" | "price_asc" | "price_desc";
+  selectedOfferTypes: OfferType[];
+  sortOrder: SortOrder;
 
   offerDatas: OfferSearchResult[];
   page: number;
@@ -29,8 +34,8 @@ interface OfferActions {
   setSelectedRegions: (regions: OfferRegionDto[]) => void;
   setSelectedModels: (models: OfferModelDto[]) => void;
   setSelectedCarriers: (carriers: CarrierDto[]) => void;
-  setSelectedOfferTypes: (types: ("MNP" | "CHG")[]) => void;
-  setSortOrder: (order: "default" | "price_asc" | "price_desc") => void;
+  setSelectedOfferTypes: (types: OfferType[]) => void;
+  setSortOrder: (order: SortOrder) => void;
   resetFilters: () => void; // 여러 상태를 한번에 초기화하는 액션
 
   fetchOffers: (isNewSearch: boolean) => Promise<void>;
@@ -42,7 +47,7 @@ const initialState: OfferState = {
   selectedModels: [],
   selectedCarriers: [],
   selectedOfferTypes: [],
-  sortOrder: "default",
+  sortOrder: SORT_ORDER.DEFAULT,
   offerDatas: [],
   page: 1,
   hasNextPage: true,

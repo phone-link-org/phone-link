@@ -5,8 +5,11 @@ import { toast } from "sonner";
 import AddressSearchButton from "../components/AddressSearchButton";
 import ImageUpload from "../components/ImageUpload";
 import axios from "axios";
-import type { UserDto } from "../../../shared/types";
+import type { UserDto, UserUpdateData } from "../../../shared/types";
 import { useAuthStore } from "../store/authStore";
+import { ROLES } from "../../../shared/constants";
+import { useTheme } from "../hooks/useTheme";
+import Swal from "sweetalert2";
 
 interface DaumPostcodeData {
   address: string;
@@ -18,19 +21,11 @@ interface DaumPostcodeData {
   sigungu: string;
 }
 
-interface UserUpdateData {
-  nickname?: string;
-  password?: string;
-  profileImageUrl?: string;
-  address?: string;
-  addressDetail?: string;
-  role?: "USER" | "SELLER";
-}
-
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const addressDetailRef = useRef<HTMLInputElement>(null);
   const { user } = useAuthStore();
+  const { theme } = useTheme();
 
   const [formData, setFormData] = useState<UserDto | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -42,6 +37,8 @@ const MyPage: React.FC = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!user?.id) return;
+
       try {
         const userId = user?.id;
         const response = await api.get<UserDto>("/user/profile", {
@@ -49,7 +46,8 @@ const MyPage: React.FC = () => {
         });
         setFormData(response);
       } catch (error) {
-        console.error("User data fetch", error);
+        toast.error("사용자 정보를 불러오는 중 오류가 발생했습니다.");
+        console.error("User data fetch error:", error);
       }
     };
     fetchUserData();
@@ -189,16 +187,23 @@ const MyPage: React.FC = () => {
         return;
       }
       // 비밀번호가 비어있으면 제외
-      const updateData: Partial<UserDto & { password?: string }> = {
-        ...formData,
+      const updateData: UserUpdateData = {
+        id: formData.id,
+        nickname: formData.nickname,
+        profileImageUrl: formData.profileImageUrl,
+        address: formData.address,
+        addressDetail: formData.addressDetail,
+        postalCode: formData.postalCode,
+        sido: formData.sido,
+        sigungu: formData.sigungu,
+        role: user?.role === ROLES.ADMIN ? ROLES.ADMIN : formData.role,
       };
+
       if (newPassword) {
         updateData.password = newPassword;
-      } else {
-        delete updateData.password;
       }
 
-      //await api.put("/user/profile", updateData);
+      await api.post("/user/profile", updateData);
 
       toast.success("프로필이 성공적으로 수정되었습니다.");
 
@@ -221,23 +226,34 @@ const MyPage: React.FC = () => {
   };
 
   const handleWithdrawal = async () => {
-    if (
-      window.confirm("정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.")
-    ) {
-      try {
-        //await api.delete("/user/withdraw");
-        toast.success("회원 탈퇴가 완료되었습니다.");
-        navigate("/");
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          toast.error(
-            error.response.data.message || "회원 탈퇴 중 오류가 발생했습니다.",
-          );
-        } else {
-          toast.error("회원 탈퇴 중 알 수 없는 오류가 발생했습니다.");
+    Swal.fire({
+      html: "정말로 탈퇴하시겠습니까?",
+      icon: "warning",
+      showCancelButton: true,
+      background: theme === "dark" ? "#343434" : "#fff",
+      color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+      confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+      cancelButtonColor: theme === "dark" ? "#F97171" : "#EF4444",
+      confirmButtonText: "탈퇴",
+      cancelButtonText: "취소",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await api.post("/auth/withdrawal", user);
+          toast.success("회원 탈퇴가 완료되었습니다.");
+          navigate("/");
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            toast.error(
+              error.response.data.message ||
+                "회원 탈퇴 중 오류가 발생했습니다.",
+            );
+          } else {
+            toast.error("회원 탈퇴 중 알 수 없는 오류가 발생했습니다.");
+          }
         }
       }
-    }
+    });
   };
 
   const toggleRole = () => {
@@ -245,7 +261,7 @@ const MyPage: React.FC = () => {
       if (!previous) return previous;
       return {
         ...previous,
-        role: previous.role === "SELLER" ? "USER" : "SELLER",
+        role: previous.role === ROLES.SELLER ? ROLES.USER : ROLES.SELLER,
       } as UserDto;
     });
   };
@@ -349,7 +365,13 @@ const MyPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData?.gender ?? ""}
+                  value={
+                    formData?.gender === "M"
+                      ? "남성"
+                      : formData?.gender === "F"
+                        ? "여성"
+                        : ""
+                  }
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
                 />
@@ -415,6 +437,7 @@ const MyPage: React.FC = () => {
                   })
                 }
                 label="프로필 이미지"
+                uploadType="profile"
               />
 
               {/* Address */}
@@ -463,35 +486,37 @@ const MyPage: React.FC = () => {
               </div>
 
               {/* Role Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  계정 유형
-                </label>
-                <div className="flex items-center justify-center">
-                  <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
-                    일반 사용자
-                  </span>
-                  <label htmlFor="role" className="relative cursor-pointer">
-                    <input
-                      id="role"
-                      name="role"
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={formData?.role === "SELLER"}
-                      onChange={toggleRole}
-                    />
-                    <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              {user && user.role !== ROLES.ADMIN && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    계정 유형
                   </label>
-                  <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
-                    판매자
-                  </span>
+                  <div className="flex items-center justify-center">
+                    <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                      일반 사용자
+                    </span>
+                    <label htmlFor="role" className="relative cursor-pointer">
+                      <input
+                        id="role"
+                        name="role"
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData?.role === ROLES.SELLER}
+                        onChange={toggleRole}
+                      />
+                      <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                    <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
+                      판매자
+                    </span>
+                  </div>
+                  <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                    {formData?.role === ROLES.SELLER
+                      ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
+                      : "일반 사용자 계정입니다."}
+                  </p>
                 </div>
-                <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {formData?.role === "SELLER"
-                    ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
-                    : "일반 사용자 계정입니다."}
-                </p>
-              </div>
+              )}
             </div>
           </div>
 

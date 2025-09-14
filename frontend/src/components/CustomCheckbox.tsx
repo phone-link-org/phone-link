@@ -7,20 +7,13 @@ interface CustomCheckboxProps {
   customStyle?: string;
 }
 
-const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
-  label,
-  checked,
-  onChange,
-  customStyle,
-}) => {
+const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, checked, onChange, customStyle }) => {
   return (
     <button
       type="button"
       onClick={onChange}
       className={`
-        px-2 py-1 rounded-lg border transition ${
-          customStyle || "text-sm w-full"
-        }
+        px-2 py-1 rounded-lg border transition ${customStyle || "text-sm w-full"}
         ${
           checked
             ? "border-none bg-primary-light dark:bg-primary-dark text-foreground-dark dark:text-foreground-light"

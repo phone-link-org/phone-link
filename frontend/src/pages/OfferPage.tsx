@@ -19,24 +19,15 @@ import type {
   PhoneStorageDto,
   OfferSearchRequest,
 } from "../../../shared/types";
-import {
-  CARRIERS,
-  OFFER_TYPES,
-  SORT_ORDER,
-  type OfferType,
-  type SortOrder,
-} from "../../../shared/constants";
+import { CARRIERS, OFFER_TYPES, SORT_ORDER, type OfferType, type SortOrder } from "../../../shared/constants";
 
 const OfferPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<
-    "region" | "model" | "carrier" | "offerType"
-  >("region");
+  const [activeTab, setActiveTab] = useState<"region" | "model" | "carrier" | "offerType">("region");
 
-  const [lastSelectedSido, setLastSelectedSido] =
-    useState<OfferRegionDto | null>(null);
+  const [lastSelectedSido, setLastSelectedSido] = useState<OfferRegionDto | null>(null);
   const [selectedRegions, setSelectedRegions] = useState<OfferRegionDto[]>([]);
 
   const [selectedModels, setSelectedModels] = useState<OfferModelDto[]>([]);
@@ -73,9 +64,7 @@ const OfferPage: React.FC = () => {
           hasNextPage: boolean;
         }>(`/offer/search`, params);
 
-        setOfferDatas((prev) =>
-          isNewSearch ? response.offers : [...prev, ...response.offers],
-        );
+        setOfferDatas((prev) => (isNewSearch ? response.offers : [...prev, ...response.offers]));
         setHasNextPage(response.hasNextPage);
         if (response.hasNextPage) {
           pageRef.current += 1; // 다음 페이지 번호 증가
@@ -87,14 +76,7 @@ const OfferPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [
-      loading,
-      selectedRegions,
-      selectedModels,
-      selectedCarriers,
-      selectedOfferTypes,
-      sortOrder,
-    ],
+    [loading, selectedRegions, selectedModels, selectedCarriers, selectedOfferTypes, sortOrder],
   );
 
   // --- Intersection Observer 설정 ---
@@ -146,13 +128,10 @@ const OfferPage: React.FC = () => {
     fetchOfferDatas(true); // 새 검색 시작
 
     // 타겟 요소로 스크롤 이동
-    const targetElement = document.getElementById(
-      "target-box",
-    ) as HTMLDivElement;
+    const targetElement = document.getElementById("target-box") as HTMLDivElement;
     if (targetElement) {
       // 타겟 요소의 절대 Y 좌표
-      const targetTop =
-        targetElement.getBoundingClientRect().top + window.scrollY;
+      const targetTop = targetElement.getBoundingClientRect().top + window.scrollY;
 
       const scrollToPosition = targetTop - 70;
 
@@ -214,9 +193,7 @@ const OfferPage: React.FC = () => {
   return (
     <>
       <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
-        <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">
-          가격 비교
-        </h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">가격 비교</h1>
         <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
           <div className="border-b border-gray-200 dark:border-background-dark">
             <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
@@ -274,21 +251,12 @@ const OfferPage: React.FC = () => {
                 setLastSelectedSido={setLastSelectedSido}
               />
             ) : activeTab === "carrier" ? (
-              <CarrierSelector
-                selectedCarriers={selectedCarriers}
-                onCarriersChange={setSelectedCarriers}
-              />
+              <CarrierSelector selectedCarriers={selectedCarriers} onCarriersChange={setSelectedCarriers} />
             ) : activeTab === "offerType" ? (
-              <OfferTypeSelector
-                selectedOfferTypes={selectedOfferTypes}
-                onOfferTypesChange={setSelectedOfferTypes}
-              />
+              <OfferTypeSelector selectedOfferTypes={selectedOfferTypes} onOfferTypesChange={setSelectedOfferTypes} />
             ) : (
               <div>
-                <ModelSelector
-                  selectedModels={selectedModels}
-                  onSelectedModelsChange={setSelectedModels}
-                />
+                <ModelSelector selectedModels={selectedModels} onSelectedModelsChange={setSelectedModels} />
               </div>
             )}
           </div>
@@ -296,9 +264,7 @@ const OfferPage: React.FC = () => {
             {/* --- 검색 조건 제목 및 초기화 버튼 --- */}
             {hasConditions && (
               <div className="flex items-baseline gap-3 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">
-                  검색 조건
-                </h3>
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">검색 조건</h3>
                 <button
                   onClick={handleResetConditions}
                   className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -321,11 +287,7 @@ const OfferPage: React.FC = () => {
                   >
                     {lastSelectedSido?.name} {item.name}
                     <button
-                      onClick={() =>
-                        setSelectedRegions((prev) =>
-                          prev.filter((item) => item.code !== item.code),
-                        )
-                      }
+                      onClick={() => setSelectedRegions((prev) => prev.filter((item) => item.code !== item.code))}
                       className="ml-2 text-gray-500 hover:text-red-500"
                     >
                       <FiX size={14} />
@@ -360,11 +322,7 @@ const OfferPage: React.FC = () => {
                       {tagText}
                       <button
                         onClick={() =>
-                          setSelectedModels((prev) =>
-                            prev.filter(
-                              (item) => item.modelId !== model.modelId,
-                            ),
-                          )
+                          setSelectedModels((prev) => prev.filter((item) => item.modelId !== model.modelId))
                         }
                         className="ml-2 text-blue-500 hover:text-red-500"
                       >
@@ -386,11 +344,7 @@ const OfferPage: React.FC = () => {
                   >
                     {carrier.name}
                     <button
-                      onClick={() =>
-                        setSelectedCarriers((prev) =>
-                          prev.filter((c) => c !== carrier),
-                        )
-                      }
+                      onClick={() => setSelectedCarriers((prev) => prev.filter((c) => c !== carrier))}
                       className="ml-2 text-green-500 hover:text-red-500"
                     >
                       <FiX size={14} />
@@ -410,11 +364,7 @@ const OfferPage: React.FC = () => {
                   >
                     {offerType === OFFER_TYPES.MNP ? "번호이동" : "기기변경"}
                     <button
-                      onClick={() =>
-                        setSelectedOfferTypes((prev) =>
-                          prev.filter((type) => type !== offerType),
-                        )
-                      }
+                      onClick={() => setSelectedOfferTypes((prev) => prev.filter((type) => type !== offerType))}
                       className="ml-2 text-purple-500 hover:text-red-500"
                     >
                       <FiX size={14} />
@@ -439,21 +389,15 @@ const OfferPage: React.FC = () => {
               onClick={handleSortToggle}
               className="flex items-center gap-2 py-2 px-3 transition-colors focus:outline-none text-gray-500 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark"
             >
-              <span className="text-sm font-medium">
-                {sortOptions[sortOrder as keyof typeof sortOptions].text}
-              </span>
-              {React.createElement(
-                sortOptions[sortOrder as keyof typeof sortOptions].Icon,
-              )}
+              <span className="text-sm font-medium">{sortOptions[sortOrder as keyof typeof sortOptions].text}</span>
+              {React.createElement(sortOptions[sortOrder as keyof typeof sortOptions].Icon)}
             </button>
           </div>
 
           <div className="flex flex-col gap-6">
             {offerDatas.length === 0 && !loading ? (
               <div className="flex justify-center items-center text-center min-h-[30vh]">
-                <p className="text-xl font-semibold text-gray-500 dark:text-gray-400">
-                  검색 결과가 없습니다.
-                </p>
+                <p className="text-xl font-semibold text-gray-500 dark:text-gray-400">검색 결과가 없습니다.</p>
               </div>
             ) : (
               offerDatas.map((data: OfferSearchResult, index) => {
@@ -476,9 +420,7 @@ const OfferPage: React.FC = () => {
 
                 // 개통방식별 색상 설정
                 const getOfferTypeBadgeColor = (offerType: string) => {
-                  return offerType === "번호이동"
-                    ? "bg-emerald-500 text-white"
-                    : "bg-amber-500 text-white";
+                  return offerType === "번호이동" ? "bg-emerald-500 text-white" : "bg-amber-500 text-white";
                 };
                 return (
                   <div
@@ -573,17 +515,13 @@ const OfferPage: React.FC = () => {
             {/* 로딩 인디케이터 */}
             {loading && (
               <div className="flex justify-center items-center py-4">
-                <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">
-                  데이터를 불러오는 중...
-                </p>
+                <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">데이터를 불러오는 중...</p>
               </div>
             )}
             {/* 더 이상 데이터가 없을 때 표시 */}
             {!hasNextPage && !loading && offerDatas.length > 0 && (
               <div className="flex justify-center items-center py-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  검색결과 끝
-                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">검색결과 끝</p>
               </div>
             )}
           </div>

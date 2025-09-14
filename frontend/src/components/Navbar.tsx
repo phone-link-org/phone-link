@@ -90,10 +90,7 @@ const Navbar: React.FC = () => {
             </button>
           </Link>
         )}
-        <button
-          className="flex md:hidden items-center justify-center w-10 h-10 ml-2"
-          aria-label="메뉴"
-        >
+        <button className="flex md:hidden items-center justify-center w-10 h-10 ml-2" aria-label="메뉴">
           <IoMenuOutline size={28}></IoMenuOutline>
         </button>
       </div>

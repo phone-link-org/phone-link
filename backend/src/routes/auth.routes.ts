@@ -95,9 +95,7 @@ router.post("/login", async (req, res) => {
           storeId = seller.storeId;
         } else {
           // 비즈니스 로직상 판매자 계정임에도 상점 정보가 없는 경우에 대한 예외 처리
-          console.warn(
-            `판매자 계정(id: ${user.id})에 연결된 상점 정보가 없습니다.`,
-          );
+          console.warn(`판매자 계정(id: ${user.id})에 연결된 상점 정보가 없습니다.`);
         }
       } else {
         isNewStore = true;
@@ -144,50 +142,42 @@ router.post("/login", async (req, res) => {
 });
 
 // 토큰을 기반으로 현재 로그인된 사용자의 정보를 반환
-router.get(
-  "/profile",
-  isAuthenticated,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+router.get("/profile", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
 
-    try {
-      const userRepository = AppDataSource.getRepository(User);
-      // 판매자(Seller) 정보도 함께 조회하여 storeId를 확인합니다.
-      const user = await userRepository.findOne({
-        where: { id: userId },
-        relations: ["sellers"],
-      });
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    // 판매자(Seller) 정보도 함께 조회하여 storeId를 확인합니다.
+    const user = await userRepository.findOne({
+      where: { id: userId },
+      relations: ["sellers"],
+    });
 
-      if (!user) {
-        return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
-      }
-
-      // 프론트엔드 authStore에서 사용하는 UserAuthData 타입에 맞게 응답 데이터 구성
-      const userAuthData: UserAuthData = {
-        id: user.id,
-        nickname: user.nickname,
-        role: user.role,
-      };
-
-      // 판매자이고, 유효한 매장이 있으면 storeId를 추가
-      if (
-        user.role === ROLES.SELLER &&
-        user.sellers &&
-        user.sellers.length > 0
-      ) {
-        const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
-        if (activeSeller) {
-          userAuthData.storeId = activeSeller.storeId;
-        }
-      }
-
-      res.status(200).json(userAuthData);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ message: "프로필 조회 중 서버 오류 발생" });
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
     }
-  },
-);
+
+    // 프론트엔드 authStore에서 사용하는 UserAuthData 타입에 맞게 응답 데이터 구성
+    const userAuthData: UserAuthData = {
+      id: user.id,
+      nickname: user.nickname,
+      role: user.role,
+    };
+
+    // 판매자이고, 유효한 매장이 있으면 storeId를 추가
+    if (user.role === ROLES.SELLER && user.sellers && user.sellers.length > 0) {
+      const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
+      if (activeSeller) {
+        userAuthData.storeId = activeSeller.storeId;
+      }
+    }
+
+    res.status(200).json(userAuthData);
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "프로필 조회 중 서버 오류 발생" });
+  }
+});
 
 router.post("/callback/:provider", async (req, res) => {
   const { provider } = req.params;
@@ -236,10 +226,7 @@ router.post("/callback/:provider", async (req, res) => {
       let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
       formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
       if (formattedPhoneNumber.length === 11) {
-        formattedPhoneNumber = formattedPhoneNumber.replace(
-          /^(\d{3})(\d{4})(\d{4})$/,
-          "$1-$2-$3",
-        );
+        formattedPhoneNumber = formattedPhoneNumber.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
       } else {
         formattedPhoneNumber = "";
       }
@@ -266,11 +253,7 @@ router.post("/callback/:provider", async (req, res) => {
     if (user) {
       // [기존 사용자 로그인 처리]
       let storeId: number | undefined;
-      if (
-        user.role === ROLES.SELLER &&
-        user.sellers &&
-        user.sellers.length > 0
-      ) {
+      if (user.role === ROLES.SELLER && user.sellers && user.sellers.length > 0) {
         const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");
         if (activeSeller) {
           storeId = activeSeller.storeId;
@@ -308,11 +291,9 @@ router.post("/callback/:provider", async (req, res) => {
         birthYear: userProfile.birthyear,
         birthday: userProfile.birthday,
       };
-      const signupToken = jwt.sign(
-        ssoData,
-        process.env.JWT_SIGNUP_SECRET || "default_signup_secret",
-        { expiresIn: "10m" },
-      );
+      const signupToken = jwt.sign(ssoData, process.env.JWT_SIGNUP_SECRET || "default_signup_secret", {
+        expiresIn: "10m",
+      });
 
       return res.status(200).json({
         success: true,
@@ -321,9 +302,7 @@ router.post("/callback/:provider", async (req, res) => {
     }
   } catch (error) {
     console.error(`${provider} callback error:`, error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
+    return res.status(500).json({ success: false, message: "Internal server error." });
   }
 });
 
@@ -351,9 +330,7 @@ router.post("/callback/:provider", async (req, res) => {
 /**
  * 네이버 Access Token 갱신
  */
-async function refreshNaverToken(
-  refreshToken: string | null,
-): Promise<string | null> {
+async function refreshNaverToken(refreshToken: string | null): Promise<string | null> {
   const { clientId, clientSecret, tokenUrl } = ssoConfig.naver;
   if (refreshToken) {
     const params = new URLSearchParams({
@@ -422,9 +399,7 @@ async function unlinkKakaoAccount(account: SocialAccount): Promise<void> {
 
   const response = await axios.post(unlinkUrl, params, { headers });
   if (response.data?.id?.toString() !== account.providerUserId) {
-    throw new Error(
-      `카카오 연동 해제 실패 (사용자 ID: ${account.providerUserId})`,
-    );
+    throw new Error(`카카오 연동 해제 실패 (사용자 ID: ${account.providerUserId})`);
   }
 }
 
@@ -439,9 +414,7 @@ router.post("/withdrawal", async (req, res) => {
     });
 
     if (!userEntity) {
-      return res
-        .status(404)
-        .json({ success: false, message: "사용자를 찾을 수 없습니다." });
+      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
     }
 
     // SSO 프로바이더 탈퇴(연결 해제) API 호출
@@ -459,8 +432,7 @@ router.post("/withdrawal", async (req, res) => {
 
     await AppDataSource.transaction(async (transactionalEntityManager) => {
       const userRepo = transactionalEntityManager.getRepository(User);
-      const socialRepo =
-        transactionalEntityManager.getRepository(SocialAccount);
+      const socialRepo = transactionalEntityManager.getRepository(SocialAccount);
 
       // 성공적으로 연동 해제된 계정들의 토큰 정보를 정리
       const successfulAccounts: SocialAccount[] = [];
@@ -499,10 +471,7 @@ router.post("/withdrawal", async (req, res) => {
   }
 });
 
-async function getUserProfile(
-  provider: string,
-  code: string,
-): Promise<UserProfile | null> {
+async function getUserProfile(provider: string, code: string): Promise<UserProfile | null> {
   switch (provider) {
     case SSO_PROVIDERS.NAVER:
       return await getNaverUserProfile(code);
@@ -527,9 +496,7 @@ async function getNaverUserProfile(code: string): Promise<UserProfile | null> {
 
     const accessToken = tokenResponse.data.access_token;
     if (!accessToken) {
-      console.error(
-        "Naver Access Token response does not contain access_token.",
-      );
+      console.error("Naver Access Token response does not contain access_token.");
       return null;
     }
 
@@ -553,19 +520,12 @@ async function getNaverUserProfile(code: string): Promise<UserProfile | null> {
       };
       return userProfile;
     } else {
-      console.error(
-        "Invalid Naver user profile response structure:",
-        profileResponse.data,
-      );
+      console.error("Invalid Naver user profile response structure:", profileResponse.data);
       return null;
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error(
-        "Axios error while getting Naver user profile:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Axios error while getting Naver user profile:", error.response?.status, error.response?.data);
     } else {
       console.error("Unknown error in getNaverUserProfile:", error);
     }
@@ -575,8 +535,7 @@ async function getNaverUserProfile(code: string): Promise<UserProfile | null> {
 
 async function getKakaoUserProfile(code: string): Promise<UserProfile | null> {
   try {
-    const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } =
-      ssoConfig.kakao;
+    const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } = ssoConfig.kakao;
 
     const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
 
@@ -605,34 +564,21 @@ async function getKakaoUserProfile(code: string): Promise<UserProfile | null> {
         sso_id: kakaoProfile.id,
         name: kakaoProfile.kakao_account.name,
         email: kakaoProfile.kakao_account.email,
-        phone_number: kakaoProfile.kakao_account.phone_number.replace(
-          "+82 ",
-          "0",
-        ),
+        phone_number: kakaoProfile.kakao_account.phone_number.replace("+82 ", "0"),
         birthyear: kakaoProfile.kakao_account.birthyear,
-        birthday: kakaoProfile.kakao_account.birthday.replace(
-          /(\d{2})(\d{2})/,
-          "$1-$2",
-        ),
+        birthday: kakaoProfile.kakao_account.birthday.replace(/(\d{2})(\d{2})/, "$1-$2"),
         gender: kakaoProfile.kakao_account.gender === "male" ? "M" : "F",
         accessToken: tokenResponse.data.access_token,
         refreshToken: tokenResponse.data.refresh_token,
       };
       return userProfile;
     } else {
-      console.error(
-        "Invalid Kakao user profile response structure:",
-        profileResponse.data,
-      );
+      console.error("Invalid Kakao user profile response structure:", profileResponse.data);
       return null;
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error(
-        "Axios error while getting Kakao user profile:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Axios error while getting Kakao user profile:", error.response?.status, error.response?.data);
     } else {
       console.error("Unknown error in getKakaoUserProfile:", error);
     }

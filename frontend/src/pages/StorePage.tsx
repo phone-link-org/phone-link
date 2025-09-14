@@ -15,7 +15,7 @@ const StorePage: React.FC = () => {
   const [store, setStore] = useState<StoreDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // storeId를 숫자로 변환
   const storeId = storeIdString ? parseInt(storeIdString, 10) : null;
 
@@ -52,54 +52,38 @@ const StorePage: React.FC = () => {
   if (error) {
     return <div className="max-w-6xl mx-auto px-4 py-8 mt-16 text-center text-red-500">{error}</div>;
   }
-  
+
   if (!store || !storeId) {
     return <div className="max-w-6xl mx-auto px-4 py-8 mt-16 text-center">매장 정보를 찾을 수 없습니다.</div>;
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
-      <h1 className="text-3xl font-bold mb-8 text-foreground-light dark:text-foreground-dark">
-        매장 관리
-      </h1>
+      <h1 className="text-3xl font-bold mb-8 text-foreground-light dark:text-foreground-dark">매장 관리</h1>
 
       {/* 3. API로 받아온 동적 데이터로 매장 정보 섹션 렌더링 */}
       <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">
-          매장 정보
-        </h2>
+        <h2 className="text-2xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">매장 정보</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-              상호명
-            </label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">상호명</label>
+            <p className="text-lg text-foreground-light dark:text-foreground-dark">{store.name}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">주소</label>
             <p className="text-lg text-foreground-light dark:text-foreground-dark">
-              {store.name}
+              {`${store.address} ${store.addressDetail || ""}`}
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-              주소
-            </label>
-            <p className="text-lg text-foreground-light dark:text-foreground-dark">
-              {`${store.address} ${store.addressDetail || ''}`}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-              연락처
-            </label>
-            <p className="text-lg text-foreground-light dark:text-foreground-dark">
-              {store.contact}
-            </p>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">연락처</label>
+            <p className="text-lg text-foreground-light dark:text-foreground-dark">{store.contact}</p>
           </div>
         </div>
       </div>
 
       <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-0 mb-0">
-        <h2 className="text-2xl font-semibold p-6 text-foreground-light dark:text-foreground-dark">
-          판매 정보
-        </h2>
+        <h2 className="text-2xl font-semibold p-6 text-foreground-light dark:text-foreground-dark">판매 정보</h2>
         <div className="border-b border-gray-200 dark:border-background-dark">
           <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
             <button
@@ -131,7 +115,11 @@ const StorePage: React.FC = () => {
         {activeTab === "prices" && <StoreOfferPriceForm storeId={storeId} />}
         {activeTab === "requiredPlan" && <StoreReqPlanForm storeId={storeId} />}
         {activeTab === "addon" && <StoreAddonForm storeId={storeId} />}
-        {activeTab === "excel" && <div className="p-6"><ExcelUpload /></div>}
+        {activeTab === "excel" && (
+          <div className="p-6">
+            <ExcelUpload />
+          </div>
+        )}
       </div>
     </div>
   );

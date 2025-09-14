@@ -35,18 +35,18 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  navigate?: (path: string) => void; // 전역 네비게이션 함수
 }
 
 // 스토어의 액션(action) 타입 정의
 interface AuthActions {
   login: (credentials: LoginFormData) => Promise<{ status: number }>;
-  handleSocialLoginCallback: (
-    provider: string,
-    code: string,
-  ) => Promise<SocialLoginResult>;
-  logout: () => Promise<void>;
+  handleSocialLoginCallback: (provider: string, code: string) => Promise<SocialLoginResult>;
+  logout: (onLogout?: () => void) => Promise<void>;
+  withdrawal: (user: UserAuthData, onWithdrawal?: () => void) => Promise<void>;
   checkAuthStatus: () => Promise<void>;
   clearError: () => void;
+  setNavigate: (navigate: (path: string) => void) => void; // 네비게이션 함수 등록
 }
 
 // 최종 스토어 타입
@@ -56,8 +56,7 @@ export const useAuthStore = create<AuthStore>((set) => {
   // 로그인 성공 시의 공통 로직을 별도의 함수로 분리
   const setLoginSuccessState = (loginData: LoginSuccessData) => {
     localStorage.setItem("token", loginData.token);
-    apiClient.defaults.headers.common["Authorization"] =
-      `Bearer ${loginData.token}`;
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${loginData.token}`;
     set({
       user: loginData.userAuthData,
       isAuthenticated: true,
@@ -72,16 +71,14 @@ export const useAuthStore = create<AuthStore>((set) => {
     isAuthenticated: false,
     isLoading: true, // 앱 시작 시 인증 상태 확인을 위해 true로 설정
     error: null,
+    navigate: undefined,
 
     // Action: 일반 로그인
     login: async (credentials: LoginFormData) => {
       set({ isLoading: true, error: null });
       try {
         // Server 로그인 API 호출
-        const response = await apiClient.post<{ data: LoginSuccessData }>(
-          "/auth/login",
-          credentials,
-        );
+        const response = await apiClient.post<{ data: LoginSuccessData }>("/auth/login", credentials);
 
         const loginData = response.data.data;
         const status = response.status;
@@ -90,8 +87,7 @@ export const useAuthStore = create<AuthStore>((set) => {
 
         return { status };
       } catch (error: any) {
-        const errorMessage =
-          error.response?.data?.message || "로그인에 실패했습니다.";
+        const errorMessage = error.response?.data?.message || "로그인에 실패했습니다.";
         set({ error: errorMessage, isLoading: false, isAuthenticated: false });
         // 에러를 다시 throw하여 컴포넌트 단에서 후속 처리를 할 수 있도록 함
         throw new Error(errorMessage);
@@ -111,11 +107,7 @@ export const useAuthStore = create<AuthStore>((set) => {
         const status = response.status;
 
         // 가입 이력이 없는 신규 사용자인 경우
-        if (
-          responseData.isNewUser &&
-          responseData.ssoData &&
-          responseData.signupToken
-        ) {
+        if (responseData.isNewUser && responseData.ssoData && responseData.signupToken) {
           set({ isLoading: false }); // 로딩 상태만 해제
           return {
             type: "SIGNUP_REQUIRED",
@@ -139,15 +131,14 @@ export const useAuthStore = create<AuthStore>((set) => {
         // 예기치 않은 응답 형식에 대한 에러
         throw new Error("서버로부터 유효하지 않은 응답을 받았습니다.");
       } catch (error: any) {
-        const errorMessage =
-          error.response?.data?.message || "소셜 로그인에 실패했습니다.";
+        const errorMessage = error.response?.data?.message || "소셜 로그인에 실패했습니다.";
         set({ error: errorMessage, isLoading: false, isAuthenticated: false });
         throw new Error(errorMessage);
       }
     },
 
     // Action: 로그아웃
-    logout: async () => {
+    logout: async (onLogout?: () => void) => {
       set({ isLoading: true });
       // localStorage에서 토큰 제거
       localStorage.removeItem("token");
@@ -158,9 +149,49 @@ export const useAuthStore = create<AuthStore>((set) => {
       // 스토어 상태 초기화
       set({ user: null, isAuthenticated: false, isLoading: false });
 
-      // 로그인 페이지로 리디렉션
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      // 콜백 함수가 제공되면 실행, 그렇지 않으면 기본 동작
+      if (onLogout) {
+        onLogout();
+      } else {
+        // 전역 네비게이션 함수가 등록되어 있으면 사용, 그렇지 않으면 window.location.href 사용
+        const { navigate } = useAuthStore.getState();
+        if (navigate && window.location.pathname !== "/login") {
+          navigate("/login");
+        } else if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+      }
+    },
+
+    // Action: 회원 탈퇴
+    withdrawal: async (user: UserAuthData, onWithdrawal?: () => void) => {
+      set({ isLoading: true, error: null });
+      try {
+        // Server 탈퇴 API 호출
+        await apiClient.post("/auth/withdrawal", user);
+
+        // 탈퇴 성공 시 로그아웃 처리
+        localStorage.removeItem("token");
+        delete apiClient.defaults.headers.common["Authorization"];
+        set({ user: null, isAuthenticated: false, isLoading: false });
+
+        // 콜백 함수가 제공되면 실행, 그렇지 않으면 기본 동작
+        if (onWithdrawal) {
+          onWithdrawal();
+        } else {
+          // 전역 네비게이션 함수가 등록되어 있으면 사용, 그렇지 않으면 window.location.href 사용
+          const { navigate } = useAuthStore.getState();
+          if (navigate) {
+            navigate("/");
+          } else {
+            window.location.href = "/";
+          }
+        }
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.message || "회원 탈퇴 중 오류가 발생했습니다.";
+        set({ error: errorMessage, isLoading: false });
+        // 에러를 다시 throw하여 컴포넌트 단에서 후속 처리를 할 수 있도록 함
+        throw new Error(errorMessage);
       }
     },
 
@@ -190,6 +221,11 @@ export const useAuthStore = create<AuthStore>((set) => {
     // Action: 에러 메시지 초기화
     clearError: () => {
       set({ error: null });
+    },
+
+    // Action: 전역 네비게이션 함수 등록
+    setNavigate: (navigate: (path: string) => void) => {
+      set({ navigate });
     },
   };
 });

@@ -42,39 +42,30 @@ router.post("/signup", async (req, res) => {
 
       await AppDataSource.transaction(async (transactionalEntityManager) => {
         // 1. 소셜 계정 정보가 이미 DB에 있는지 확인
-        const existingSocialAccount = await transactionalEntityManager.findOne(
-          SocialAccount,
-          {
-            where: {
-              provider: decoded.provider,
-              providerUserId: decoded.providerUserId,
-            },
+        const existingSocialAccount = await transactionalEntityManager.findOne(SocialAccount, {
+          where: {
+            provider: decoded.provider,
+            providerUserId: decoded.providerUserId,
           },
-        );
+        });
 
         if (existingSocialAccount) {
           throw new Error("ALREADY_LINKED_ACCOUNT");
         }
 
         // 2. 이메일 및 전화번호 중복 확인
-        const existingUserByEmail = await transactionalEntityManager.findOne(
-          User,
-          {
-            where: { email: decoded.email },
-          },
-        );
+        const existingUserByEmail = await transactionalEntityManager.findOne(User, {
+          where: { email: decoded.email },
+        });
         if (existingUserByEmail) {
           throw new Error("EMAIL_ALREADY_EXISTS");
         }
 
         const finalPhoneNumber = signupData.phoneNumber || decoded.phoneNumber;
         if (finalPhoneNumber) {
-          const existingUserByPhone = await transactionalEntityManager.findOne(
-            User,
-            {
-              where: { phoneNumber: finalPhoneNumber },
-            },
-          );
+          const existingUserByPhone = await transactionalEntityManager.findOne(User, {
+            where: { phoneNumber: finalPhoneNumber },
+          });
           if (existingUserByPhone) {
             throw new Error("PHONE_ALREADY_EXISTS");
           }
@@ -112,9 +103,7 @@ router.post("/signup", async (req, res) => {
         if (birthDate) {
           const birthYear = Number(birthDate.split("-")[0]);
           newUser.birthYear = birthYear;
-          newUser.birthday = `${birthDate.split("-")[1]}-${
-            birthDate.split("-")[2]
-          }`;
+          newUser.birthday = `${birthDate.split("-")[1]}-${birthDate.split("-")[2]}`;
 
           const currentYear = new Date().getFullYear();
           const age = currentYear - birthYear;
@@ -272,9 +261,7 @@ router.post("/signup", async (req, res) => {
         if (birthDate) {
           const birthYear = Number(birthDate.split("-")[0]);
           newUser.birthYear = birthYear;
-          newUser.birthday = `${birthDate.split("-")[1]}-${
-            birthDate.split("-")[2]
-          }`;
+          newUser.birthday = `${birthDate.split("-")[1]}-${birthDate.split("-")[2]}`;
 
           const currentYear = new Date().getFullYear();
           const age = currentYear - birthYear;
@@ -372,9 +359,7 @@ router.get("/profile", async (req, res) => {
 router.post("/profile", isAuthenticated, async (req, res) => {
   const userUpdateData: UserUpdateData = req.body;
   if (!userUpdateData.id) {
-    return res
-      .status(401)
-      .json({ success: false, message: "인증 정보가 유효하지 않습니다." });
+    return res.status(401).json({ success: false, message: "인증 정보가 유효하지 않습니다." });
   }
 
   try {
@@ -384,16 +369,11 @@ router.post("/profile", isAuthenticated, async (req, res) => {
     });
 
     if (!userToUpdate) {
-      return res
-        .status(404)
-        .json({ success: false, message: "사용자를 찾을 수 없습니다." });
+      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
     }
 
     // 닉네임 변경 시 중복 확인
-    if (
-      userUpdateData.nickname &&
-      userUpdateData.nickname !== userToUpdate.nickname
-    ) {
+    if (userUpdateData.nickname && userUpdateData.nickname !== userToUpdate.nickname) {
       const existingUser = await userRepo.findOne({
         where: {
           nickname: userUpdateData.nickname,
@@ -401,9 +381,7 @@ router.post("/profile", isAuthenticated, async (req, res) => {
         },
       });
       if (existingUser) {
-        return res
-          .status(409)
-          .json({ success: false, message: "이미 사용 중인 닉네임입니다." });
+        return res.status(409).json({ success: false, message: "이미 사용 중인 닉네임입니다." });
       }
       userToUpdate.nickname = userUpdateData.nickname;
     }
@@ -414,22 +392,13 @@ router.post("/profile", isAuthenticated, async (req, res) => {
     }
 
     // 기타 정보 업데이트
-    if (userUpdateData.profileImageUrl !== undefined)
-      userToUpdate.profileImageUrl = userUpdateData.profileImageUrl;
-    if (userUpdateData.address !== undefined)
-      userToUpdate.address = userUpdateData.address;
-    if (userUpdateData.addressDetail !== undefined)
-      userToUpdate.addressDetail = userUpdateData.addressDetail;
-    if (userUpdateData.postalCode !== undefined)
-      userToUpdate.postalCode = userUpdateData.postalCode;
-    if (userUpdateData.sido !== undefined)
-      userToUpdate.sido = userUpdateData.sido;
-    if (userUpdateData.sigungu !== undefined)
-      userToUpdate.sigungu = userUpdateData.sigungu;
-    if (
-      userUpdateData.role &&
-      [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)
-    ) {
+    if (userUpdateData.profileImageUrl !== undefined) userToUpdate.profileImageUrl = userUpdateData.profileImageUrl;
+    if (userUpdateData.address !== undefined) userToUpdate.address = userUpdateData.address;
+    if (userUpdateData.addressDetail !== undefined) userToUpdate.addressDetail = userUpdateData.addressDetail;
+    if (userUpdateData.postalCode !== undefined) userToUpdate.postalCode = userUpdateData.postalCode;
+    if (userUpdateData.sido !== undefined) userToUpdate.sido = userUpdateData.sido;
+    if (userUpdateData.sigungu !== undefined) userToUpdate.sigungu = userUpdateData.sigungu;
+    if (userUpdateData.role && [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)) {
       userToUpdate.role = userUpdateData.role;
     }
 

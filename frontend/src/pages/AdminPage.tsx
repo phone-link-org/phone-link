@@ -7,10 +7,7 @@ import MasterDataManager from "../components/admin/MasterDataManager";
 
 const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    | "store-approval"
-    | "master-data-management"
-    | "user-management"
-    | "system-region"
+    "store-approval" | "master-data-management" | "user-management" | "system-region"
   >("store-approval");
 
   // 시스템 지역 설정 관련 상태
@@ -20,9 +17,7 @@ const AdminPage: React.FC = () => {
 
   // 매장 승인 대기 관련 상태
   const [pendingStores, setPendingStores] = useState<PendingStoreDto[]>([]);
-  const [selectedStore, setSelectedStore] = useState<PendingStoreDto | null>(
-    null,
-  );
+  const [selectedStore, setSelectedStore] = useState<PendingStoreDto | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -50,9 +45,7 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
-      <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">
-        관리자 페이지
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">관리자 페이지</h1>
 
       <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
         <div className="border-b border-gray-200 dark:border-background-dark">
@@ -104,16 +97,12 @@ const AdminPage: React.FC = () => {
       <div className="bg-white dark:bg-[#292929] rounded-b-lg shadow-lg px-6 pb-6 pt-6 min-h-[500px]">
         {activeTab === "store-approval" && (
           <div className="space-y-6">
-            <p className="text-gray-600 dark:text-gray-300">
-              승인 대기 중인 매장 등록 요청을 관리합니다.
-            </p>
+            <p className="text-gray-600 dark:text-gray-300">승인 대기 중인 매장 등록 요청을 관리합니다.</p>
 
             {/* 매장 승인 대기 목록 */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  승인 대기 매장 목록
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">승인 대기 매장 목록</h3>
                 <button
                   onClick={() => {
                     // TODO: 데이터 새로고침 기능
@@ -128,9 +117,7 @@ const AdminPage: React.FC = () => {
 
               {pendingStores.length === 0 ? (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    승인 대기 중인 매장이 없습니다.
-                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">승인 대기 중인 매장이 없습니다.</p>
                 </div>
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-[#454545] overflow-hidden">
@@ -178,16 +165,13 @@ const AdminPage: React.FC = () => {
                               {store.userEmail}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
-                              {new Date(store.createdAt).toLocaleDateString(
-                                "ko-KR",
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
+                              {new Date(store.createdAt).toLocaleDateString("ko-KR", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </td>
                           </tr>
                         ))}
@@ -204,13 +188,9 @@ const AdminPage: React.FC = () => {
 
         {activeTab === "user-management" && (
           <div className="space-y-6">
-            <p className="text-gray-600 dark:text-gray-300">
-              시스템의 모든 회원을 관리합니다.
-            </p>
+            <p className="text-gray-600 dark:text-gray-300">시스템의 모든 회원을 관리합니다.</p>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                회원 관리 기능이 준비 중입니다.
-              </p>
+              <p className="text-gray-500 dark:text-gray-400">회원 관리 기능이 준비 중입니다.</p>
             </div>
           </div>
         )}
@@ -218,8 +198,7 @@ const AdminPage: React.FC = () => {
         {activeTab === "system-region" && (
           <div className="space-y-6">
             <p className="text-gray-600 dark:text-gray-300">
-              공공 API의 모든 법정동 데이터를 가져와 DB에 저장합니다. (10 ~
-              20분정도 소요됩니다.)
+              공공 API의 모든 법정동 데이터를 가져와 DB에 저장합니다. (10 ~ 20분정도 소요됩니다.)
             </p>
             <button
               onClick={syncRegionDataToDb}
@@ -231,9 +210,7 @@ const AdminPage: React.FC = () => {
 
             {syncResult && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-blue-700 dark:text-blue-300 font-bold">
-                  {syncResult}
-                </p>
+                <p className="text-blue-700 dark:text-blue-300 font-bold">{syncResult}</p>
               </div>
             )}
             {syncError && (
@@ -246,11 +223,7 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* 매장 상세정보 모달 */}
-      <StoreDetailModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        storeId={selectedStore?.id ?? -1}
-      />
+      <StoreDetailModal isOpen={showModal} onClose={() => setShowModal(false)} storeId={selectedStore?.id ?? -1} />
     </div>
   );
 };

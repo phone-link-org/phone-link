@@ -131,9 +131,7 @@ const SsoCallbackPage: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <p className="text-xl font-semibold">
-        {provider
-          ? `${provider} 로그인 처리 중입니다...`
-          : "로그인 처리 중입니다..."}
+        {provider ? `${provider} 로그인 처리 중입니다...` : "로그인 처리 중입니다..."}
       </p>
     </div>
   );

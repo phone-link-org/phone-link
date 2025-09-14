@@ -31,9 +31,7 @@ router.get("/sidos", async (req, res) => {
           END`;
 
     qb.select(["r.code AS code", `${nameCaseExpression} AS name`]);
-    qb.andWhere(
-      "(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 0",
-    );
+    qb.andWhere("(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 0");
 
     const rows = await qb.getRawMany<OfferRegionDto[]>();
 
@@ -80,9 +78,7 @@ router.get("/sigungus", async (req: RegionRequest, res) => {
     qb.select(["r.code AS code", "SUBSTRING_INDEX(r.name, ' ', -1) AS name"]);
     qb.andWhere("r.code LIKE :sidoCode", {
       sidoCode: `${sidoCode}%`,
-    }).andWhere(
-      "(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 1",
-    );
+    }).andWhere("(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 1");
 
     const rows = await qb.getRawMany<OfferRegionDto[]>();
     res.status(200).json({

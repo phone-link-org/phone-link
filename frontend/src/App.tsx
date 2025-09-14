@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { ClipLoader } from "react-spinners";
 import { Toaster } from "sonner";
 import { useContext, useEffect, useRef } from "react";
@@ -22,19 +22,22 @@ import { useAuthStore } from "./store/authStore";
 import { ROLES } from "../../shared/constants";
 
 function App() {
-  const { checkAuthStatus, isLoading } = useAuthStore();
+  const navigate = useNavigate();
+  const { checkAuthStatus, isLoading, setNavigate } = useAuthStore();
   const themeContext = useContext(ThemeContext);
   const theme = themeContext?.theme || "light";
 
   const isInitialized = useRef(false);
 
-  // App 컴포넌트가 처음 마운트될 때 checkAuthStatus를 실행
+  // App 컴포넌트가 처음 마운트될 때 checkAuthStatus를 실행하고 네비게이션 함수를 등록
   useEffect(() => {
     if (!isInitialized.current) {
       isInitialized.current = true;
+      // 네비게이션 함수를 authStore에 등록
+      setNavigate(navigate);
       checkAuthStatus();
     }
-  }, [checkAuthStatus]);
+  }, [checkAuthStatus, setNavigate, navigate]);
 
   if (isLoading) {
     return (

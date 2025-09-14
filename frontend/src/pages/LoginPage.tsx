@@ -57,8 +57,7 @@ const LoginPage: React.FC = () => {
         setEmailError(isEmailEmpty);
         setPasswordError(isPasswordEmpty);
 
-        if (isEmailEmpty && isPasswordEmpty)
-          setErrorMessage("이메일과 비밀번호를 입력해주세요.");
+        if (isEmailEmpty && isPasswordEmpty) setErrorMessage("이메일과 비밀번호를 입력해주세요.");
         else if (isEmailEmpty) {
           setErrorMessage("이메일을 입력해주세요.");
         } else {
@@ -92,9 +91,7 @@ const LoginPage: React.FC = () => {
   const getState = () => {
     const array = new Uint8Array(16);
     window.crypto.getRandomValues(array);
-    const state = Array.from(array, (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
+    const state = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
     return state;
   };
 
@@ -118,16 +115,11 @@ const LoginPage: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
       <div className="w-full max-w-md p-8 space-y-6 rounded-lg shadow-md bg-white dark:bg-[#292929]">
-        <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">
-          PhoneLink
-        </h1>
+        <h1 className="text-3xl font-bold text-center text-primary-light dark:text-primary-dark">PhoneLink</h1>
         <form onSubmit={handleLogin}>
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="email"
-                className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 이메일
               </label>
               <input
@@ -148,10 +140,7 @@ const LoginPage: React.FC = () => {
               />
             </div>
             <div>
-              <label
-                htmlFor="password"
-                className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+              <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 비밀번호
               </label>
               <input
@@ -188,10 +177,7 @@ const LoginPage: React.FC = () => {
         </form>
         <div className="text-sm text-center text-gray-500 dark:text-gray-400">
           <span>회원이 아니신가요? </span>
-          <Link
-            to="/signup"
-            className="font-medium text-primary-light hover:underline dark:text-primary-dark"
-          >
+          <Link to="/signup" className="font-medium text-primary-light hover:underline dark:text-primary-dark">
             회원가입
           </Link>
         </div>

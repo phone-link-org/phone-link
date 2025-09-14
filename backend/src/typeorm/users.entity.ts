@@ -74,6 +74,7 @@ export class User {
   })
   role: Role;
 
+  //ACTIVE: 활성화, SUSPENDED: 정지, WITHDRAWN: 탈퇴
   @Column({
     type: "enum",
     enum: ["ACTIVE", "SUSPENDED", "WITHDRAWN"],
@@ -84,6 +85,9 @@ export class User {
 
   @Column({ name: "last_login_at", type: "datetime" })
   lastLoginAt?: Date;
+
+  @Column({ name: "last_login_type", type: "varchar", length: 100 })
+  lastLoginType: string;
 
   @DeleteDateColumn({ name: "deleted_at", type: "datetime" })
   deletedAt?: Date;

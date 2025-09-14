@@ -32,10 +32,10 @@ export class SocialAccount {
   providerUserId: string;
 
   @Column({ name: "access_token", type: "varchar", length: 1024 })
-  accessToken?: string;
+  accessToken: string | null;
 
   @Column({ name: "refresh_token", type: "varchar", length: 1024 })
-  refreshToken?: string;
+  refreshToken: string | null;
 
   @CreateDateColumn({ name: "created_at", type: "datetime" })
   createdAt: Date;

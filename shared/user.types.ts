@@ -20,6 +20,7 @@ export interface UserDto {
   addressDetail?: string;
   role: Role;
   status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
+  lastLoginType: string;
   readonly lastLoginAt?: Date;
   readonly deletedAt?: Date;
   readonly createdAt: Date;

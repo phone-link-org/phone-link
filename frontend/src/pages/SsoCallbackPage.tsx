@@ -29,7 +29,7 @@ const SsoCallbackPage: React.FC = () => {
     if (provider === SSO_PROVIDERS.NAVER) {
       const storedState = sessionStorage.getItem("naver_oauth_state");
       if (state !== storedState) {
-        toast.error("비정상적인 접근입니다. (state 불일치)");
+        toast.error("비정상적인 접근입니다.");
         navigate("/login");
         return;
       }
@@ -37,7 +37,7 @@ const SsoCallbackPage: React.FC = () => {
     } else if (provider === SSO_PROVIDERS.KAKAO) {
       const storedState = sessionStorage.getItem("kakao_oauth_state");
       if (state !== storedState) {
-        toast.error("비정상적인 접근입니다. (state 불일치)");
+        toast.error("비정상적인 접근입니다.");
         navigate("/login");
         return;
       }

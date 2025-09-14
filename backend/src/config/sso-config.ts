@@ -18,10 +18,12 @@ export const ssoConfig = {
   kakao: {
     clientId: getEnv("KAKAO_CLIENT_ID"),
     clientSecret: getEnv("KAKAO_CLIENT_SECRET"),
+    adminKey: getEnv("KAKAO_ADMIN_KEY"),
     redirectUri: `${PHONE_LINK_CLIENT_URL}/auth/callback/kakao`,
     //authUrl: "https://kauth.kakao.com/oauth/authorize",
     tokenUrl: "https://kauth.kakao.com/oauth/token",
     userInfoUrl: "https://kapi.kakao.com/v2/user/me",
+    unlinkUrl: "https://kapi.kakao.com/v1/user/unlink",
     scopes: ["profile_nickname", "account_email", "gender", "birthday"],
   },
   naver: {

@@ -8,6 +8,8 @@ import axios from "axios";
 import type { UserDto, UserUpdateData } from "../../../shared/types";
 import { useAuthStore } from "../store/authStore";
 import { ROLES } from "../../../shared/constants";
+import { useTheme } from "../hooks/useTheme";
+import Swal from "sweetalert2";
 
 interface DaumPostcodeData {
   address: string;
@@ -23,6 +25,7 @@ const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const addressDetailRef = useRef<HTMLInputElement>(null);
   const { user } = useAuthStore();
+  const { theme } = useTheme();
 
   const [formData, setFormData] = useState<UserDto | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -223,23 +226,34 @@ const MyPage: React.FC = () => {
   };
 
   const handleWithdrawal = async () => {
-    if (
-      window.confirm("정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.")
-    ) {
-      try {
-        //await api.delete("/user/withdraw");
-        toast.success("회원 탈퇴가 완료되었습니다.");
-        navigate("/");
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          toast.error(
-            error.response.data.message || "회원 탈퇴 중 오류가 발생했습니다.",
-          );
-        } else {
-          toast.error("회원 탈퇴 중 알 수 없는 오류가 발생했습니다.");
+    Swal.fire({
+      html: "정말로 탈퇴하시겠습니까?",
+      icon: "warning",
+      showCancelButton: true,
+      background: theme === "dark" ? "#343434" : "#fff",
+      color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+      confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+      cancelButtonColor: theme === "dark" ? "#F97171" : "#EF4444",
+      confirmButtonText: "탈퇴",
+      cancelButtonText: "취소",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await api.post("/auth/withdrawal", user);
+          toast.success("회원 탈퇴가 완료되었습니다.");
+          navigate("/");
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            toast.error(
+              error.response.data.message ||
+                "회원 탈퇴 중 오류가 발생했습니다.",
+            );
+          } else {
+            toast.error("회원 탈퇴 중 알 수 없는 오류가 발생했습니다.");
+          }
         }
       }
-    }
+    });
   };
 
   const toggleRole = () => {

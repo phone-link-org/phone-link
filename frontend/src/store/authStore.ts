@@ -149,9 +149,6 @@ export const useAuthStore = create<AuthStore>((set) => {
     // Action: 로그아웃
     logout: async () => {
       set({ isLoading: true });
-      // 서버에 로그아웃 요청 (선택 사항)
-      // await apiClient.post('/auth/logout');
-
       // localStorage에서 토큰 제거
       localStorage.removeItem("token");
 

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import type ReqPlanDto from '../../../../shared/reqPlan.types.ts'
+import apiClient from "../../api/axios.ts";
 
 // 통신사 ID와 이름을 매핑 (UI 렌더링 순서와 키를 고정)
 const CARRIERS: { [key: string]: string } = {
@@ -23,10 +24,47 @@ interface StoreReqPlanFormProps {
 const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId }) => {
   // 1. 상태 구조를 배열에서 객체로 변경
   const [reqPlans, setReqPlans] = useState<ReqPlansState>({
-    "1": { storeId: storeId ,name: "", monthlyFee: "", duration: "" }, // SKT
-    "2": { storeId: storeId ,name: "", monthlyFee: "", duration: "" }, // KT
-    "3": { storeId: storeId ,name: "", monthlyFee: "", duration: "" }, // LG U+
+    "1": { storeId: storeId, carrierId: 1, name: "", monthlyFee: "", duration: "" }, // SKT
+    "2": { storeId: storeId, carrierId: 2, name: "", monthlyFee: "", duration: "" }, // KT
+    "3": { storeId: storeId, carrierId: 3, name: "", monthlyFee: "", duration: "" }, // LG U+
   });
+
+  useEffect(() => {
+    const fetchReqPlans = async () => {
+      try {
+        const response = await apiClient.get<{ data: ReqPlanDto[] }>(`/store/${storeId}/req-plans`);
+        const plans = response.data.data;
+
+        if (plans && plans.length > 0) {
+          const newReqPlans = plans.reduce((acc, plan) => {
+            const carrierId = String(plan.carrierId);
+            acc[carrierId] = {
+              ...plan,
+              monthlyFee: plan.monthlyFee ?? "",
+              duration: plan.duration ?? "",
+            };
+            return acc;
+          }, {} as ReqPlansState);
+
+          // API에 없는 통신사는 기본값으로 채워줌
+          Object.keys(CARRIERS).forEach(id => {
+            if (!newReqPlans[id]) {
+              newReqPlans[id] = { storeId: storeId, carrierId: parseInt(id), name: "", monthlyFee: "", duration: "" };
+            }
+          });
+
+          setReqPlans(newReqPlans);
+        }
+      } catch (error) {
+        console.error("요금제 정보를 불러오는 데 실패했습니다.", error);
+      }
+    };
+
+    if (storeId) {
+      fetchReqPlans();
+    }
+  }, [storeId]);
+
 
   // 2. 입력 값 변경 핸들러 수정 (index 대신 carrierId 사용)
   const handleChange = (
@@ -72,15 +110,17 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId }) => {
 
     try {
       console.log("제출할 데이터:", submissionData);
-      // await apiClient.post("/api/store/req-plans", submissionData);
+      const response = await apiClient.post(`/store/${storeId}/req-plans`, submissionData);
 
-      Swal.fire({
-        icon: "success",
-        title: "저장 완료",
-        text: "요금제 정보가 성공적으로 저장되었습니다.",
-        timer: 1500,
-        showConfirmButton: false,
-      });
+      if (response.data !== null) {
+        Swal.fire({
+          icon: "success",
+          title: "저장 완료",
+          text: "요금제 정보가 성공적으로 저장되었습니다.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
 
     } catch (error) {
       console.error("요금제 저장 실패:", error);

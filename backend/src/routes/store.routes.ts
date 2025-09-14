@@ -746,6 +746,27 @@ router.post(
   },
 );
 
+router.get("/:storeId/req-plans", isAuthenticated, async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const reqPlanRepo = AppDataSource.getRepository(ReqPlan);
+    
+    const plans = await reqPlanRepo.findBy({ storeId: parseInt(storeId) });
+
+    res.status(200).json({
+      success: true,
+      data: plans,
+    });
+  } catch (error) {
+    console.error("Error fetching req plans", error);
+    res.status(500).json({
+      success: false,
+      message: "요금제 정보 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
 router.post("/:storeId/req-plans", isAuthenticated, hasRole(["SELLER"]), async (req, res) => {
   try {
     const storeIdString: string = req.params.storeId;
@@ -766,8 +787,9 @@ router.post("/:storeId/req-plans", isAuthenticated, hasRole(["SELLER"]), async (
           const newReqPlans = plans.map((plan: ReqPlanDto) => ({
             storeId: storeId,
             name: plan.name,
+            carrierId: plan.carrierId,
             monthlyFee: plan.monthlyFee || 0,
-            duration: plan.duration,
+            duration: plan.duration || 0,
           }));
           const savedReqPlans = await transactionEntityManager.save(
             ReqPlan,

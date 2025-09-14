@@ -2,6 +2,13 @@
 module.exports = {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  safelist: [
+    "group-hover:text-blue-500",
+    "group-hover:text-green-500",
+    "group-hover:text-purple-500",
+    "group-hover:text-yellow-500",
+    "group-hover:text-red-500",
+  ],
   theme: {
     extend: {
       colors: {

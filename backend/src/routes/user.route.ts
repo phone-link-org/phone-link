@@ -422,4 +422,28 @@ router.post("/profile", isAuthenticated, async (req, res) => {
   }
 });
 
+router.get("/social-accounts/:userId", isAuthenticated, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const socialAccounts = await AppDataSource.getRepository(SocialAccount).find({ where: { userId: Number(userId) } });
+
+    const responseData: { naver: boolean; kakao: boolean } = {
+      naver: socialAccounts.some((account) => account.provider === "naver"),
+      kakao: socialAccounts.some((account) => account.provider === "kakao"),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: responseData,
+    });
+  } catch (error) {
+    console.error("Social accounts error:", error);
+    res.status(500).json({
+      success: false,
+      message: "소셜 계정 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
 export default router;

@@ -13,7 +13,6 @@ import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
 import { ROLES, Role } from "../../../shared/constants";
-import { UserFavorite } from "./userFavorites.entity";
 
 @Entity("users")
 @Index("idx_status", ["status"])
@@ -111,8 +110,4 @@ export class User {
 
   @OneToMany(() => Seller, (seller) => seller.user)
   sellers: Seller[];
-
-  /** 사용자가 즐겨찾기한 매장 목록 */
-  @OneToMany(() => UserFavorite, (favorite) => favorite.user)
-  favorites: UserFavorite[];
 }

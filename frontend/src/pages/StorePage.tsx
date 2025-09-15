@@ -33,13 +33,13 @@ const StorePage: React.FC = () => {
   // 즐겨찾기 토글 함수
   const toggleFavorite = async () => {
     try {
-      setIsFavorite(!isFavorite);
-      await api.post<boolean>(`/store/favorite`, { userId: user?.id, storeId: storeId });
+      const response = await api.post<boolean>(`/store/favorite`, { userId: user?.id, storeId: storeId });
+      console.log(response);
+      setIsFavorite(response);
     } catch (error) {
       console.error(error);
       toast.error("처리 중 오류가 발생했습니다.");
     }
-    // TODO: 실제 즐겨찾기 API 호출 로직 구현
   };
 
   // 링크 타입 감지 함수
@@ -186,6 +186,7 @@ const StorePage: React.FC = () => {
                 )}
               </button>
             </div>
+            <div>{`${isFavorite}`}</div>
 
             {/* Description 섹션 */}
             {store.description && (

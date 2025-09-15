@@ -12,6 +12,7 @@ import { PhoneDeviceDto } from "shared/phone.types";
 import ReqPlanDto from "shared/reqPlan.types";
 import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
 import { ReqPlan } from "../typeorm/reqPlans.entity";
+import { UserFavorites } from "../typeorm/userFavorites.entity";
 import { ROLES } from "../../../shared/constants";
 
 const router = Router();
@@ -612,6 +613,96 @@ router.post("/:storeId/req-plans", isAuthenticated, hasRole(["SELLER"]), async (
     res.status(500).json({
       success: false,
       message: "요금제 저장 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 즐겨찾기 상태 조회 엔드포인트
+router.get("/favorite", isAuthenticated, async (req, res) => {
+  try {
+    const { userId, storeId } = req.query;
+
+    if (!userId || !storeId) {
+      return res.status(400).json({
+        success: false,
+        message: "사용자 ID와 매장 ID가 필요합니다.",
+        error: "Bad Request",
+      });
+    }
+
+    const favoriteRepo = AppDataSource.getRepository(UserFavorites);
+    const favorite = await favoriteRepo.findOne({
+      where: {
+        userId: parseInt(userId as string),
+        storeId: parseInt(storeId as string),
+      },
+    });
+
+    const isFavorite = !!favorite;
+
+    res.status(200).json({
+      success: true,
+      data: isFavorite,
+    });
+  } catch (error) {
+    console.error("Error during fetching favorite status", error);
+    res.status(500).json({
+      success: false,
+      message: "즐겨찾기 상태 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 즐겨찾기 토글 엔드포인트
+router.post("/favorite", isAuthenticated, async (req, res) => {
+  try {
+    const { userId, storeId } = req.body;
+
+    if (!userId || !storeId) {
+      return res.status(400).json({
+        success: false,
+        message: "사용자 ID와 매장 ID가 필요합니다.",
+        error: "Bad Request",
+      });
+    }
+
+    const favoriteRepo = AppDataSource.getRepository(UserFavorites);
+
+    // 기존 즐겨찾기 확인
+    const existingFavorite = await favoriteRepo.findOne({
+      where: {
+        userId: parseInt(userId),
+        storeId: parseInt(storeId),
+      },
+    });
+
+    let isFavorite: boolean;
+
+    if (existingFavorite) {
+      // 즐겨찾기가 있으면 삭제
+      await favoriteRepo.remove(existingFavorite);
+      isFavorite = false;
+    } else {
+      // 즐겨찾기가 없으면 추가
+      const newFavorite = favoriteRepo.create({
+        userId: parseInt(userId),
+        storeId: parseInt(storeId),
+      });
+      await favoriteRepo.save(newFavorite);
+      isFavorite = true;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: isFavorite,
+    });
+  } catch (error) {
+    console.error("Error during toggling favorite", error);
+    res.status(500).json({
+      success: false,
+      message: "즐겨찾기 처리 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

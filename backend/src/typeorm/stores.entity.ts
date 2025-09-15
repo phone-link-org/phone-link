@@ -15,6 +15,7 @@ import { ReqPlan } from "./reqPlans.entity";
 import { Seller } from "./sellers.entity";
 import { Offer } from "./offers.entity";
 import { User } from "./users.entity";
+import { UserFavorites } from "./userFavorites.entity";
 
 @Entity("stores")
 export class Store {
@@ -119,6 +120,6 @@ export class Store {
   @OneToMany(() => Offer, (offer) => offer.store)
   offers: Offer[];
 
-  @OneToMany(() => UserFavorite, (favorite) => favorite.storeId)
-  favoritedBy: UserFavorigitte[];
+  @OneToMany(() => UserFavorites, (favorite) => favorite.store)
+  favorites: UserFavorites[];
 }

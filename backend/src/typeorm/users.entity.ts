@@ -12,6 +12,7 @@ import { Comment } from "./comments.entity";
 import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
+import { UserFavorites } from "./userFavorites.entity";
 import { ROLES, Role } from "../../../shared/constants";
 
 @Entity("users")
@@ -112,6 +113,6 @@ export class User {
   sellers: Seller[];
 
   /** 사용자가 즐겨찾기한 매장 목록 */
-  @OneToMany(() => UserFavorite, (favorite) => favorite.userId)
-  favorites: UserFavorite[];
+  @OneToMany(() => UserFavorites, (favorite) => favorite.user)
+  favorites: UserFavorites[];
 }

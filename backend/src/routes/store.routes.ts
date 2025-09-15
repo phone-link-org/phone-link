@@ -13,6 +13,7 @@ import ReqPlanDto from "shared/reqPlan.types";
 import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
 import { ReqPlan } from "../typeorm/reqPlans.entity";
 import { ROLES } from "../../../shared/constants";
+import { UserFavorite } from "../typeorm/userFavorites.entity";
 
 const router = Router();
 
@@ -39,58 +40,53 @@ router.get("/stores", async (req, res) => {
 });
 
 // 매장명 중복 확인 엔드포인트
-router.get(
-  "/check-name",
-  isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole([ROLES.SELLER, ROLES.ADMIN]), // 권한 확인 미들웨어
-  async (req, res) => {
-    try {
-      const { inputStoreName } = req.query;
+router.get("/check-name", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { inputStoreName } = req.query;
 
-      if (!inputStoreName || typeof inputStoreName !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "매장명을 입력해주세요.",
-          error: "Bad Request",
-        });
-      }
-
-      const storeRepo = AppDataSource.getRepository(Store);
-      const transformedName = inputStoreName.trim().toLowerCase().replace(/\s+/g, "");
-
-      // 대소문자 구분 없이 비교하기 위해 모든 매장을 가져와서 비교
-      const allStores = await storeRepo.find();
-      const existingStore = allStores.find(
-        (store) => store.name.trim().toLowerCase().replace(/\s+/g, "") === transformedName,
-      );
-
-      if (existingStore) {
-        return res.status(200).json({
-          success: true,
-          data: {
-            isDuplicate: true,
-            message: "이미 존재하는 매장명입니다.",
-          },
-        });
-      } else {
-        return res.status(200).json({
-          success: true,
-          data: {
-            isDuplicate: false,
-            message: "사용 가능한 매장명입니다.",
-          },
-        });
-      }
-    } catch (e) {
-      console.error("Error during checking store name", e);
-      res.status(500).json({
+    if (!inputStoreName || typeof inputStoreName !== "string") {
+      return res.status(400).json({
         success: false,
-        message: "매장명 확인 중 오류가 발생했습니다.",
-        error: "Internal Server Error",
+        message: "매장명을 입력해주세요.",
+        error: "Bad Request",
       });
     }
-  },
-);
+
+    const storeRepo = AppDataSource.getRepository(Store);
+    const transformedName = inputStoreName.trim().toLowerCase().replace(/\s+/g, "");
+
+    // 대소문자 구분 없이 비교하기 위해 모든 매장을 가져와서 비교
+    const allStores = await storeRepo.find();
+    const existingStore = allStores.find(
+      (store) => store.name.trim().toLowerCase().replace(/\s+/g, "") === transformedName,
+    );
+
+    if (existingStore) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isDuplicate: true,
+          message: "이미 존재하는 매장명입니다.",
+        },
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isDuplicate: false,
+          message: "사용 가능한 매장명입니다.",
+        },
+      });
+    }
+  } catch (e) {
+    console.error("Error during checking store name", e);
+    res.status(500).json({
+      success: false,
+      message: "매장명 확인 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
 
 // 매장 등록 요청 엔드포인트
 router.post("/register", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
@@ -612,6 +608,58 @@ router.post("/:storeId/req-plans", isAuthenticated, hasRole(["SELLER"]), async (
     res.status(500).json({
       success: false,
       message: "요금제 저장 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/favorite", isAuthenticated, async (req, res) => {
+  try {
+    const { userId, storeId } = req.query;
+    console.log(userId, storeId);
+    const userFavoriteRepo = AppDataSource.getRepository(UserFavorite);
+    const result = await userFavoriteRepo.findOne({
+      where: { userId: parseInt(userId as string), storeId: parseInt(storeId as string) },
+    });
+    res.status(200).json({
+      success: true,
+      data: result ? true : false,
+    });
+  } catch (error) {
+    console.error("Error fetching favorite", error);
+    res.status(500).json({
+      success: false,
+      message: "즐겨찾기 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.post("/favorite", isAuthenticated, async (req, res) => {
+  try {
+    const { userId, storeId } = req.body;
+    const userFavoriteRepo = AppDataSource.getRepository(UserFavorite);
+    const existingResult = await userFavoriteRepo.findOne({
+      where: { userId: parseInt(userId as string), storeId: parseInt(storeId as string) },
+    });
+
+    if (existingResult) {
+      await userFavoriteRepo.delete(existingResult.id);
+    } else {
+      await userFavoriteRepo.save({
+        userId: parseInt(userId as string),
+        storeId: parseInt(storeId as string),
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: true,
+    });
+  } catch (error) {
+    console.error("Error saving favorite", error);
+    res.status(500).json({
+      success: false,
+      message: "즐겨찾기 저장 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

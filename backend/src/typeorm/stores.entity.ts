@@ -120,6 +120,6 @@ export class Store {
   @OneToMany(() => Offer, (offer) => offer.store)
   offers: Offer[];
 
-  @OneToMany(() => UserFavorite, (favorite) => favorite.store)
+  @OneToMany(() => UserFavorite, (favorite) => favorite.storeId)
   favoritedBy: UserFavorite[];
 }

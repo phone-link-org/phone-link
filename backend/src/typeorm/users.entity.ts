@@ -113,6 +113,6 @@ export class User {
   sellers: Seller[];
 
   /** 사용자가 즐겨찾기한 매장 목록 */
-  @OneToMany(() => UserFavorite, (favorite) => favorite.user)
+  @OneToMany(() => UserFavorite, (favorite) => favorite.userId)
   favorites: UserFavorite[];
 }

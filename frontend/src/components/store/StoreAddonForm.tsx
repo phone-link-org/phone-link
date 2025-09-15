@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import Swal from "sweetalert2";
 import { useTheme } from "../../hooks/useTheme";
 
-const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
+const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ storeId, isEditable = true }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [addons, setAddons] = useState<AddonFormData[]>([
     {
@@ -37,9 +37,7 @@ const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   useEffect(() => {
     try {
       const fetchAddons = async () => {
-        const response = await api.get<AddonFormData[]>(
-          `/store/${storeId}/addons`,
-        );
+        const response = await api.get<AddonFormData[]>(`/store/${storeId}/addons`);
         setAddons(
           response.length > 0
             ? response
@@ -61,25 +59,49 @@ const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
     }
   }, []);
 
-  const handleAddonChange = (
-    index: number,
-    field: keyof AddonFormData,
-    value: string | number | null,
-  ) => {
+  // 숫자에 콤마 추가하는 함수
+  const formatNumberWithComma = (value: number | string): string => {
+    if (!value || value === 0) return "";
+    const numValue = typeof value === "string" ? parseInt(value.replace(/,/g, ""), 10) : value;
+    return numValue.toLocaleString();
+  };
+
+  // 콤마가 포함된 문자열을 숫자로 변환하는 함수
+  const parseNumberFromCommaString = (value: string): number => {
+    if (!value) return 0;
+    return parseInt(value.replace(/,/g, ""), 10) || 0;
+  };
+
+  const handleAddonChange = (index: number, field: keyof AddonFormData, value: string | number | null) => {
     // 숫자 필드 길이 제한
     if (
       ["monthlyFee", "durationMonths", "penaltyFee"].includes(field) &&
       typeof value === "string" &&
-      value.length > 6
+      value.replace(/,/g, "").length > 6
     ) {
       return;
     }
 
+    // 숫자 필드에 숫자가 아닌 값 입력 방지
+    if (["monthlyFee", "durationMonths", "penaltyFee"].includes(field) && typeof value === "string") {
+      // 콤마를 제거한 후 숫자인지 확인
+      const numericValue = value.replace(/,/g, "");
+      if (numericValue !== "" && !/^\d+$/.test(numericValue)) {
+        return; // 숫자가 아닌 값은 입력 차단
+      }
+    }
+
     const newAddons = [...addons];
-    const processedValue =
-      ["monthlyFee", "durationMonths", "penaltyFee"].includes(field) && value
-        ? Number(value)
-        : value;
+    let processedValue = value;
+
+    // 숫자 필드인 경우 콤마 제거 후 숫자로 변환
+    if (["monthlyFee", "durationMonths", "penaltyFee"].includes(field) && value) {
+      if (typeof value === "string") {
+        processedValue = parseNumberFromCommaString(value);
+      } else {
+        processedValue = Number(value);
+      }
+    }
 
     newAddons[index] = { ...newAddons[index], [field]: processedValue };
     setAddons(newAddons);
@@ -105,6 +127,28 @@ const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   };
 
   const handleAddonSave = () => {
+    // 숫자 필드 유효성 검사
+    const hasInvalidNumericFields = addons.some((addon) => {
+      return (
+        (addon.monthlyFee && (isNaN(addon.monthlyFee) || addon.monthlyFee < 0)) ||
+        (addon.durationMonths && (isNaN(addon.durationMonths) || addon.durationMonths < 0)) ||
+        (addon.penaltyFee && (isNaN(addon.penaltyFee) || addon.penaltyFee < 0))
+      );
+    });
+
+    if (hasInvalidNumericFields) {
+      Swal.fire({
+        title: "입력 오류",
+        text: "숫자 필드에는 숫자만 입력할 수 있습니다.",
+        icon: "error",
+        background: theme === "dark" ? "#343434" : "#fff",
+        color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+        confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+        confirmButtonText: "확인",
+      });
+      return;
+    }
+
     const hasInvalidAddon = addons.some(
       (addon) =>
         addon.name.trim() === "" || // 이름이 비어있거나 공백만 있는지 확인
@@ -114,9 +158,7 @@ const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
     );
 
     Swal.fire({
-      title: hasInvalidAddon
-        ? "입력값이 존재하지 않는 부가서비스가 존재합니다."
-        : "저장하시겠습니까?",
+      title: hasInvalidAddon ? "입력값이 존재하지 않는 부가서비스가 존재합니다." : "저장하시겠습니까?",
       html: hasInvalidAddon ? "그래도 저장하시겠습니까?" : undefined,
       icon: hasInvalidAddon ? "warning" : "question",
       showCancelButton: true,
@@ -142,176 +184,204 @@ const StoreAddonForm: React.FC<{ storeId: number }> = ({ storeId }) => {
   };
 
   return (
-    <div className="p-6 rounded-b-lg">
-      {/* 헤더 */}
-      <div className="flex gap-3 px-2 text-center">
+    <div className="p-4 sm:p-6 rounded-b-lg">
+      {/* 헤더 - 데스크톱에서만 표시 */}
+      <div className="hidden lg:flex gap-3 px-2 text-center mb-4">
         <div className="w-32">
-          <label className="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1">
-            통신사
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">통신사</label>
         </div>
-        <div className="w-1/2">
-          <label className="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1">
-            부가서비스명
-          </label>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">부가서비스명</label>
         </div>
         <div className="w-32">
-          <label className="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1">
-            월 요금 (원)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">월 요금 (원)</label>
         </div>
         <div className="w-28">
-          <label className="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1">
-            기간 (개월)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">기간 (개월)</label>
         </div>
         <div className="w-32">
-          <label className="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1">
-            추가 요금 (만원)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">추가 요금 (만원)</label>
         </div>
         <div className="w-8">{/* 삭제 버튼 공간 */}</div>
       </div>
 
-      {addons.map((addon, index) => (
-        <div key={index} className="p-2">
-          <div className="flex items-end gap-3">
-            {/* 통신사 선택 */}
-            <div className="w-32">
-              <Combobox
-                value={
-                  carriers.find((carrier) => carrier.id === addon.carrierId) ||
-                  null
-                }
-                onChange={(carrier) =>
-                  handleAddonChange(index, "carrierId", carrier?.id || null)
-                }
-              >
-                <div className="relative">
-                  <Combobox.Input
-                    className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
-                    displayValue={(carrier: CarrierDto | null) =>
-                      carrier?.name || "통신사 선택"
-                    }
-                    readOnly
-                  />
-                  <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-                    <FaChevronDown
-                      className="h-5 w-5 text-gray-400"
-                      aria-hidden="true"
+      <div className="space-y-4">
+        {addons.map((addon, index) => (
+          <div key={index} className="border border-gray-200 dark:border-gray-500 rounded-lg p-4 sm:p-6">
+            {/* 모바일/태블릿: 카드 형태, 데스크톱: 테이블 형태 */}
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+              {/* 통신사 선택 */}
+              <div className="w-full lg:w-32">
+                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                  통신사
+                </label>
+                {isEditable ? (
+                  <Combobox
+                    value={carriers.find((carrier) => carrier.id === addon.carrierId) || null}
+                    onChange={(carrier) => handleAddonChange(index, "carrierId", carrier?.id || null)}
+                  >
+                    <div className="relative">
+                      <Combobox.Input
+                        className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        displayValue={(carrier: CarrierDto | null) => carrier?.name || "통신사 선택"}
+                        readOnly
+                      />
+                      <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        <FaChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      </Combobox.Button>
+                      <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        {carriers.map((carrier) => (
+                          <Combobox.Option
+                            key={carrier.id}
+                            value={carrier}
+                            className={({ active }) =>
+                              `relative cursor-default select-none py-2 pl-3 pr-9 ${
+                                active ? "bg-primary-light text-white" : "text-gray-900 dark:text-gray-100"
+                              }`
+                            }
+                          >
+                            {carrier.name}
+                          </Combobox.Option>
+                        ))}
+                      </Combobox.Options>
+                    </div>
+                  </Combobox>
+                ) : (
+                  <div className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    {carriers.find((carrier) => carrier.id === addon.carrierId)?.name || "통신사 선택"}
+                  </div>
+                )}
+              </div>
+
+              {/* 부가서비스명 */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                  부가서비스명
+                </label>
+                <input
+                  type="text"
+                  value={addon.name}
+                  onChange={(e) => handleAddonChange(index, "name", e.target.value)}
+                  placeholder="부가서비스명을 입력하세요"
+                  className={`w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                  disabled={!isEditable}
+                />
+              </div>
+
+              {/* 숫자 입력 필드들을 그룹화 */}
+              <div className="flex flex-col gap-4 lg:flex-col xl:flex-row">
+                {/* 월 납부 요금 */}
+                <div className="w-full lg:w-32 xl:w-32">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                    월 요금
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formatNumberWithComma(addon.monthlyFee)}
+                      onChange={(e) => handleAddonChange(index, "monthlyFee", e.target.value)}
+                      placeholder="0"
+                      maxLength={7}
+                      className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                      disabled={!isEditable}
                     />
-                  </Combobox.Button>
-                  <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-background-dark py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                    {carriers.map((carrier) => (
-                      <Combobox.Option
-                        key={carrier.id}
-                        value={carrier}
-                        className={({ active }) =>
-                          `relative cursor-default select-none py-2 pl-3 pr-9 ${
-                            active
-                              ? "bg-blue-600 text-white"
-                              : "text-gray-900 dark:text-gray-100"
-                          }`
-                        }
-                      >
-                        {carrier.name}
-                      </Combobox.Option>
-                    ))}
-                  </Combobox.Options>
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                      원
+                    </span>
+                  </div>
                 </div>
-              </Combobox>
-            </div>
 
-            {/* 부가서비스명 */}
-            <div className="w-1/2">
-              <input
-                type="text"
-                value={addon.name}
-                onChange={(e) =>
-                  handleAddonChange(index, "name", e.target.value)
-                }
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            </div>
+                {/* 기간과 추가 요금을 같은 row에 배치 */}
+                <div className="flex flex-row gap-2 sm:flex-row sm:gap-4 lg:flex-col xl:flex-row">
+                  {/* 유지 기간 */}
+                  <div className="w-1/2 sm:w-32 lg:w-28 xl:w-28">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                      기간
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={addon.durationMonths || ""}
+                        onChange={(e) => handleAddonChange(index, "durationMonths", e.target.value)}
+                        placeholder="0"
+                        maxLength={2}
+                        className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                        disabled={!isEditable}
+                      />
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                        개월
+                      </span>
+                    </div>
+                  </div>
 
-            {/* 월 납부 요금 */}
-            <div className="w-32">
-              <input
-                type="number"
-                value={addon.monthlyFee || ""}
-                onChange={(e) =>
-                  handleAddonChange(index, "monthlyFee", e.target.value)
-                }
-                min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            </div>
+                  {/* 미가입시 추가 요금 */}
+                  <div className="w-1/2 sm:w-40 lg:w-32 xl:w-32">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                      추가 요금
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={addon.penaltyFee || ""}
+                        onChange={(e) => handleAddonChange(index, "penaltyFee", e.target.value)}
+                        placeholder="0"
+                        maxLength={2}
+                        className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                        disabled={!isEditable}
+                      />
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                        만원
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            {/* 유지 기간 */}
-            <div className="w-28">
-              <input
-                type="number"
-                value={addon.durationMonths || ""}
-                onChange={(e) =>
-                  handleAddonChange(index, "durationMonths", e.target.value)
-                }
-                min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            </div>
-
-            {/* 미가입시 추가 요금 */}
-            <div className="w-32">
-              <input
-                type="number"
-                value={addon.penaltyFee || ""}
-                onChange={(e) =>
-                  handleAddonChange(index, "penaltyFee", e.target.value)
-                }
-                min="0"
-                className="w-full px-2 py-2 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            </div>
-
-            {/* 삭제 버튼 */}
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => removeAddon(index)}
-                className="flex items-center justify-center w-8 h-10 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                title="삭제"
-              >
-                <FaTrashAlt className="text-sm" />
-              </button>
+              {/* 삭제 버튼 - 편집 가능할 때만 표시 */}
+              {isEditable && (
+                <div className="flex justify-center lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => removeAddon(index)}
+                    className="flex items-center justify-center w-10 h-10 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="삭제"
+                  >
+                    <FaTrashAlt className="text-sm" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* 부가서비스 추가 버튼 - 편집 가능할 때만 표시 */}
+      {isEditable && (
+        <div className="flex justify-center px-2 py-4">
+          <button
+            type="button"
+            onClick={addAddon}
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-md font-medium transition-colors"
+          >
+            + 부가서비스 추가
+          </button>
         </div>
-      ))}
+      )}
 
-      {/* 부가서비스 추가 버튼 */}
-      <div className="flex justify-center px-2 py-4">
-        <button
-          type="button"
-          onClick={addAddon}
-          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-md font-medium transition-colors"
-        >
-          + 부가서비스 추가
-        </button>
-      </div>
-
-      {/* 저장 버튼 */}
-      <div className="flex justify-center mt-2">
-        <button
-          type="button"
-          onClick={() => {
-            handleAddonSave();
-          }}
-          className="px-4 py-2 w-full rounded bg-primary-light hover:bg-[#3d5e33] dark:bg-primary-dark dark:hover:bg-[#759161] text-white dark:text-foreground-light text-base font-medium transition-colors"
-        >
-          저장
-        </button>
-      </div>
+      {/* 저장 버튼 - 편집 가능할 때만 표시 */}
+      {isEditable && (
+        <div className="flex justify-center mt-4 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              handleAddonSave();
+            }}
+            className="w-full sm:w-auto px-6 py-3 sm:py-2 rounded-md bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light text-white dark:text-foreground-light text-sm sm:text-base font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-primary-dark"
+          >
+            저장하기
+          </button>
+        </div>
+      )}
     </div>
   );
 };

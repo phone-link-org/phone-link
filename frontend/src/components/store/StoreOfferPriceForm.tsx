@@ -14,7 +14,7 @@ const offerTypes: { value: OfferType; label: string }[] = [
   { value: OFFER_TYPES.CHG, label: "기기변경" },
 ];
 
-const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
+const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ storeId, isEditable = true }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [offers, setOffers] = useState<StoreOfferModel[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +40,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
     const fetchPriceTableData = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get<StoreOfferModel[]>(
-          `/store/${storeId}/offers`,
-        );
+        const response = await api.get<StoreOfferModel[]>(`/store/${storeId}/offers`);
         console.log(response);
         setOffers(response);
       } catch (error) {
@@ -62,9 +60,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
           model.modelId === modelId
             ? {
                 ...model,
-                storages: model.storages.filter(
-                  (storage) => storage.storageId !== storageId,
-                ),
+                storages: model.storages.filter((storage) => storage.storageId !== storageId),
               }
             : model,
         )
@@ -93,9 +89,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
         const carrier = storage.carriers.find((c) => c.carrierId === carrierId);
         if (!carrier) return;
 
-        const offerTypeObj = carrier.offerTypes.find(
-          (ot) => ot.offerType === offerType,
-        );
+        const offerTypeObj = carrier.offerTypes.find((ot) => ot.offerType === offerType);
         if (!offerTypeObj) return;
 
         offerTypeObj.price = price ?? null;
@@ -105,8 +99,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
 
   const getCarrierImageUrl = (carrierName: string) => {
     try {
-      return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url)
-        .href;
+      return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url).href;
     } catch (error) {
       console.error(`Error loading image for carrier: ${carrierName}`, error);
       return "https://placehold.co/500x500";
@@ -139,20 +132,11 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
 
   return (
     <>
-      <LoadingSpinner
-        isVisible={isSubmitting}
-        title="가격 정보 등록 중"
-        subtitle="잠시만 기다려주세요..."
-      />
+      <LoadingSpinner isVisible={isSubmitting} title="가격 정보 등록 중" subtitle="잠시만 기다려주세요..." />
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6 p-6 bg-white dark:bg-[#292929] rounded-b-lg"
-      >
+      <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white dark:bg-[#292929] rounded-b-lg">
         <div className="overflow-x-auto">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-end">
-            단위: 만원
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-end">단위: 만원</p>
           <div className="h-[600px] overflow-y-auto border dark:border-gray-600 rounded-md">
             <table className="min-w-full table-fixed">
               <thead className="sticky top-0 bg-[#a8a8a8] dark:bg-[#737373]">
@@ -194,10 +178,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
               <tbody className="bg-white dark:bg-[#292929]">
                 {isLoading ? (
                   <tr>
-                    <td
-                      colSpan={carriers.length * offerTypes.length + 3}
-                      className="px-6 py-20"
-                    >
+                    <td colSpan={carriers.length * offerTypes.length + 3} className="px-6 py-20">
                       <div className="flex items-center justify-center">
                         <ClipLoader
                           size={48}
@@ -224,9 +205,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
                         <tr
                           key={`${model.modelId}-${storage.storageId}`}
                           className={
-                            modelIndex > 0 || storageIndex > 0
-                              ? "border-t border-gray-200 dark:border-gray-600"
-                              : ""
+                            modelIndex > 0 || storageIndex > 0 ? "border-t border-gray-200 dark:border-gray-600" : ""
                           }
                         >
                           {/* 모델명: storage 개수만큼 rowSpan */}
@@ -253,7 +232,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
                               >
                                 <input
                                   type="number"
-                                  className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                  className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
                                   value={offerType.price ?? ""}
                                   onChange={(e) =>
                                     handlePriceChange(
@@ -264,27 +243,25 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
                                       e.target.value,
                                     )
                                   }
+                                  disabled={!isEditable}
                                 />
                               </td>
                             )),
                           )}
 
-                          {/* 삭제 버튼 */}
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleRemoveRow(
-                                  model.modelId,
-                                  storage.storageId,
-                                )
-                              }
-                              tabIndex={-1}
-                              className="text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
-                            </button>
-                          </td>
+                          {/* 삭제 버튼 - 편집 가능할 때만 표시 */}
+                          {isEditable && (
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRow(model.modelId, storage.storageId)}
+                                tabIndex={-1}
+                                className="text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     });
@@ -295,19 +272,22 @@ const StoreOfferPriceForm: React.FC<{ storeId: number }> = ({ storeId }) => {
           </div>
         </div>
 
-        <div>
-          <button
-            type="submit"
-            disabled={isSubmitting} // 제출 중일 때 버튼 비활성화
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-md font-medium transition-all duration-200 ${
-              isSubmitting
-                ? "bg-gray-400 cursor-not-allowed text-white dark:text-gray-600"
-                : "text-white dark:text-black bg-primary-light dark:bg-primary-dark hover:bg-primary-dark"
-            }`}
-          >
-            {isSubmitting ? "등록 중..." : "등록"}
-          </button>
-        </div>
+        {/* 저장 버튼 - 편집 가능할 때만 표시 */}
+        {isEditable && (
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting} // 제출 중일 때 버튼 비활성화
+              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-md font-medium transition-all duration-200 ${
+                isSubmitting
+                  ? "bg-gray-400 cursor-not-allowed text-white dark:text-gray-600"
+                  : "text-white dark:text-black bg-primary-light dark:bg-primary-dark hover:bg-primary-dark"
+              }`}
+            >
+              {isSubmitting ? "등록 중..." : "등록"}
+            </button>
+          </div>
+        )}
       </form>
     </>
   );

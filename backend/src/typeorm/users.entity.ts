@@ -13,7 +13,6 @@ import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
 import { ROLES, Role } from "../../../shared/constants";
-import { UserFavorite } from "./userFavorites.entity";
 
 @Entity("users")
 @Index("idx_status", ["status"])

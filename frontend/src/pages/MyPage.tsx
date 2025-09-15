@@ -61,7 +61,7 @@ const MENU_ITEMS = [
 ];
 
 const MyPage: React.FC = () => {
-  const { user, withdrawal } = useAuthStore();
+  const { user, withdrawal, logout } = useAuthStore();
   const { theme } = useTheme();
 
   // 모달 상태 관리
@@ -130,9 +130,19 @@ const MyPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark pt-[63px] pb-6 mt-6">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark pt-[63px] mt-6">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
+          {/* 로그아웃 버튼 */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => logout()}
+              className="px-4 py-2 rounded bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
+
           {/* 사용자 프로필 섹션 */}
           <div
             className="bg-white dark:bg-[#292929] rounded-lg shadow-md p-6 mb-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"

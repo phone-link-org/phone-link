@@ -186,7 +186,6 @@ const StorePage: React.FC = () => {
                 )}
               </button>
             </div>
-            <div>{`${isFavorite}`}</div>
 
             {/* Description 섹션 */}
             {store.description && (

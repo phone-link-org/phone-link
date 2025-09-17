@@ -11,9 +11,10 @@ import { FaStar, FaRegStar } from "react-icons/fa";
 import { useAuthStore } from "../store/authStore";
 import { ROLES } from "../../../shared/constants";
 import { toast } from "sonner";
+import StoreStaffForm from "../components/store/StoreStaffForm";
 
 const StorePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"prices" | "excel" | "addon" | "requiredPlan">("prices");
+  const [activeTab, setActiveTab] = useState<"prices" | "excel" | "addon" | "requiredPlan" | "staff">("prices");
   const { storeId: storeIdString } = useParams<{ storeId: string }>();
   const { user } = useAuthStore();
 
@@ -335,6 +336,12 @@ const StorePage: React.FC = () => {
                 <span className="sm:hidden">엑셀 업로드</span>
               </button>
             )}
+            <button
+              className={`shrink-0 border-b-2 py-3 sm:py-4 px-2 text-sm sm:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === "staff" ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark" : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"}`}
+              onClick={() => setActiveTab("staff")}
+            >
+              직원 관리
+            </button>
           </nav>
         </div>
         <div className="min-h-[400px]">
@@ -346,6 +353,7 @@ const StorePage: React.FC = () => {
               <ExcelUpload />
             </div>
           )}
+          {activeTab === "staff" && <StoreStaffForm storeId={storeId} isEditable={isStoreStaff} />}
         </div>
       </div>
     </div>

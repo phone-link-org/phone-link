@@ -1,16 +1,16 @@
-import { Router } from "express";
-import { AppDataSource } from "../db";
-import { Store } from "../typeorm/stores.entity";
-import { PendingStoreDto, StoreRegisterFormData } from "../../../shared/store.types";
-import { Addon } from "../typeorm/addons.entity";
-import { AddonFormData } from "shared/addon.types";
-import { Offer } from "../typeorm/offers.entity";
-import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
-import { PhoneDevice } from "../typeorm/phoneDevices.entity";
-import { OfferDto } from "shared/offer.types";
-import { PhoneDeviceDto } from "shared/phone.types";
+import { AuthenticatedRequest, hasRole, isAuthenticated } from "../middlewares/auth.middleware";
 import ReqPlanDto from "shared/reqPlan.types";
-import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
+import { PhoneDeviceDto } from "shared/phone.types";
+import { OfferDto } from "shared/offer.types";
+import { PhoneDevice } from "../typeorm/phoneDevices.entity";
+import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
+import { Offer } from "../typeorm/offers.entity";
+import { AddonFormData } from "shared/addon.types";
+import { Addon } from "../typeorm/addons.entity";
+import { PendingStoreDto, StoreRegisterFormData } from "../../../shared/store.types";
+import { Store } from "../typeorm/stores.entity";
+import { AppDataSource } from "../db";
+import { Router } from "express";
 import { ReqPlan } from "../typeorm/reqPlans.entity";
 import { UserFavorites } from "../typeorm/userFavorites.entity";
 import { ROLES } from "../../../shared/constants";
@@ -307,9 +307,10 @@ router.get("/:storeId/offers", async (req, res) => {
   }
 });
 
-router.post("/:storeId/offers", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+router.post("/:storeId/offers", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req: AuthenticatedRequest, res) => {
   const { storeId } = req.params;
   const { offers } = req.body;
+  const userId = req.user!.id; // ❕인증된 요청이므로 user 객체는 항상 존재
 
   const queryRunner = AppDataSource.createQueryRunner();
   await queryRunner.connect();
@@ -346,7 +347,7 @@ router.post("/:storeId/offers", isAuthenticated, hasRole([ROLES.SELLER, ROLES.AD
                 deviceId: device.id,
                 offerType: offerType.offerType,
                 price: offerType.price,
-                updatedBy: 9999, //TODO: 로그인 정보 가져와서 ID값으로 변경 필요!
+                updatedBy: userId,
               };
               newOfferMap.set(offerKey, offerData);
             }

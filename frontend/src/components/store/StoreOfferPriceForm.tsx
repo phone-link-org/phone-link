@@ -39,14 +39,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     const fetchData = async () => {
       setIsLoading(true);
       try {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        const response = await api.get<StoreOfferModel[]>(`/store/${storeId}/offers`);
-        console.log(response);
-        setOffers(response);
-=======
-=======
->>>>>>> Stashed changes
         // 1. 여러 API를 동시에 호출
         const [devicesRes, offersRes, carriersRes] = await Promise.all([
           apiClient.get<{ data: StructuredDevice[] }>("/phone/devices-structured"),
@@ -95,10 +87,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
         
         setOffers(newOffers);
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -111,8 +99,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   }, [storeId]);
   
   const handleRemoveRow = (modelId: number, storageId: number) => {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     setOffers((prev) =>
       prev
         .map((model) =>
@@ -125,26 +111,11 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
         )
         // 🔹 storages 가 비어 있으면 모델 자체도 제거
         .filter((model) => model.storages.length > 0),
-=======
-=======
->>>>>>> Stashed changes
-    setOffers(prev =>
-      prev.map(model =>
-        model.modelId === modelId
-          ? { ...model, storages: model.storages.filter(s => s.storageId !== storageId) }
-          : model
-      ).filter(model => model.storages.length > 0)
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     );
   };
 
   const handlePriceChange = (modelId: number, storageId: number, carrierId: number, offerType: OfferType, newValue: string) => {
     const price = newValue === "" ? null : Number(newValue);
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
     setOffers(
       produce((draft) => {
@@ -163,24 +134,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
         offerTypeObj.price = price ?? null;
       }),
     );
-=======
-=======
->>>>>>> Stashed changes
-    setOffers(produce(draft => {
-      const model = draft.find(m => m.modelId === modelId);
-      if (!model) return;
-      const storage = model.storages.find(s => s.storageId === storageId);
-      if (!storage) return;
-      const carrier = storage.carriers.find(c => c.carrierId === carrierId);
-      if (!carrier) return;
-      const offerTypeObj = carrier.offerTypes.find(ot => ot.offerType === offerType);
-      if (!offerTypeObj) return;
-      offerTypeObj.price = price;
-    }));
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   };
 
   const getCarrierImageUrl = (carrierName: string) => {
@@ -223,13 +176,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   return (
     <>
       <LoadingSpinner isVisible={isSubmitting} title="가격 정보 등록 중" subtitle="잠시만 기다려주세요..." />
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
       <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white dark:bg-[#292929] rounded-b-lg">
         <div className="overflow-x-auto">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-end">단위: 만원</p>
@@ -266,8 +213,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                     </td>
                   </tr>
                 ) : (
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
                   offers.map((model, modelIndex) => {
                     return model.storages.map((storage, storageIndex) => {
                       return (
@@ -300,13 +245,13 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                                   <input
                                     type="number"
                                     className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                                    value={offerType.price ?? ""}
+                                    value={offerTypeData?.price ?? ""}
                                     onChange={(e) =>
                                       handlePriceChange(
                                         model.modelId,
                                         storage.storageId,
-                                        carrier.carrierId,
-                                        offerType.offerType,
+                                        carrier.id,
+                                        offerType.value,
                                         e.target.value,
                                       )
                                     }
@@ -334,62 +279,11 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                       );
                     });
                   })
-=======
-                  offers.map((model, modelIndex) => 
-                    model.storages.map((storage, storageIndex) => (
-                      <tr key={`${model.modelId}-${storage.storageId}`} className={modelIndex > 0 || storageIndex > 0 ? "border-t border-gray-200 dark:border-gray-600" : ""}>
-                        {storageIndex === 0 && (
-                          <td rowSpan={model.storages.length} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600">
-                            {model.modelName}
-                          </td>
-=======
-                  offers.map((model, modelIndex) => 
-                    model.storages.map((storage, storageIndex) => (
-                      <tr key={`${model.modelId}-${storage.storageId}`} className={modelIndex > 0 || storageIndex > 0 ? "border-t border-gray-200 dark:border-gray-600" : ""}>
-                        {storageIndex === 0 && (
-                          <td rowSpan={model.storages.length} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600">
-                            {model.modelName}
-                          </td>
->>>>>>> Stashed changes
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
-                          {storage.storage}
-                        </td>
-                        {carriers.map(carrier =>
-                          offerTypes.map(offerType => {
-                            const carrierData = storage.carriers.find(c => c.carrierId === carrier.id);
-                            const offerTypeData = carrierData?.offerTypes.find(ot => ot.offerType === offerType.value);
-                            return (
-                              <td key={`cell-${storage.storageId}-${carrier.id}-${offerType.value}`} className="px-4 py-4 whitespace-nowrap">
-                                <input
-                                  type="number"
-                                  className="w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light"
-                                  value={offerTypeData?.price ?? ""}
-                                  onChange={e => handlePriceChange(model.modelId, storage.storageId, carrier.id, offerType.value, e.target.value)}
-                                />
-                              </td>
-                            );
-                          })
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button type="button" onClick={() => handleRemoveRow(model.modelId, storage.storageId)} tabIndex={-1} className="text-gray-400 hover:text-red-500 transition-colors">
-                            <FaTrashAlt className="text-red-400 dark:text-red-500 hover:opacity-70" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
                 )}
               </tbody>
             </table>
           </div>
         </div>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
         {/* 저장 버튼 - 편집 가능할 때만 표시 */}
         {isEditable && (
@@ -407,15 +301,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
             </button>
           </div>
         )}
-=======
-=======
->>>>>>> Stashed changes
-        <div>
-          <button type="submit" disabled={isSubmitting} className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-md font-medium transition-all duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed text-white dark:text-gray-600" : "text-white dark:text-black bg-primary-light dark:bg-primary-dark hover:bg-primary-dark"}`}>
-            {isSubmitting ? "등록 중..." : "등록"}
-          </button>
-        </div>
->>>>>>> Stashed changes
       </form>
     </>
   );

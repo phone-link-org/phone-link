@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { CarrierDto, StoreOfferModel } from "../../../../shared/types";
-import apiClient, { api } from "../../api/axios";
+import apiClient from "../../api/axios";
 import { FaTrashAlt } from "react-icons/fa";
 import { toast } from "sonner";
 import { produce } from "immer";
@@ -8,6 +8,20 @@ import LoadingSpinner from "../LoadingSpinner";
 import { ClipLoader } from "react-spinners";
 import { useTheme } from "../../hooks/useTheme";
 import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
+
+// 프론트엔드에서 사용할 기기 데이터 타입
+interface StructuredDevice {
+  id: number;
+  name: string;
+  models: {
+    id: number;
+    name: string;
+    storages: {
+      id: number;
+      capacity: string;
+    }[];
+  }[];
+}
 
 const offerTypes: { value: OfferType; label: string }[] = [
   { value: OFFER_TYPES.MNP, label: "번호이동" },
@@ -18,41 +32,27 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
   const [offers, setOffers] = useState<StoreOfferModel[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
 
-  // 통신사 정보 조회
   useEffect(() => {
-    try {
-      const fetchCarriers = async () => {
-        const response = await api.get<CarrierDto[]>(`/phone/carriers`);
-        setCarriers(response);
-      };
-      fetchCarriers();
-    } catch (error) {
-      console.error("Error fetching carriers:", error);
-      toast.error("통신사 데이터을 불러오는 중 오류가 발생했습니다.");
-    }
-  }, []);
-
-  // 시세표 조회
-  useEffect(() => {
-    const fetchPriceTableData = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const response = await api.get<StoreOfferModel[]>(`/store/${storeId}/offers`);
         console.log(response);
         setOffers(response);
       } catch (error) {
-        console.error("Error fetching price table data:", error);
-        toast.error("가격 정보를 불러오는 중 오류가 발생했습니다.");
+        console.error("Error fetching data:", error);
+        toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPriceTableData();
+    
+    fetchData();
   }, [storeId]);
-
+  
   const handleRemoveRow = (modelId: number, storageId: number) => {
     setOffers((prev) =>
       prev
@@ -69,13 +69,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     );
   };
 
-  const handlePriceChange = (
-    modelId: number,
-    storageId: number,
-    carrierId: number,
-    offerType: OfferType,
-    newValue: string,
-  ) => {
+  const handlePriceChange = (modelId: number, storageId: number, carrierId: number, offerType: OfferType, newValue: string) => {
     const price = newValue === "" ? null : Number(newValue);
 
     setOffers(
@@ -101,7 +95,6 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     try {
       return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url).href;
     } catch (error) {
-      console.error(`Error loading image for carrier: ${carrierName}`, error);
       return "https://placehold.co/500x500";
     }
   };
@@ -109,24 +102,29 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (offers.length === 0) {
-      toast.error("가격 정보를 입력 후 등록해주세요.");
-      return;
+    // 1. 모든 가격 필드가 비어있는지 검사
+    const hasAnyPrice = offers.some(model =>
+      model.storages.some(storage =>
+        storage.carriers.some(carrier =>
+          carrier.offerTypes.some(offer => offer.price !== null && offer.price !== undefined)
+        )
+      )
+    );
+
+    if (!hasAnyPrice) {
+      toast.error("가격을 하나 이상 입력해주세요.");
+      return; // 데이터 제출 중단
     }
 
-    setIsSubmitting(true); // 로딩 상태 활성화
-
+    setIsSubmitting(true);
     try {
-      const result = await apiClient.post(`/store/${storeId}/offers`, {
-        offers,
-      });
-      console.log(result);
+      await apiClient.post(`/store/${storeId}/offers`, { offers });
       toast.success("가격 정보가 성공적으로 등록되었습니다.");
     } catch (error) {
       toast.error("데이터 제출에 실패했습니다.");
       console.error(error);
     } finally {
-      setIsSubmitting(false); // 로딩 상태 비활성화
+      setIsSubmitting(false);
     }
   };
 
@@ -141,38 +139,17 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
             <table className="min-w-full table-fixed">
               <thead className="sticky top-0 bg-[#a8a8a8] dark:bg-[#737373]">
                 <tr>
-                  <th
-                    scope="col"
-                    className="w-48 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
-                  >
-                    모델
-                  </th>
-                  <th
-                    scope="col"
-                    className="w-24 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
-                  >
-                    용량
-                  </th>
-                  {carriers.map((carrier) =>
-                    offerTypes.map((type) => (
-                      <th
-                        key={`th-${carrier.id}-${type.value}`}
-                        scope="col"
-                        className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
-                      >
-                        <img
-                          src={getCarrierImageUrl(carrier.name)}
-                          alt={carrier.name}
-                          className="max-w-6 max-h-6 object-contain mx-auto mb-1"
-                        />
+                  <th scope="col" className="w-48 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">모델</th>
+                  <th scope="col" className="w-24 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">용량</th>
+                  {carriers.map(carrier =>
+                    offerTypes.map(type => (
+                      <th key={`th-${carrier.id}-${type.value}`} scope="col" className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">
+                        <img src={getCarrierImageUrl(carrier.name)} alt={carrier.name} className="max-w-6 max-h-6 object-contain mx-auto mb-1" />
                         {type.label}
                       </th>
-                    )),
+                    ))
                   )}
-                  <th
-                    scope="col"
-                    className="w-20 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
-                  ></th>
+                  <th scope="col" className="w-20 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"></th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-[#292929]">
@@ -180,22 +157,14 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                   <tr>
                     <td colSpan={carriers.length * offerTypes.length + 3} className="px-6 py-20">
                       <div className="flex items-center justify-center">
-                        <ClipLoader
-                          size={48}
-                          color={theme === "light" ? "#4F7942" : "#9DC183"}
-                          loading={true}
-                          className="animate-pulse"
-                        />
+                        <ClipLoader size={48} color={theme === "light" ? "#4F7942" : "#9DC183"} loading={true} className="animate-pulse" />
                       </div>
                     </td>
                   </tr>
                 ) : offers.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={carriers.length * offerTypes.length + 3}
-                      className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
-                    >
-                      등록된 가격 정보가 없습니다.
+                    <td colSpan={carriers.length * offerTypes.length + 3} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                      표시할 기기 정보가 없습니다.
                     </td>
                   </tr>
                 ) : (
@@ -222,31 +191,30 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
                             {storage.storage}
                           </td>
-
-                          {/* carrier × offerType 가격들 */}
-                          {storage.carriers.map((carrier) =>
-                            carrier.offerTypes.map((offerType) => (
-                              <td
-                                key={`cell-${storage.storageId}-${carrier.carrierId}-${offerType.offerType}`}
-                                className="px-4 py-4 whitespace-nowrap"
-                              >
-                                <input
-                                  type="number"
-                                  className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                                  value={offerType.price ?? ""}
-                                  onChange={(e) =>
-                                    handlePriceChange(
-                                      model.modelId,
-                                      storage.storageId,
-                                      carrier.carrierId,
-                                      offerType.offerType,
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={!isEditable}
-                                />
-                              </td>
-                            )),
+                          {carriers.map(carrier =>
+                            offerTypes.map(offerType => {
+                              const carrierData = storage.carriers.find(c => c.carrierId === carrier.id);
+                              const offerTypeData = carrierData?.offerTypes.find(ot => ot.offerType === offerType.value);
+                              return (
+                                <td key={`cell-${storage.storageId}-${carrier.id}-${offerType.value}`} className="px-4 py-4 whitespace-nowrap">
+                                  <input
+                                    type="number"
+                                    className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                                    value={offerType.price ?? ""}
+                                    onChange={(e) =>
+                                      handlePriceChange(
+                                        model.modelId,
+                                        storage.storageId,
+                                        carrier.carrierId,
+                                        offerType.offerType,
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={!isEditable}
+                                  />
+                                </td>
+                              )
+                            }),
                           )}
 
                           {/* 삭제 버튼 - 편집 가능할 때만 표시 */}

@@ -14,6 +14,8 @@ import { hasRole, isAuthenticated } from "../middlewares/auth.middleware";
 import { ReqPlan } from "../typeorm/reqPlans.entity";
 import { UserFavorites } from "../typeorm/userFavorites.entity";
 import { ROLES } from "../../../shared/constants";
+import { User } from "../typeorm/users.entity";
+import { StoreStaffData } from "../../../shared/user.types";
 
 const router = Router();
 
@@ -703,6 +705,40 @@ router.post("/favorite", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "즐겨찾기 처리 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/:storeId/staffs", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const staffs = await AppDataSource.createQueryBuilder()
+      .select([
+        "u.id as userId",
+        "u.email as email",
+        "u.name as name",
+        "u.nickname as nickname",
+        "u.profile_image_url as profileImageUrl",
+        "u.phone_number as phoneNumber",
+        "u.status as systemStatus",
+        "s.status as storeStatus",
+      ])
+      .from(User, "u")
+      .innerJoin("sellers", "s", "u.id = s.user_id")
+      .where("s.store_id = :storeId", { storeId: parseInt(storeId) })
+      .getRawMany<StoreStaffData>();
+
+    res.status(200).json({
+      success: true,
+      data: staffs,
+    });
+  } catch (error) {
+    console.error("Error during fetching staffs", error);
+    res.status(500).json({
+      success: false,
+      message: "직원 조회 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

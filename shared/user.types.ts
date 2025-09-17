@@ -1,4 +1,4 @@
-import type { StoreDto } from "./store.types";
+import type { StoreDto, SellerDto } from "./types";
 import type { Role, SsoProvider } from "./constants";
 
 export interface UserDto {
@@ -74,4 +74,15 @@ export type UserAuthData = Pick<
   "id" | "nickname" | "role" | "profileImageUrl"
 > & {
   storeId?: StoreDto["id"];
+};
+
+export type StoreStaffData = {
+  userId: UserDto["id"];
+  email: UserDto["email"];
+  name: UserDto["name"];
+  nickname?: UserDto["nickname"];
+  profileImageUrl?: UserDto["profileImageUrl"];
+  phoneNumber?: UserDto["phoneNumber"];
+  storeStatus: SellerDto["status"];
+  systemStatus: UserDto["status"];
 };

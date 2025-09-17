@@ -29,11 +29,10 @@ const SignupPage: React.FC = () => {
     role: ROLES.USER,
     address: "",
     addressDetail: "",
+    lastLoginType: "",
   });
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof SignupFormData | "passwordConfirm", string>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof SignupFormData | "passwordConfirm", string>>>({});
   const [isSsoSignup, setIsSsoSignup] = useState(false);
   const [signupToken, setSignupToken] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<StoreDto | null>(null);
@@ -46,10 +45,7 @@ const SignupPage: React.FC = () => {
   useEffect(() => {
     if (location.state?.ssoData) {
       const { ssoData, signupToken } = location.state;
-      const birthdate =
-        ssoData.birthYear && ssoData.birthday
-          ? `${ssoData.birthYear}-${ssoData.birthday}`
-          : "";
+      const birthdate = ssoData.birthYear && ssoData.birthday ? `${ssoData.birthYear}-${ssoData.birthday}` : "";
 
       setFormData((prev) => ({
         ...prev,
@@ -71,10 +67,7 @@ const SignupPage: React.FC = () => {
         setStores(storesData);
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
-          toast.error(
-            error.response.data.message ||
-              "매장 목록을 불러오는데 실패했습니다.",
-          );
+          toast.error(error.response.data.message || "매장 목록을 불러오는데 실패했습니다.");
         } else {
           toast.error("매장 목록을 불러오는데 실패했습니다.");
         }
@@ -84,9 +77,7 @@ const SignupPage: React.FC = () => {
     fetchStores();
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const target = e.target as HTMLInputElement; // type, checked 속성 접근을 위함
 
@@ -122,8 +113,7 @@ const SignupPage: React.FC = () => {
         extraAddress += data.bname;
       }
       if (data.buildingName !== "") {
-        extraAddress +=
-          extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
+        extraAddress += extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
       }
       fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
     }
@@ -179,9 +169,7 @@ const SignupPage: React.FC = () => {
     return true;
   };
 
-  const handleFocus = (
-    e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name } = e.target;
     if (errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -191,9 +179,7 @@ const SignupPage: React.FC = () => {
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const newErrors: Partial<
-      Record<keyof SignupFormData | "passwordConfirm", string>
-    > = {};
+    const newErrors: Partial<Record<keyof SignupFormData | "passwordConfirm", string>> = {};
     let formIsValid = true;
 
     // --- Common Fields Validation ---
@@ -262,9 +248,7 @@ const SignupPage: React.FC = () => {
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         console.error("Signup error:", error.response.data);
-        toast.error(
-          error.response.data.message || "회원가입 중 오류가 발생했습니다.",
-        );
+        toast.error(error.response.data.message || "회원가입 중 오류가 발생했습니다.");
       } else {
         console.error("Unexpected error:", error);
         toast.error("알 수 없는 오류가 발생했습니다.");
@@ -284,10 +268,7 @@ const SignupPage: React.FC = () => {
             <div className="space-y-4">
               {/* Email */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   이메일 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -301,19 +282,14 @@ const SignupPage: React.FC = () => {
                   disabled={isSsoSignup}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
                 />
-                <p className="h-4 text-xs text-red-500">
-                  {errors.email || " "}
-                </p>
+                <p className="h-4 text-xs text-red-500">{errors.email || " "}</p>
               </div>
 
               {/* Password */}
               {!isSsoSignup && (
                 <>
                   <div>
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       비밀번호 <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -326,9 +302,7 @@ const SignupPage: React.FC = () => {
                       placeholder="영어 / 숫자 / 특수문자 포함 10자 이상"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                     />
-                    <p className="h-4 text-xs text-red-500">
-                      {errors.password || " "}
-                    </p>
+                    <p className="h-4 text-xs text-red-500">{errors.password || " "}</p>
                   </div>
                   <div>
                     <label
@@ -347,9 +321,7 @@ const SignupPage: React.FC = () => {
                       placeholder="비밀번호 확인"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                     />
-                    <p className="h-4 text-xs text-red-500">
-                      {errors.passwordConfirm || " "}
-                    </p>
+                    <p className="h-4 text-xs text-red-500">{errors.passwordConfirm || " "}</p>
                   </div>
                 </>
               )}
@@ -357,10 +329,7 @@ const SignupPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Name */}
                 <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     이름 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -373,16 +342,12 @@ const SignupPage: React.FC = () => {
                     disabled={isSsoSignup}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
                   />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.name || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.name || " "}</p>
                 </div>
 
                 {/* Gender */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    성별
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">성별</label>
                   <div className="grid grid-cols-2">
                     {/* 남성 버튼 */}
                     <label>
@@ -434,9 +399,7 @@ const SignupPage: React.FC = () => {
                       </span>
                     </label>
                   </div>
-                  <p className="h-4 mt-1 text-xs text-red-500">
-                    {errors.gender ? errors.gender : <span>&nbsp;</span>}
-                  </p>
+                  <p className="h-4 mt-1 text-xs text-red-500">{errors.gender ? errors.gender : <span>&nbsp;</span>}</p>
                 </div>
               </div>
             </div>
@@ -449,10 +412,7 @@ const SignupPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Birthday */}
                 <div>
-                  <label
-                    htmlFor="birthday"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     생년월일
                   </label>
                   <input
@@ -465,17 +425,12 @@ const SignupPage: React.FC = () => {
                     disabled={isSsoSignup}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
                   />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.birthday || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.birthday || " "}</p>
                 </div>
 
                 {/* Phone Number */}
                 <div>
-                  <label
-                    htmlFor="phoneNumber"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     전화번호 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -490,18 +445,13 @@ const SignupPage: React.FC = () => {
                     disabled={isSsoSignup}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white disabled:cursor-not-allowed disabled:opacity-70 dark:disabled:bg-gray-800"
                   />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.phoneNumber || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.phoneNumber || " "}</p>
                 </div>
               </div>
 
               {/* Address */}
               <div>
-                <label
-                  htmlFor="address"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   기본 주소
                 </label>
                 <div className="flex items-center">
@@ -515,21 +465,14 @@ const SignupPage: React.FC = () => {
                     readOnly
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                   />
-                  <AddressSearchButton
-                    onAddressComplete={handleAddressComplete}
-                  />
+                  <AddressSearchButton onAddressComplete={handleAddressComplete} />
                 </div>
-                <p className="h-4 text-xs text-red-500">
-                  {errors.address || " "}
-                </p>
+                <p className="h-4 text-xs text-red-500">{errors.address || " "}</p>
               </div>
 
               {/* Address Detail */}
               <div>
-                <label
-                  htmlFor="addressDetail"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <label htmlFor="addressDetail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   상세 주소
                 </label>
                 <input
@@ -542,18 +485,13 @@ const SignupPage: React.FC = () => {
                   ref={addressDetailRef}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                 />
-                <p className="h-4 text-xs text-red-500">
-                  {errors.addressDetail || " "}
-                </p>
+                <p className="h-4 text-xs text-red-500">{errors.addressDetail || " "}</p>
               </div>
 
               {/* Store Selector (Conditional) */}
               {formData.role === ROLES.SELLER && (
                 <div className="transition-all duration-300 ease-in-out">
-                  <label
-                    htmlFor="storeId"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="storeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     소속 매장 <span className="text-red-500">*</span>
                   </label>
                   <StoreSearchableSelect
@@ -606,8 +544,7 @@ const SignupPage: React.FC = () => {
 
           {formData.role === ROLES.SELLER && (
             <p className="mt-2 text-center text-[13.5px] text-red-500">
-              판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자
-              권한이 부여됩니다.
+              판매자 계정 가입인 경우 해당 매장의 관리자의 승인 이후 판매자 권한이 부여됩니다.
             </p>
           )}
 
@@ -621,10 +558,7 @@ const SignupPage: React.FC = () => {
           </button>
           <div className="mt-4 text-sm text-center text-gray-500 dark:text-gray-400">
             <span>이미 계정이 있으신가요? </span>
-            <Link
-              to="/login"
-              className="font-medium text-primary-light hover:underline dark:text-primary-dark"
-            >
+            <Link to="/login" className="font-medium text-primary-light hover:underline dark:text-primary-dark">
               로그인
             </Link>
           </div>

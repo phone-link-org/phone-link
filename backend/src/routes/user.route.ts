@@ -142,6 +142,7 @@ router.post("/signup", async (req, res) => {
           const newSeller = new Seller();
           newSeller.userId = savedUser.id;
           newSeller.storeId = storeId;
+          newSeller.status = "PENDING";
           await transactionalEntityManager.save(newSeller);
         }
 

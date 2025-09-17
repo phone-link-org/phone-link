@@ -47,7 +47,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         </div>
 
         {/* 모달 바디 */}
-        <div className="p-4 sm:px-6 sm:py-3 overflow-y-auto max-h-[calc(90vh-60px)]">{children}</div>
+        <div className="p-4 sm:px-6 overflow-y-auto max-h-[calc(90vh-60px)]">{children}</div>
       </div>
     </div>
   );

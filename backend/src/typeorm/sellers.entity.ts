@@ -30,10 +30,9 @@ export class Seller {
     enum: ["ACTIVE", "INACTIVE", "PENDING", "REJECTED"],
     nullable: false,
     default: "ACTIVE",
-    comment:
-      "ACTIVE: 재직, INACTIVE: 퇴사, PENDING: 승인대기, REJECTED: 승인거절",
+    comment: "ACTIVE: 재직, INACTIVE: 퇴사, PENDING: 승인대기, REJECTED: 승인거절",
   })
-  status: "ACTIVE" | "INACTIVE";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";
 
   @CreateDateColumn({ name: "created_at", type: "datetime" })
   createdAt: Date;

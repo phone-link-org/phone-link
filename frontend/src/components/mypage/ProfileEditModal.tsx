@@ -297,30 +297,69 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               />
             </div>
 
-            {/* Gender - 읽기전용 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">성별</label>
-              <input
-                type="text"
-                value={formData?.gender === "M" ? "남성" : formData?.gender === "F" ? "여성" : ""}
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
-              />
-            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Gender - 읽기전용 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">성별</label>
+                <div className="grid grid-cols-2">
+                  {/* 남성 버튼 */}
+                  <label>
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="M"
+                      checked={formData?.gender === "M"}
+                      disabled
+                      className="sr-only"
+                    />
+                    <span
+                      className={`w-full h-10 flex items-center justify-center text-sm border rounded-l-md transition-colors duration-200 ${
+                        formData?.gender === "M"
+                          ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
+                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-500"
+                      }`}
+                    >
+                      남성
+                    </span>
+                  </label>
 
-            {/* Birthday */}
-            <div>
-              <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                생년월일
-              </label>
-              <input
-                type="date"
-                id="birthday"
-                name="birthday"
-                value={formData?.birthday ?? ""}
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
-              />
+                  {/* 여성 버튼 */}
+                  <label>
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="F"
+                      checked={formData?.gender === "F"}
+                      disabled
+                      className="sr-only"
+                    />
+                    <span
+                      className={`w-full h-10 flex items-center justify-center text-sm border rounded-r-md transition-colors duration-200 ${
+                        formData?.gender === "F"
+                          ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
+                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-500"
+                      }`}
+                    >
+                      여성
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Birthday */}
+              <div>
+                <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  생년월일
+                </label>
+                <input
+                  type="date"
+                  id="birthday"
+                  name="birthday"
+                  value={formData?.birthday ?? ""}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
+                />
+              </div>
             </div>
 
             {/* Phone Number - 읽기전용 */}

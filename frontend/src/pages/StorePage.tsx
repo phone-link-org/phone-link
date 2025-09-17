@@ -328,20 +328,22 @@ const StorePage: React.FC = () => {
             </button>
             {/* 엑셀 업로드 탭은 판매자에게만 표시 */}
             {isStoreStaff && (
-              <button
-                className={`shrink-0 border-b-2 py-3 sm:py-4 px-2 text-sm sm:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === "excel" ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark" : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"}`}
-                onClick={() => setActiveTab("excel")}
-              >
-                <span className="hidden sm:inline">엑셀 파일 업로드</span>
-                <span className="sm:hidden">엑셀 업로드</span>
-              </button>
+              <>
+                <button
+                  className={`shrink-0 border-b-2 py-3 sm:py-4 px-2 text-sm sm:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === "excel" ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark" : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"}`}
+                  onClick={() => setActiveTab("excel")}
+                >
+                  <span className="hidden sm:inline">엑셀 파일 업로드</span>
+                  <span className="sm:hidden">엑셀 업로드</span>
+                </button>
+                <button
+                  className={`shrink-0 border-b-2 py-3 sm:py-4 px-2 text-sm sm:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === "staff" ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark" : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"}`}
+                  onClick={() => setActiveTab("staff")}
+                >
+                  직원 관리
+                </button>
+              </>
             )}
-            <button
-              className={`shrink-0 border-b-2 py-3 sm:py-4 px-2 text-sm sm:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === "staff" ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark" : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"}`}
-              onClick={() => setActiveTab("staff")}
-            >
-              직원 관리
-            </button>
           </nav>
         </div>
         <div className="min-h-[400px]">
@@ -353,7 +355,9 @@ const StorePage: React.FC = () => {
               <ExcelUpload />
             </div>
           )}
-          {activeTab === "staff" && <StoreStaffForm storeId={storeId} isEditable={isStoreStaff} />}
+          {activeTab === "staff" && isStoreStaff ? (
+            <StoreStaffForm storeId={storeId} isEditable={isStoreStaff} />
+          ) : null}
         </div>
       </div>
     </div>

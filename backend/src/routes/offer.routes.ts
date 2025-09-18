@@ -2,13 +2,7 @@
 import { Router } from "express";
 import { AppDataSource } from "../db";
 import { Offer } from "../typeorm/offers.entity";
-import {
-  OfferDetailFormData,
-  OfferModelDto,
-  OfferRegionDto,
-  OfferSearchResult,
-  PhoneStorageDto,
-} from "shared/types";
+import { OfferDetailFormData, OfferModelDto, OfferRegionDto, OfferSearchResult, PhoneStorageDto } from "shared/types";
 import { SORT_ORDER } from "../../../shared/constants";
 
 const router = Router();
@@ -76,15 +70,7 @@ router.get("/:offerId", async (req, res) => {
 router.post("/search", async (req, res) => {
   try {
     // page: 현재 페이지 번호, limit: 페이지 당 아이템 수, sortOrder: 정렬 순서
-    const {
-      regions,
-      models,
-      carriers,
-      offerTypes,
-      page = 1,
-      limit = 20,
-      sortOrder = SORT_ORDER.DEFAULT,
-    } = req.body;
+    const { regions, models, carriers, offerTypes, page = 1, limit = 20, sortOrder = SORT_ORDER.DEFAULT } = req.body;
 
     interface DynamicParams {
       [key: string]: string | string[] | number | number[] | boolean;
@@ -146,18 +132,14 @@ router.post("/search", async (req, res) => {
 
       // modelId > 0 => 모델 단위 + 스토리지 규칙
       if (Number.isFinite(modelId) && modelId > 0) {
-        const hasNegativeStorage = storages.some(
-          (s: PhoneStorageDto) => Number(s?.id) < 0,
-        );
+        const hasNegativeStorage = storages.some((s: PhoneStorageDto) => Number(s?.id) < 0);
         const positiveStorageIds = storages
           .map((s: PhoneStorageDto) => Number(s?.id))
           .filter((id: number) => Number.isFinite(id) && id > 0);
 
         if (!hasNegativeStorage && positiveStorageIds.length > 0) {
           // 스토리지 조건 적용
-          modelClauses.push(
-            `(pd.model_id = :${prefix}_model AND pd.storage_id IN (:...${prefix}_storages))`,
-          );
+          modelClauses.push(`(pd.model_id = :${prefix}_model AND pd.storage_id IN (:...${prefix}_storages))`);
           modelParams[`${prefix}_model`] = modelId;
           modelParams[`${prefix}_storages`] = positiveStorageIds;
         } else {
@@ -216,10 +198,9 @@ router.post("/search", async (req, res) => {
       .innerJoin("o.carrier", "c")
       .where("1=1")
       .andWhere("r.is_active = :isActive", { isActive: true }) // 폐지되지 않은, 현존하는 지역만 조회
-      .andWhere(
-        "(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 1",
-      ) // '시/군/구' 코드만 불러오는 조건
+      .andWhere("(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 1") // '시/군/구' 코드만 불러오는 조건
       .andWhere("s.status = :status", { status: "OPEN" }) // 폐업하지 않은 매장만 조회
+      .andWhere("o.price IS NOT NULL") // 가격이 있는 경우만 조회
       .andWhere("s.approval_status = :approvalStatus", {
         approvalStatus: "APPROVED",
       }); // 승인된 매장만 조회

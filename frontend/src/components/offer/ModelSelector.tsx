@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type {
-  OfferModelDto,
-  PhoneManufacturerDto,
-  PhoneStorageDto,
-} from "../../../../shared/types";
+import type { OfferModelDto, PhoneManufacturerDto, PhoneStorageDto } from "../../../../shared/types";
 import CustomCheckbox from "../CustomCheckbox";
 import { api } from "../../api/axios";
 import { toast } from "sonner";
@@ -13,26 +9,18 @@ interface ModelSelectorProps {
   onSelectedModelsChange: (models: OfferModelDto[]) => void;
 }
 
-const ModelSelector: React.FC<ModelSelectorProps> = ({
-  selectedModels,
-  onSelectedModelsChange,
-}) => {
-  const [manufacturers, setManufacturers] = useState<PhoneManufacturerDto[]>(
-    [],
-  );
-  const [selectedManufacturer, setSelectedManufacturer] =
-    useState<PhoneManufacturerDto | null>(null);
+const ModelSelector: React.FC<ModelSelectorProps> = ({ selectedModels, onSelectedModelsChange }) => {
+  const [manufacturers, setManufacturers] = useState<PhoneManufacturerDto[]>([]);
+  const [selectedManufacturer, setSelectedManufacturer] = useState<PhoneManufacturerDto | null>(null);
   const [models, setModels] = useState<OfferModelDto[]>([]);
-  const [lastSelectedModel, setLastSelectedModel] =
-    useState<OfferModelDto | null>(null);
+  const [lastSelectedModel, setLastSelectedModel] = useState<OfferModelDto | null>(null);
   const [storages, setStorages] = useState<PhoneStorageDto[]>([]);
 
   // 제조사 목록 조회 (최초 1회만)
   useEffect(() => {
     try {
       const fetchManufacturers = async () => {
-        const response =
-          await api.get<PhoneManufacturerDto[]>(`/phone/manufacturers`);
+        const response = await api.get<PhoneManufacturerDto[]>(`/phone/manufacturers`);
         setManufacturers(response);
       };
       fetchManufacturers();
@@ -99,9 +87,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   // 모델 선택 시
   const handleModelChange = (clickedModel: OfferModelDto) => {
     // 1. 모델 선택/해제 로직
-    const isAlreadySelected = selectedModels.some(
-      (item) => item.modelId === clickedModel.modelId,
-    );
+    const isAlreadySelected = selectedModels.some((item) => item.modelId === clickedModel.modelId);
 
     // 3. lastSelectedModel 및 storages 상태 업데이트
     if (isAlreadySelected) {
@@ -122,9 +108,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     if (isAlreadySelected) {
       // 모델 선택 해제
-      newSelectedModels = selectedModels.filter(
-        (item) => item.modelId !== clickedModel.modelId,
-      );
+      newSelectedModels = selectedModels.filter((item) => item.modelId !== clickedModel.modelId);
     } else {
       // 모델 선택 추가
       const isAllSelected = clickedModel.modelId < 0; // '전체' 모델인지 확인
@@ -137,20 +121,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         };
 
         newSelectedModels = [
-          ...selectedModels.filter(
-            (item) => item.manufacturerId !== clickedModel.manufacturerId,
-          ),
+          ...selectedModels.filter((item) => item.manufacturerId !== clickedModel.manufacturerId),
           allModelWithCustomName,
         ];
       } else {
         // 일반 모델 선택 시: 기존 '전체' 제거하고 새 모델 추가
         newSelectedModels = [
           ...selectedModels.filter(
-            (item) =>
-              !(
-                item.manufacturerId === clickedModel.manufacturerId &&
-                item.modelId < 0
-              ),
+            (item) => !(item.manufacturerId === clickedModel.manufacturerId && item.modelId < 0),
           ),
           clickedModel,
         ];
@@ -165,9 +143,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     if (!lastSelectedModel) return;
 
     // 1. 현재 선택된 모델 찾기
-    const currentModelIndex = selectedModels.findIndex(
-      (item) => item.modelId === lastSelectedModel.modelId,
-    );
+    const currentModelIndex = selectedModels.findIndex((item) => item.modelId === lastSelectedModel.modelId);
 
     if (currentModelIndex === -1) return; // 모델이 선택되지 않은 경우
 
@@ -219,10 +195,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       <div className="w-full md:w-1/5 max-h-60 min-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="flex flex-col gap-2">
           {manufacturers.map((manufacturer) => (
-            <label
-              key={manufacturer.id}
-              className="flex justify-center items-center cursor-pointer"
-            >
+            <label key={manufacturer.id} className="flex justify-center items-center cursor-pointer">
               <CustomCheckbox
                 label={manufacturer.name_ko}
                 checked={selectedManufacturer === manufacturer}
@@ -236,24 +209,15 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       <div className="w-full md:w-3/5 max-h-60 min-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {selectedManufacturer === null ? (
-            <div className="text-gray-400 text-xs">
-              제조사를 먼저 선택하세요.
-            </div>
+            <div className="text-gray-400 text-xs">제조사를 먼저 선택하세요.</div>
           ) : models?.length === 0 ? (
-            <span className="text-gray-400 text-xs">
-              데이터가 존재하지 않습니다.
-            </span>
+            <span className="text-gray-400 text-xs">데이터가 존재하지 않습니다.</span>
           ) : (
             models?.map((model) => (
-              <label
-                key={model.modelId}
-                className="flex justify-center items-center cursor-pointer"
-              >
+              <label key={model.modelId} className="flex justify-center items-center cursor-pointer">
                 <CustomCheckbox
                   label={model.name}
-                  checked={selectedModels.some(
-                    (item) => item.modelId == model.modelId,
-                  )}
+                  checked={selectedModels.some((item) => item.modelId == model.modelId)}
                   onChange={() => handleModelChange(model)}
                   customStyle="text-sm w-[150px]"
                 />
@@ -272,14 +236,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
               <CustomCheckbox
                 label={data.storage}
                 checked={(() => {
-                  const currentCondition = selectedModels.find(
-                    (item) => item.modelId === lastSelectedModel?.modelId,
-                  );
-                  return (
-                    currentCondition?.storages?.some(
-                      (item) => item.id === data.id,
-                    ) || false
-                  );
+                  const currentCondition = selectedModels.find((item) => item.modelId === lastSelectedModel?.modelId);
+                  return currentCondition?.storages?.some((item) => item.id === data.id) || false;
                 })()}
                 onChange={() => handleStorageChange(data)}
                 customStyle="text-sm w-[150px]"

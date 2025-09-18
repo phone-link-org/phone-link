@@ -42,10 +42,7 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
           placeholder="매장명 검색"
         />
         <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
-          <HiChevronUpDown
-            className="h-5 w-5 text-gray-400"
-            aria-hidden="true"
-          />
+          <HiChevronUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
         </Combobox.Button>
 
         {filteredStores.length > 0 && (
@@ -84,29 +81,18 @@ const StoreSearchableSelect: React.FC<StoreSearchableSelectProps> = ({
                 className={({ active }) =>
                   classNames(
                     "relative cursor-default select-none py-2 pl-3 pr-9",
-                    active
-                      ? "bg-primary-light text-white dark:bg-primary-dark"
-                      : "text-gray-900 dark:text-gray-200",
+                    active ? "bg-primary-light text-white dark:bg-primary-dark" : "text-gray-900 dark:text-gray-200",
                   )
                 }
               >
                 {({ active, selected }) => (
                   <>
-                    <span
-                      className={classNames(
-                        "block truncate",
-                        selected ? "font-semibold" : "",
-                      )}
-                    >
-                      {store.name}
-                    </span>
+                    <span className={classNames("block truncate", selected ? "font-semibold" : "")}>{store.name}</span>
                     {selected && (
                       <span
                         className={classNames(
                           "absolute inset-y-0 right-0 flex items-center pr-4",
-                          active
-                            ? "text-white"
-                            : "text-primary-light dark:text-primary-dark",
+                          active ? "text-white" : "text-primary-light dark:text-primary-dark",
                         )}
                       >
                         <HiCheck className="h-5 w-5" aria-hidden="true" />

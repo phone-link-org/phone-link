@@ -12,12 +12,7 @@ interface ManufacturerModalProps {
   onSave: () => void;
 }
 
-const ManufacturerModal: React.FC<ManufacturerModalProps> = ({
-  isOpen,
-  onClose,
-  manufacturerData,
-  onSave,
-}) => {
+const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ isOpen, onClose, manufacturerData, onSave }) => {
   const {
     register,
     handleSubmit,
@@ -74,21 +69,12 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-background-light dark:bg-background-dark p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100"
-                >
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
                   {manufacturerData?.id ? "제조사 수정" : "제조사 추가"}
                 </Dialog.Title>
-                <form
-                  onSubmit={handleSubmit(onValid)}
-                  className="mt-4 space-y-4"
-                >
+                <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4">
                   <div>
-                    <label
-                      htmlFor="name_ko"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
+                    <label htmlFor="name_ko" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       제조사명 (한국어)
                     </label>
                     <input
@@ -99,17 +85,10 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                     />
-                    {errors.name_ko && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.name_ko.message}
-                      </p>
-                    )}
+                    {errors.name_ko && <p className="mt-1 text-sm text-red-600">{errors.name_ko.message}</p>}
                   </div>
                   <div>
-                    <label
-                      htmlFor="name_en"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
+                    <label htmlFor="name_en" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       제조사명 (영어)
                     </label>
                     <input
@@ -120,11 +99,7 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                     />
-                    {errors.name_en && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.name_en.message}
-                      </p>
-                    )}
+                    {errors.name_en && <p className="mt-1 text-sm text-red-600">{errors.name_en.message}</p>}
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-2">

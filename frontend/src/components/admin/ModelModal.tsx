@@ -1,17 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { format } from "date-fns";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import {
-  Controller,
-  useFieldArray,
-  useForm,
-  type FieldErrors,
-} from "react-hook-form";
-import type {
-  PhoneDetailFormData,
-  PhoneManufacturerDto,
-  PhoneStorageDto,
-} from "../../../../shared/phone.types";
+import { Controller, useFieldArray, useForm, type FieldErrors } from "react-hook-form";
+import type { PhoneDetailFormData, PhoneManufacturerDto, PhoneStorageDto } from "../../../../shared/phone.types";
 import { api } from "../../api/axios";
 import CustomCheckbox from "../CustomCheckbox";
 import ImageUpload from "../ImageUpload";
@@ -24,12 +15,7 @@ interface ModelModalProps {
   onSave: () => void;
 }
 
-const ModelModal: React.FC<ModelModalProps> = ({
-  isOpen,
-  onClose,
-  phoneModelData,
-  onSave,
-}) => {
+const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, phoneModelData, onSave }) => {
   const {
     register,
     handleSubmit,
@@ -47,9 +33,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
     ),
     criteriaMode: "all",
   });
-  const [manufacturers, setManufacturers] = useState<PhoneManufacturerDto[]>(
-    [],
-  );
+  const [manufacturers, setManufacturers] = useState<PhoneManufacturerDto[]>([]);
   const [allStorages, setAllStorages] = useState<PhoneStorageDto[]>([]);
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -68,9 +52,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
 
   const fetchManufacturers = async () => {
     try {
-      const result = await api.get<PhoneManufacturerDto[]>(
-        "/phone/manufacturers",
-      );
+      const result = await api.get<PhoneManufacturerDto[]>("/phone/manufacturers");
       setManufacturers(result);
     } catch (error) {
       toast.error("제조사 정보를 불러오는 데 실패했습니다.");
@@ -87,9 +69,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
     if (phoneModelData) {
       const formattedData = {
         ...phoneModelData,
-        releaseDate: phoneModelData.releaseDate
-          ? format(new Date(phoneModelData.releaseDate), "yyyy-MM-dd")
-          : "",
+        releaseDate: phoneModelData.releaseDate ? format(new Date(phoneModelData.releaseDate), "yyyy-MM-dd") : "",
       };
       reset(formattedData as any);
       replace(phoneModelData.storages || []);
@@ -109,26 +89,16 @@ const ModelModal: React.FC<ModelModalProps> = ({
   const watchedStorages = watch("storages", []);
 
   const formatPrice = (value: number | string | undefined | null): string => {
-    if (
-      value === undefined ||
-      value === null ||
-      value === "" ||
-      isNaN(Number(value))
-    )
-      return "";
+    if (value === undefined || value === null || value === "" || isNaN(Number(value))) return "";
     const num = String(value).replace(/,/g, "");
     if (isNaN(Number(num)) || num === "") return "";
     return Number(num).toLocaleString("ko-KR");
   };
 
   const handleStorageChange = (storage: PhoneStorageDto) => {
-    const index = watchedStorages.findIndex(
-      (s) => s.storage === storage.storage,
-    );
+    const index = watchedStorages.findIndex((s) => s.storage === storage.storage);
     if (index > -1) {
-      const fieldIndex = fields.findIndex(
-        (field) => field.storage === storage.storage,
-      );
+      const fieldIndex = fields.findIndex((field) => field.storage === storage.storage);
       if (fieldIndex > -1) remove(fieldIndex);
     } else {
       append({
@@ -216,16 +186,10 @@ const ModelModal: React.FC<ModelModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-background-light dark:bg-background-dark p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100"
-                >
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
                   {phoneModelData ? "핸드폰 모델 수정" : "핸드폰 모델 추가"}
                 </Dialog.Title>
-                <form
-                  onSubmit={handleSubmit(onValid, onInvalid)}
-                  className="mt-4 space-y-4"
-                >
+                <form onSubmit={handleSubmit(onValid, onInvalid)} className="mt-4 space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <label
@@ -249,9 +213,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
                         ))}
                       </select>
                       {errors.manufacturerId && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.manufacturerId.message}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.manufacturerId.message}</p>
                       )}
                     </div>
                     <div>
@@ -287,9 +249,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                       />
                       {errors.modelName_ko && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.modelName_ko.message}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.modelName_ko.message}</p>
                       )}
                     </div>
 
@@ -309,9 +269,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                       />
                       {errors.modelName_en && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.modelName_en.message}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.modelName_en.message}</p>
                       )}
                     </div>
                   </div>
@@ -331,9 +289,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
                   />
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      용량 선택
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">용량 선택</label>
                     <div className="mt-2 grid grid-cols-3 gap-2 lg:grid-cols-6">
                       {allStorages.map((storage) => (
                         <CustomCheckbox
@@ -348,10 +304,7 @@ const ModelModal: React.FC<ModelModalProps> = ({
 
                   <div className="space-y-4 max-h-48 overflow-y-auto pr-2">
                     {fields.map((field, index) => (
-                      <div
-                        key={field.id}
-                        className="p-2 border rounded-md border-gray-200 dark:border-gray-500"
-                      >
+                      <div key={field.id} className="p-2 border rounded-md border-gray-200 dark:border-gray-500">
                         <div className="flex md:space-x-4 md:items-center gap-4 md:gap-0">
                           {/* 용량 */}
                           <div className="md:w-16 md:flex-shrink-0 flex items-center h-full">
@@ -378,13 +331,8 @@ const ModelModal: React.FC<ModelModalProps> = ({
                                     id={`storages.${index}.devices.0.retailPrice`}
                                     value={formatPrice(field.value)}
                                     onChange={(e) => {
-                                      const rawValue = e.target.value.replace(
-                                        /[^0-9]/g,
-                                        "",
-                                      );
-                                      field.onChange(
-                                        rawValue ? parseInt(rawValue, 10) : 0,
-                                      );
+                                      const rawValue = e.target.value.replace(/[^0-9]/g, "");
+                                      field.onChange(rawValue ? parseInt(rawValue, 10) : 0);
                                     }}
                                     className="w-full px-3 py-2 pr-8 text-right border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                                     placeholder="0"
@@ -395,13 +343,9 @@ const ModelModal: React.FC<ModelModalProps> = ({
                                 </div>
                               )}
                             />
-                            {errors.storages?.[index]?.devices?.[0]
-                              ?.retailPrice && (
+                            {errors.storages?.[index]?.devices?.[0]?.retailPrice && (
                               <p className="mt-1 text-xs text-red-600">
-                                {
-                                  errors.storages?.[index]?.devices?.[0]
-                                    ?.retailPrice?.message
-                                }
+                                {errors.storages?.[index]?.devices?.[0]?.retailPrice?.message}
                               </p>
                             )}
                           </div>
@@ -426,13 +370,8 @@ const ModelModal: React.FC<ModelModalProps> = ({
                                     id={`storages.${index}.devices.0.unlockedPrice`}
                                     value={formatPrice(field.value)}
                                     onChange={(e) => {
-                                      const rawValue = e.target.value.replace(
-                                        /[^0-9]/g,
-                                        "",
-                                      );
-                                      field.onChange(
-                                        rawValue ? parseInt(rawValue, 10) : 0,
-                                      );
+                                      const rawValue = e.target.value.replace(/[^0-9]/g, "");
+                                      field.onChange(rawValue ? parseInt(rawValue, 10) : 0);
                                     }}
                                     className="w-full px-3 py-2 pr-8 text-right border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                                     placeholder="0"
@@ -443,13 +382,9 @@ const ModelModal: React.FC<ModelModalProps> = ({
                                 </div>
                               )}
                             />
-                            {errors.storages?.[index]?.devices?.[0]
-                              ?.unlockedPrice && (
+                            {errors.storages?.[index]?.devices?.[0]?.unlockedPrice && (
                               <p className="mt-1 text-xs text-red-600">
-                                {
-                                  errors.storages?.[index]?.devices?.[0]
-                                    ?.unlockedPrice?.message
-                                }
+                                {errors.storages?.[index]?.devices?.[0]?.unlockedPrice?.message}
                               </p>
                             )}
                           </div>
@@ -463,21 +398,14 @@ const ModelModal: React.FC<ModelModalProps> = ({
                             </label>
                             <input
                               type="text"
-                              {...register(
-                                `storages.${index}.devices.0.coupangLink`,
-                                {
-                                  required: "쿠팡 링크를 입력해주세요.",
-                                },
-                              )}
+                              {...register(`storages.${index}.devices.0.coupangLink`, {
+                                required: "쿠팡 링크를 입력해주세요.",
+                              })}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                             />
-                            {errors.storages?.[index]?.devices?.[0]
-                              ?.coupangLink && (
+                            {errors.storages?.[index]?.devices?.[0]?.coupangLink && (
                               <p className="mt-1 text-xs text-red-600">
-                                {
-                                  errors.storages?.[index]?.devices?.[0]
-                                    ?.coupangLink?.message
-                                }
+                                {errors.storages?.[index]?.devices?.[0]?.coupangLink?.message}
                               </p>
                             )}
                           </div>

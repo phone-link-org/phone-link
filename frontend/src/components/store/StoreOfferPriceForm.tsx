@@ -45,33 +45,35 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
           apiClient.get<{ data: StoreOfferModel[] }>(`/store/${storeId}/offers`),
           apiClient.get<{ data: CarrierDto[] }>("/phone/carriers"),
         ]);
-        
+
         const allDevices = devicesRes.data.data;
         const existingOffers = offersRes.data.data;
         setCarriers(carriersRes.data.data);
 
         // 2. 전체 기기 목록을 기반으로 시세표 구조 생성
-        const newOffers = allDevices.flatMap(manufacturer => 
-          manufacturer.models.map(model => {
+        const newOffers = allDevices.flatMap((manufacturer) =>
+          manufacturer.models.map((model) => {
             return {
               manufacturerId: manufacturer.id,
               modelId: model.id,
               modelName: model.name,
-              storages: model.storages.map(storage => {
+              storages: model.storages.map((storage) => {
                 // 3. 기존 가격 정보가 있는지 찾아서 병합
-                const existingModel = existingOffers.find(o => o.modelId === model.id);
-                const existingStorage = existingModel?.storages.find(s => s.storageId === storage.id);
+                const existingModel = existingOffers.find((o) => o.modelId === model.id);
+                const existingStorage = existingModel?.storages.find((s) => s.storageId === storage.id);
 
                 return {
                   storageId: storage.id,
                   storage: storage.capacity,
-                  carriers: carriersRes.data.data.map(carrier => {
-                    const existingCarrier = existingStorage?.carriers.find(c => c.carrierId === carrier.id);
+                  carriers: carriersRes.data.data.map((carrier) => {
+                    const existingCarrier = existingStorage?.carriers.find((c) => c.carrierId === carrier.id);
                     return {
                       carrierId: carrier.id,
                       carrierName: carrier.name,
-                      offerTypes: offerTypes.map(offerType => {
-                        const existingOfferType = existingCarrier?.offerTypes.find(ot => ot.offerType === offerType.value);
+                      offerTypes: offerTypes.map((offerType) => {
+                        const existingOfferType = existingCarrier?.offerTypes.find(
+                          (ot) => ot.offerType === offerType.value,
+                        );
                         return {
                           offerType: offerType.value,
                           price: existingOfferType?.price ?? null,
@@ -82,11 +84,10 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                 };
               }),
             };
-          })
+          }),
         );
-        
-        setOffers(newOffers);
 
+        setOffers(newOffers);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -94,10 +95,10 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, [storeId]);
-  
+
   const handleRemoveRow = (modelId: number, storageId: number) => {
     setOffers((prev) =>
       prev
@@ -114,7 +115,13 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     );
   };
 
-  const handlePriceChange = (modelId: number, storageId: number, carrierId: number, offerType: OfferType, newValue: string) => {
+  const handlePriceChange = (
+    modelId: number,
+    storageId: number,
+    carrierId: number,
+    offerType: OfferType,
+    newValue: string,
+  ) => {
     const price = newValue === "" ? null : Number(newValue);
 
     setOffers(
@@ -139,7 +146,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   const getCarrierImageUrl = (carrierName: string) => {
     try {
       return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url).href;
-    } catch (error) {
+    } catch {
       return "https://placehold.co/500x500";
     }
   };
@@ -148,12 +155,12 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     e.preventDefault();
 
     // 1. 모든 가격 필드가 비어있는지 검사
-    const hasAnyPrice = offers.some(model =>
-      model.storages.some(storage =>
-        storage.carriers.some(carrier =>
-          carrier.offerTypes.some(offer => offer.price !== null && offer.price !== undefined)
-        )
-      )
+    const hasAnyPrice = offers.some((model) =>
+      model.storages.some((storage) =>
+        storage.carriers.some((carrier) =>
+          carrier.offerTypes.some((offer) => offer.price !== null && offer.price !== undefined),
+        ),
+      ),
     );
 
     if (!hasAnyPrice) {
@@ -184,17 +191,38 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
             <table className="min-w-full table-fixed">
               <thead className="sticky top-0 bg-[#a8a8a8] dark:bg-[#737373]">
                 <tr>
-                  <th scope="col" className="w-48 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">모델</th>
-                  <th scope="col" className="w-24 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">용량</th>
-                  {carriers.map(carrier =>
-                    offerTypes.map(type => (
-                      <th key={`th-${carrier.id}-${type.value}`} scope="col" className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider">
-                        <img src={getCarrierImageUrl(carrier.name)} alt={carrier.name} className="max-w-6 max-h-6 object-contain mx-auto mb-1" />
+                  <th
+                    scope="col"
+                    className="w-48 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
+                  >
+                    모델
+                  </th>
+                  <th
+                    scope="col"
+                    className="w-24 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
+                  >
+                    용량
+                  </th>
+                  {carriers.map((carrier) =>
+                    offerTypes.map((type) => (
+                      <th
+                        key={`th-${carrier.id}-${type.value}`}
+                        scope="col"
+                        className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
+                      >
+                        <img
+                          src={getCarrierImageUrl(carrier.name)}
+                          alt={carrier.name}
+                          className="max-w-6 max-h-6 object-contain mx-auto mb-1"
+                        />
                         {type.label}
                       </th>
-                    ))
+                    )),
                   )}
-                  <th scope="col" className="w-20 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"></th>
+                  <th
+                    scope="col"
+                    className="w-20 px-6 py-3 text-center text-sm font-medium text-white dark:text-black uppercase tracking-wider"
+                  ></th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-[#292929]">
@@ -202,13 +230,21 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                   <tr>
                     <td colSpan={carriers.length * offerTypes.length + 3} className="px-6 py-20">
                       <div className="flex items-center justify-center">
-                        <ClipLoader size={48} color={theme === "light" ? "#4F7942" : "#9DC183"} loading={true} className="animate-pulse" />
+                        <ClipLoader
+                          size={48}
+                          color={theme === "light" ? "#4F7942" : "#9DC183"}
+                          loading={true}
+                          className="animate-pulse"
+                        />
                       </div>
                     </td>
                   </tr>
                 ) : offers.length === 0 ? (
                   <tr>
-                    <td colSpan={carriers.length * offerTypes.length + 3} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <td
+                      colSpan={carriers.length * offerTypes.length + 3}
+                      className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                    >
                       표시할 기기 정보가 없습니다.
                     </td>
                   </tr>
@@ -236,12 +272,17 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
                             {storage.storage}
                           </td>
-                          {carriers.map(carrier =>
-                            offerTypes.map(offerType => {
-                              const carrierData = storage.carriers.find(c => c.carrierId === carrier.id);
-                              const offerTypeData = carrierData?.offerTypes.find(ot => ot.offerType === offerType.value);
+                          {carriers.map((carrier) =>
+                            offerTypes.map((offerType) => {
+                              const carrierData = storage.carriers.find((c) => c.carrierId === carrier.id);
+                              const offerTypeData = carrierData?.offerTypes.find(
+                                (ot) => ot.offerType === offerType.value,
+                              );
                               return (
-                                <td key={`cell-${storage.storageId}-${carrier.id}-${offerType.value}`} className="px-4 py-4 whitespace-nowrap">
+                                <td
+                                  key={`cell-${storage.storageId}-${carrier.id}-${offerType.value}`}
+                                  className="px-4 py-4 whitespace-nowrap"
+                                >
                                   <input
                                     type="number"
                                     className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
@@ -258,7 +299,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                                     disabled={!isEditable}
                                   />
                                 </td>
-                              )
+                              );
                             }),
                           )}
 

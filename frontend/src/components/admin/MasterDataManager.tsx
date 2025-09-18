@@ -22,28 +22,17 @@ const MasterDataManager: React.FC = () => {
   const [isManufacturerModalOpen, setIsManufacturerModalOpen] = useState(false);
   const [isCarrierModalOpen, setIsCarrierModalOpen] = useState(false);
 
-  const [phoneModelDatas, setPhoneModelDatas] = useState<PhoneModelGridData[]>(
-    [],
-  );
-  const [selectedPhoneModel, setSelectedPhoneModel] =
-    useState<PhoneDetailFormData | null>(null);
+  const [phoneModelDatas, setPhoneModelDatas] = useState<PhoneModelGridData[]>([]);
+  const [selectedPhoneModel, setSelectedPhoneModel] = useState<PhoneDetailFormData | null>(null);
 
-  const [phoneStorageDatas, setPhoneStorageDatas] = useState<PhoneStorageDto[]>(
-    [],
-  );
-  const [selectedStorage, setSelectedStorage] =
-    useState<PhoneStorageDto | null>(null);
+  const [phoneStorageDatas, setPhoneStorageDatas] = useState<PhoneStorageDto[]>([]);
+  const [selectedStorage, setSelectedStorage] = useState<PhoneStorageDto | null>(null);
 
-  const [manufacturerDatas, setManufacturerDatas] = useState<
-    PhoneManufacturerDto[]
-  >([]);
-  const [selectedManufacturer, setSelectedManufacturer] =
-    useState<PhoneManufacturerDto | null>(null);
+  const [manufacturerDatas, setManufacturerDatas] = useState<PhoneManufacturerDto[]>([]);
+  const [selectedManufacturer, setSelectedManufacturer] = useState<PhoneManufacturerDto | null>(null);
 
   const [carrierDatas, setCarrierDatas] = useState<CarrierDto[]>([]);
-  const [selectedCarrier, setSelectedCarrier] = useState<CarrierDto | null>(
-    null,
-  );
+  const [selectedCarrier, setSelectedCarrier] = useState<CarrierDto | null>(null);
 
   const masterDataMenus = [
     { id: "models", name: "핸드폰 모델" },
@@ -88,9 +77,7 @@ const MasterDataManager: React.FC = () => {
           setPhoneStorageDatas(result);
           break;
         case "manufacturers":
-          result = await api.get<PhoneManufacturerDto[]>(
-            "/admin/manufacturers",
-          );
+          result = await api.get<PhoneManufacturerDto[]>("/admin/manufacturers");
           setManufacturerDatas(result);
           break;
         case "carriers":
@@ -116,9 +103,7 @@ const MasterDataManager: React.FC = () => {
       let response;
       switch (menuId) {
         case "models":
-          response = await api.get<PhoneDetailFormData>(
-            `/admin/phone-detail/${itemId}`,
-          );
+          response = await api.get<PhoneDetailFormData>(`/admin/phone-detail/${itemId}`);
           setSelectedPhoneModel(response);
           setIsModelModalOpen(true);
           break;
@@ -128,9 +113,7 @@ const MasterDataManager: React.FC = () => {
           setIsStorageModalOpen(true);
           break;
         case "manufacturers":
-          response = await api.get<PhoneManufacturerDto>(
-            `/admin/manufacturer/${itemId}`,
-          );
+          response = await api.get<PhoneManufacturerDto>(`/admin/manufacturer/${itemId}`);
           setSelectedManufacturer(response);
           setIsManufacturerModalOpen(true);
           break;
@@ -216,9 +199,7 @@ const MasterDataManager: React.FC = () => {
 
   return (
     <div>
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        시스템에 사용되는 정보를 관리합니다.
-      </p>
+      <p className="text-gray-600 dark:text-gray-300 mb-6">시스템에 사용되는 정보를 관리합니다.</p>
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-1/4 lg:w-1/5">
           <nav className="flex flex-col space-y-2">

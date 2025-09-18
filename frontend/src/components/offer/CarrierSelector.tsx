@@ -8,10 +8,7 @@ interface CarrierSelectorProps {
   onCarriersChange: (carriers: CarrierDto[]) => void;
 }
 
-const CarrierSelector: React.FC<CarrierSelectorProps> = ({
-  selectedCarriers,
-  onCarriersChange,
-}) => {
+const CarrierSelector: React.FC<CarrierSelectorProps> = ({ selectedCarriers, onCarriersChange }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
 
   useEffect(() => {
@@ -39,8 +36,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
 
   const getCarrierImageUrl = (carrierName: string) => {
     try {
-      return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url)
-        .href;
+      return new URL(`/src/assets/images/${carrierName}.png`, import.meta.url).href;
     } catch (error) {
       console.error(`Error loading image for carrier: ${carrierName}`, error);
       return "https://placehold.co/500x500";
@@ -85,9 +81,7 @@ const CarrierSelector: React.FC<CarrierSelectorProps> = ({
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {carrier.name}
-              </span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{carrier.name}</span>
             </button>
           );
         })}

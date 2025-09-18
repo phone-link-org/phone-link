@@ -28,19 +28,11 @@ interface DataGridProps<T extends { id: number }> {
   onAddItem: () => void;
 }
 
-const DataGrid = <T extends { id: number }>({
-  title,
-  data,
-  columns,
-  onRowClick,
-  onAddItem,
-}: DataGridProps<T>) => {
+const DataGrid = <T extends { id: number }>({ title, data, columns, onRowClick, onAddItem }: DataGridProps<T>) => {
   console.log(data);
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">
-        {title}
-      </h2>
+      <h2 className="text-xl font-semibold mb-4 text-foreground-light dark:text-foreground-dark">{title}</h2>
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-[#454545] overflow-hidden">
         <div className="overflow-x-auto max-h-[480px]">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-[#454545]">

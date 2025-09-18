@@ -3,13 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api/axios";
 import { format } from "date-fns";
 import type { OfferDetailFormData } from "../../../shared/types";
-import {
-  FiExternalLink,
-  FiMessageCircle,
-  FiPhone,
-  FiLink,
-  FiSmartphone,
-} from "react-icons/fi";
+import { FiExternalLink, FiMessageCircle, FiPhone, FiLink, FiSmartphone } from "react-icons/fi";
 import { CARRIERS, OFFER_TYPES } from "../../../shared/constants";
 
 const formatOfferType = (type?: string): string => {
@@ -24,9 +18,7 @@ const formatOfferType = (type?: string): string => {
 };
 
 const getOfferTypeBadgeColor = (offerType?: string) => {
-  return offerType === OFFER_TYPES.MNP
-    ? "bg-emerald-500 text-white"
-    : "bg-amber-500 text-white";
+  return offerType === OFFER_TYPES.MNP ? "bg-emerald-500 text-white" : "bg-amber-500 text-white";
 };
 
 const getCarrierBadgeColor = (carrier?: string) => {
@@ -46,8 +38,7 @@ const OfferDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [offerFormData, setOfferFormData] =
-    useState<OfferDetailFormData | null>(null);
+  const [offerFormData, setOfferFormData] = useState<OfferDetailFormData | null>(null);
   const [mvnoPlan, setMvnoPlan] = useState(30000);
   const [mnoPlan, setMnoPlan] = useState(45000);
   const [unlockedPrice, setUnlockedPrice] = useState(0);
@@ -95,13 +86,8 @@ const OfferDetailPage: React.FC = () => {
   if (error || !offerFormData) {
     return (
       <div className="flex flex-col justify-center items-center h-screen gap-4">
-        <p className="text-xl text-red-500">
-          {error || "판매 정보를 찾을 수 없습니다."}
-        </p>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-gray-200 rounded-md"
-        >
+        <p className="text-xl text-red-500">{error || "판매 정보를 찾을 수 없습니다."}</p>
+        <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 rounded-md">
           뒤로가기
         </button>
       </div>
@@ -109,8 +95,7 @@ const OfferDetailPage: React.FC = () => {
   }
 
   const selfPurchaseTotal = unlockedPrice + mvnoPlan * 24;
-  const offerTotal =
-    offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000;
+  const offerTotal = offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000;
   const difference = selfPurchaseTotal - offerTotal;
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -141,10 +126,7 @@ const OfferDetailPage: React.FC = () => {
           </div>
 
           <div className="flex-1 w-full">
-            <Link
-              to={`/store/${offerFormData.storeId}`}
-              className="w-fit block mx-auto sm:mx-0"
-            >
+            <Link to={`/store/${offerFormData.storeId}`} className="w-fit block mx-auto sm:mx-0">
               <p className="font-medium text-md text-gray-500 dark:text-gray-400 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                 {offerFormData.storeName}
               </p>
@@ -164,9 +146,7 @@ const OfferDetailPage: React.FC = () => {
             </div>
 
             <div className="mt-1 flex w-full flex-col items-center gap-y-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-baseline sm:gap-x-4">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {offerFormData.modelName}
-              </h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{offerFormData.modelName}</h2>
               <p
                 className={`text-4xl font-bold ${offerFormData?.price && offerFormData.price < 0 ? "text-red-500 dark:text-red-400" : "text-primary-light dark:text-primary-dark"}`}
               >
@@ -198,9 +178,7 @@ const OfferDetailPage: React.FC = () => {
             {/* 쿠팡 자급제 가격 + 바로가기 버튼 */}
             <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
               <div className="text-center">
-                <span className="text-gray-600 dark:text-gray-400">
-                  쿠팡 자급제:{" "}
-                </span>
+                <span className="text-gray-600 dark:text-gray-400">쿠팡 자급제: </span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {offerFormData.unlockedPrice
                     ? `${offerFormData.unlockedPrice.toLocaleString("ko-KR")}원`
@@ -271,16 +249,12 @@ const OfferDetailPage: React.FC = () => {
                         type="text"
                         value={unlockedPrice.toLocaleString("ko-KR")}
                         onChange={(e) => {
-                          const value = Number(
-                            e.target.value.replace(/[^0-9]/g, ""),
-                          );
+                          const value = Number(e.target.value.replace(/[^0-9]/g, ""));
                           setUnlockedPrice(isNaN(value) ? 0 : value);
                         }}
                         className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
                       />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        원
-                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">원</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
@@ -292,16 +266,12 @@ const OfferDetailPage: React.FC = () => {
                           type="text"
                           value={mvnoPlan.toLocaleString("ko-KR")}
                           onChange={(e) => {
-                            const value = Number(
-                              e.target.value.replace(/[^0-9]/g, ""),
-                            );
+                            const value = Number(e.target.value.replace(/[^0-9]/g, ""));
                             setMvnoPlan(isNaN(value) ? 0 : value);
                           }}
                           className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
                         />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          원
-                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">원</span>
                       </div>
                       <span className="font-mono">x 24</span>
                     </div>
@@ -311,9 +281,7 @@ const OfferDetailPage: React.FC = () => {
               <div className="mt-auto">
                 <hr className="my-3 border-gray-300 dark:border-gray-200" />
                 <div className="flex justify-between items-baseline">
-                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
-                    총
-                  </p>
+                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">총</p>
                   <p className="font-bold text-2xl text-gray-800 dark:text-gray-200">
                     {(unlockedPrice + mvnoPlan * 24).toLocaleString("ko-KR")}원
                   </p>
@@ -330,9 +298,7 @@ const OfferDetailPage: React.FC = () => {
                 <div className="space-y-2 text-gray-700 dark:text-gray-300">
                   <div className="flex justify-between items-center">
                     <p className="text-sm">필수 요금제 (6개월)</p>
-                    <p className="font-mono">
-                      {offerFormData.monthlyFee.toLocaleString("ko-KR")}원 x 6
-                    </p>
+                    <p className="font-mono">{offerFormData.monthlyFee.toLocaleString("ko-KR")}원 x 6</p>
                   </div>
                   <div className="flex justify-between items-center">
                     <p className="text-sm">변경 요금제 (18개월)</p>
@@ -343,16 +309,12 @@ const OfferDetailPage: React.FC = () => {
                           type="text"
                           value={mnoPlan.toLocaleString("ko-KR")}
                           onChange={(e) => {
-                            const value = Number(
-                              e.target.value.replace(/[^0-9]/g, ""),
-                            );
+                            const value = Number(e.target.value.replace(/[^0-9]/g, ""));
                             setMnoPlan(isNaN(value) ? 0 : value);
                           }}
                           className="w-full bg-transparent p-1 text-right font-semibold focus:outline-none focus:ring-0 border-0"
                         />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          원
-                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">원</span>
                       </div>
                       <span className="font-mono">x 18</span>
                     </div>
@@ -362,22 +324,14 @@ const OfferDetailPage: React.FC = () => {
                       <>
                         <p className="text-sm">개통 시 지원금 (페이백)</p>
                         <p className="font-mono text-red-500 dark:text-red-400">
-                          -{" "}
-                          {Math.abs(
-                            offerFormData.price! * 10000,
-                          ).toLocaleString("ko-KR")}
-                          원
+                          - {Math.abs(offerFormData.price! * 10000).toLocaleString("ko-KR")}원
                         </p>
                       </>
                     ) : (
                       <>
                         <p className="text-sm">개통 시 기기값 (선납)</p>
                         <p className="font-mono text-blue-500 dark:text-blue-400">
-                          +{" "}
-                          {(offerFormData.price! * 10000).toLocaleString(
-                            "ko-KR",
-                          )}
-                          원
+                          + {(offerFormData.price! * 10000).toLocaleString("ko-KR")}원
                         </p>
                       </>
                     )}
@@ -387,15 +341,11 @@ const OfferDetailPage: React.FC = () => {
               <div className="mt-auto">
                 <hr className="my-3 border-gray-300 dark:border-gray-200" />
                 <div className="flex justify-between items-baseline">
-                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
-                    총
-                  </p>
+                  <p className="font-bold text-lg text-gray-800 dark:text-gray-200">총</p>
                   <p className="font-bold text-2xl text-gray-800 dark:text-gray-200">
-                    {(
-                      offerFormData.monthlyFee * 6 +
-                      mnoPlan * 18 +
-                      offerFormData.price! * 10000
-                    ).toLocaleString("ko-KR")}
+                    {(offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000).toLocaleString(
+                      "ko-KR",
+                    )}
                     원
                   </p>
                 </div>
@@ -408,14 +358,9 @@ const OfferDetailPage: React.FC = () => {
                 <div>
                   <p className="font-semibold text-blue-800 dark:text-blue-200">
                     자급제 + 알뜰폰 조합보다{" "}
-                    <span className="text-2xl font-bold">
-                      {difference.toLocaleString("ko-KR")}원
-                    </span>{" "}
-                    더 저렴해요!
+                    <span className="text-2xl font-bold">{difference.toLocaleString("ko-KR")}원</span> 더 저렴해요!
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    (24개월 총 유지비 기준)
-                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">(24개월 총 유지비 기준)</p>
                 </div>
               </div>
             )}
@@ -424,14 +369,10 @@ const OfferDetailPage: React.FC = () => {
                 <div>
                   <p className="font-semibold text-orange-800 dark:text-orange-200">
                     자급제 + 알뜰폰 조합이{" "}
-                    <span className="text-2xl font-bold">
-                      {Math.abs(difference).toLocaleString("ko-KR")}원
-                    </span>{" "}
-                    더 저렴해요.
+                    <span className="text-2xl font-bold">{Math.abs(difference).toLocaleString("ko-KR")}원</span> 더
+                    저렴해요.
                   </p>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                    (24개월 총 유지비 기준)
-                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">(24개월 총 유지비 기준)</p>
                 </div>
               </div>
             )}
@@ -444,8 +385,7 @@ const OfferDetailPage: React.FC = () => {
             )}
           </div>
           <div className="mt-6 text-red-400">
-            * 부가적인 조건에 따라 실제 유지비는 다를 수 있습니다. 참고용으로만
-            봐주세요.
+            * 부가적인 조건에 따라 실제 유지비는 다를 수 있습니다. 참고용으로만 봐주세요.
           </div>
         </div>
         {/* )} */}
@@ -453,14 +393,10 @@ const OfferDetailPage: React.FC = () => {
         <hr className="my-8 border-gray-200 dark:border-gray-700" />
 
         <div className="space-y-4">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            판매처 정보
-          </h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">판매처 정보</h3>
           <div className="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex flex-col sm:flex-row sm:justify-between">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                판매처
-              </span>
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">판매처</span>
               <Link to={`/store/${offerFormData.storeId}`}>
                 <span className="font-semibold text-gray-900 dark:text-gray-100 sm:text-right hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                   {offerFormData.storeName}
@@ -468,9 +404,7 @@ const OfferDetailPage: React.FC = () => {
               </Link>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                주소
-              </span>
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">주소</span>
               <a
                 href={`https://map.naver.com/p/search/${offerFormData.storeName}`}
                 target="_blank"
@@ -482,9 +416,7 @@ const OfferDetailPage: React.FC = () => {
             </div>
             {offerFormData.storeContact && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                  연락처
-                </span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">연락처</span>
                 <a
                   href={`tel:${offerFormData.storeContact}`}
                   className="font-semibold text-gray-900 dark:text-gray-100 hover:underline sm:text-right  hover:text-primary-light dark:hover:text-primary-dark"
@@ -495,9 +427,7 @@ const OfferDetailPage: React.FC = () => {
             )}
             {(offerFormData.storeLink_1 || offerFormData.storeLink_2) && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">
-                  소셜 링크
-                </span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">소셜 링크</span>
                 <div className="flex flex-wrap items-center gap-x-4 sm:justify-end sm:w-3/4">
                   {offerFormData.storeLink_1 && (
                     <a

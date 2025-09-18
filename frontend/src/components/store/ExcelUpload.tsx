@@ -1,11 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-import type {
-  PriceInput,
-  Addon,
-  PriceSubmissionData,
-} from "../../../../shared/types";
+import type { PriceInput, Addon, PriceSubmissionData } from "../../../../shared/types";
 import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
 
 type TableRow = {
@@ -43,23 +39,14 @@ const ExcelUpload: React.FC = () => {
   //const [addons, setAddons] = useState<Addon[]>([{ name: "", carrier: "1", monthlyFee: "", requiredDuration: "", penaltyFee: "" }]);
   const storages = new Set(["128G", "256G", "512G", "1T"]);
 
-  const handleAddonChange = (
-    index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleAddonChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newAddons = [...addons];
 
-    if (
-      name === "monthlyFee" ||
-      name === "requiredDuration" ||
-      name === "penaltyFee"
-    ) {
+    if (name === "monthlyFee" || name === "requiredDuration" || name === "penaltyFee") {
       newAddons[index] = { ...newAddons[index], [name]: parseInt(value) };
     } else if (name === "carrier") {
-      const carrierKey = Object.keys(CARRIERS).find(
-        (k) => CARRIERS[k as keyof typeof CARRIERS] === value,
-      );
+      const carrierKey = Object.keys(CARRIERS).find((k) => CARRIERS[k as keyof typeof CARRIERS] === value);
       newAddons[index] = { ...newAddons[index], [name]: carrierKey || value };
     } else {
       newAddons[index] = { ...newAddons[index], [name]: value };
@@ -117,9 +104,7 @@ const ExcelUpload: React.FC = () => {
         setData(parsedData);
       } catch (error) {
         console.error("Error parsing Excel file:", error);
-        alert(
-          "Failed to parse Excel file. Please check the file format and console for details.",
-        );
+        alert("Failed to parse Excel file. Please check the file format and console for details.");
         setFileName(null);
       } finally {
         setIsProcessing(false);
@@ -155,11 +140,7 @@ const ExcelUpload: React.FC = () => {
       ];
 
       for (const c of priceByCarrier) {
-        if (
-          c.price !== "" &&
-          c.price !== undefined &&
-          !isNaN(Number(c.price))
-        ) {
+        if (c.price !== "" && c.price !== undefined && !isNaN(Number(c.price))) {
           results.push({
             storeId: 1, // Placeholder
             model: modelName,
@@ -206,9 +187,7 @@ const ExcelUpload: React.FC = () => {
   }
 
   function numVal(v: any) {
-    return v !== "" && v !== undefined && !isNaN(Number(v))
-      ? Number(v)
-      : undefined;
+    return v !== "" && v !== undefined && !isNaN(Number(v)) ? Number(v) : undefined;
   }
 
   const handleSubmit = async () => {
@@ -228,10 +207,7 @@ const ExcelUpload: React.FC = () => {
         //  penaltyFee: Number(addon.penaltyFee) || 0
         //}))
       };
-      const response = await axios.post(
-        `${apiBaseURL}/api/price-input`,
-        submissionData,
-      );
+      const response = await axios.post(`${apiBaseURL}/api/price-input`, submissionData);
 
       console.log("Server response:", response.data);
       alert("Data submitted successfully!");
@@ -268,11 +244,7 @@ const ExcelUpload: React.FC = () => {
           htmlFor="excel-upload"
           className={`cursor-pointer text-white font-bold py-2 px-4 rounded transition-colors duration-200 ${isProcessing ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"}`}
         >
-          {isProcessing
-            ? "Processing..."
-            : fileName
-              ? "Change File"
-              : "Select Excel File"}
+          {isProcessing ? "Processing..." : fileName ? "Change File" : "Select Excel File"}
         </label>
         <input
           id="excel-upload"
@@ -282,9 +254,7 @@ const ExcelUpload: React.FC = () => {
           className="hidden"
           disabled={isProcessing}
         />
-        {fileName && (
-          <span className="text-gray-600 dark:text-gray-300">{fileName}</span>
-        )}
+        {fileName && <span className="text-gray-600 dark:text-gray-300">{fileName}</span>}
       </div>
 
       {isProcessing && <div className="mt-6 text-center">Parsing file...</div>}
@@ -296,34 +266,20 @@ const ExcelUpload: React.FC = () => {
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light"
             disabled={isProcessing}
           >
-            {isProcessing
-              ? "Submitting..."
-              : `Submit ${tableData.length} Records`}
+            {isProcessing ? "Submitting..." : `Submit ${tableData.length} Records`}
           </button>
           <div className="mt-4 overflow-auto max-h-96">
             <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                 <tr>
-                  <th
-                    rowSpan={2}
-                    scope="col"
-                    className="border py-3 px-6 text-center align-middle"
-                  >
+                  <th rowSpan={2} scope="col" className="border py-3 px-6 text-center align-middle">
                     기기
                   </th>
-                  <th
-                    rowSpan={2}
-                    scope="col"
-                    className="border py-3 px-6 text-center align-middle"
-                  >
+                  <th rowSpan={2} scope="col" className="border py-3 px-6 text-center align-middle">
                     용량
                   </th>
                   {columns.map((col) => (
-                    <th
-                      colSpan={2}
-                      key={col.carrier}
-                      className="border py-2 px-4 text-center"
-                    >
+                    <th colSpan={2} key={col.carrier} className="border py-2 px-4 text-center">
                       {col.carrier}
                     </th>
                   ))}
@@ -331,42 +287,23 @@ const ExcelUpload: React.FC = () => {
                 <tr>
                   {columns.map((col) => (
                     <React.Fragment key={col.carrier}>
-                      <th className="border py-1 px-2 bg-gray-50 text-center">
-                        번호이동
-                      </th>
-                      <th className="border py-1 px-2 bg-gray-50 text-center">
-                        기기변경
-                      </th>
+                      <th className="border py-1 px-2 bg-gray-50 text-center">번호이동</th>
+                      <th className="border py-1 px-2 bg-gray-50 text-center">기기변경</th>
                     </React.Fragment>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {tableData.map((row, index) => (
-                  <tr
-                    key={index}
-                    className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
-                  >
+                  <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                     <td className="py-4 px-6 text-center">{row.model}</td>
                     <td className="py-4 px-6 text-center">{row.capacity}</td>
-                    <td className="py-4 px-6 text-center">
-                      {row.sk_mnp ?? "-"}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {row.sk_chg ?? "-"}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {row.kt_mnp ?? "-"}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {row.kt_chg ?? "-"}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {row.lg_mnp ?? "-"}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {row.lg_chg ?? "-"}
-                    </td>
+                    <td className="py-4 px-6 text-center">{row.sk_mnp ?? "-"}</td>
+                    <td className="py-4 px-6 text-center">{row.sk_chg ?? "-"}</td>
+                    <td className="py-4 px-6 text-center">{row.kt_mnp ?? "-"}</td>
+                    <td className="py-4 px-6 text-center">{row.kt_chg ?? "-"}</td>
+                    <td className="py-4 px-6 text-center">{row.lg_mnp ?? "-"}</td>
+                    <td className="py-4 px-6 text-center">{row.lg_chg ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -374,9 +311,7 @@ const ExcelUpload: React.FC = () => {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              부가서비스
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">부가서비스</label>
             {addons.map((addon, index) => (
               <div key={index} className="flex items-center gap-2 mt-2">
                 <input
@@ -390,10 +325,7 @@ const ExcelUpload: React.FC = () => {
                 <input
                   type="text"
                   name="carrier"
-                  value={
-                    CARRIERS[addon.carrier as keyof typeof CARRIERS] ||
-                    addon.carrier
-                  }
+                  value={CARRIERS[addon.carrier as keyof typeof CARRIERS] || addon.carrier}
                   onChange={(e) => handleAddonChange(index, e)}
                   list="carrier-options"
                   placeholder="통신사 선택 또는 입력"

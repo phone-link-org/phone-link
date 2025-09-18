@@ -5,15 +5,8 @@ export default function ThemeToggleButton() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <button
-      onClick={toggleTheme}
-      className="p-2 rounded-full dark:text-gray-200 transition-colors"
-    >
-      {theme === "dark" ? (
-        <IoMoonOutline size={22} />
-      ) : (
-        <IoSunnyOutline size={22} />
-      )}
+    <button onClick={toggleTheme} className="p-2 rounded-full dark:text-gray-200 transition-colors">
+      {theme === "dark" ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
     </button>
   );
 }

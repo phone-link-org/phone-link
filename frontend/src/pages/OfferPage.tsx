@@ -498,12 +498,12 @@ const OfferPage: React.FC = () => {
                         <div className="text-center sm:text-right">
                           <p
                             className={`text-2xl sm:text-3xl font-bold ${
-                              data.price && data.price < 0
+                              data.price !== null && data.price !== undefined && (data.price < 0 || data.price === 0)
                                 ? "text-red-500 dark:text-red-400"
                                 : "text-primary-light dark:text-primary-dark"
                             }`}
                           >
-                            {data.price}만원
+                            {data.price + (data.price && data.price !== 0 ? "만원" : "원")}
                           </p>
                         </div>
                       </div>

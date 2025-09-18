@@ -44,23 +44,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     try {
       const formData = new FormData();
       formData.append("image", file);
-      const response = await api.post<string>(
-        `/upload/${uploadType}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      const response = await api.post<string>(`/upload/${uploadType}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+      });
 
       return response;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        toast.error(
-          error.response.data.message ||
-            "이미지 업로드 중 오류가 발생했습니다.",
-        );
+        toast.error(error.response.data.message || "이미지 업로드 중 오류가 발생했습니다.");
       } else {
         toast.error("이미지 업로드 중 알 수 없는 오류가 발생했습니다.");
       }
@@ -77,9 +70,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       toast.success("이미지가 성공적으로 삭제되었습니다.");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        toast.error(
-          error.response.data.message || "이미지 삭제 중 오류가 발생했습니다.",
-        );
+        toast.error(error.response.data.message || "이미지 삭제 중 오류가 발생했습니다.");
       } else {
         toast.error("이미지 삭제 중 알 수 없는 오류가 발생했습니다.");
       }
@@ -185,14 +176,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         />
         {previewUrl ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <img
-              src={previewUrl}
-              alt="이미지 미리보기"
-              className="h-12 w-12 object-cover rounded-md"
-            />
-            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-              이미지 선택됨
-            </p>
+            <img src={previewUrl} alt="이미지 미리보기" className="h-12 w-12 object-cover rounded-md" />
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">이미지 선택됨</p>
             {!disabled && (
               <button
                 type="button"
@@ -208,9 +193,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           <div className="flex flex-col items-center justify-center h-full">
             <HiPhoto className="h-6 w-6 text-gray-400" />
             <p className="text-xs text-gray-600 dark:text-gray-300 my-1">
-              {disabled
-                ? "이미지 업로드 불가"
-                : "이미지를 드래그하거나 파일 선택 버튼을 클릭하세요"}
+              {disabled ? "이미지 업로드 불가" : "이미지를 드래그하거나 파일 선택 버튼을 클릭하세요"}
             </p>
             {!disabled && (
               <button

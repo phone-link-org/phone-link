@@ -8,10 +8,7 @@ interface OfferTypeSelectorProps {
   onOfferTypesChange: (offerTypes: OfferType[]) => void;
 }
 
-const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
-  selectedOfferTypes,
-  onOfferTypesChange,
-}) => {
+const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({ selectedOfferTypes, onOfferTypesChange }) => {
   const offerTypes = [
     { value: OFFER_TYPES.MNP, label: "번호이동", icon: BsArrowRepeat },
     { value: OFFER_TYPES.CHG, label: "기기변경", icon: BsPhoneFlip },
@@ -22,9 +19,7 @@ const OfferTypeSelector: React.FC<OfferTypeSelectorProps> = ({
 
     if (isSelected) {
       // 선택 해제
-      onOfferTypesChange(
-        selectedOfferTypes.filter((type) => type !== offerType),
-      );
+      onOfferTypesChange(selectedOfferTypes.filter((type) => type !== offerType));
     } else {
       // 선택 추가
       onOfferTypesChange([...selectedOfferTypes, offerType]);

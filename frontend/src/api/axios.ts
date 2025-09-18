@@ -49,14 +49,11 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // 성공 응답 로깅 (개발 환경에서만)
     if (import.meta.env.VITE_DEV_MODE) {
-      console.log(
-        `✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`,
-        {
-          status: response.status,
-          data: response.data,
-          timestamp: new Date().toISOString(),
-        },
-      );
+      console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+        status: response.status,
+        data: response.data,
+        timestamp: new Date().toISOString(),
+      });
     }
     return response;
   },
@@ -74,9 +71,7 @@ apiClient.interceptors.response.use(
       timestamp: new Date().toISOString(),
     };
 
-    console.groupCollapsed(
-      `❌ API Error: ${requestInfo.method} ${requestInfo.url}`,
-    );
+    console.groupCollapsed(`❌ API Error: ${requestInfo.method} ${requestInfo.url}`);
     console.error("Request Info:", requestInfo);
     console.error("Full Error Object:", error);
     console.groupEnd();
@@ -104,9 +99,7 @@ apiClient.interceptors.response.use(
         console.error("🌐 서버 연결 오류 - 잠시 후 다시 시도해주세요.");
         break;
       default:
-        console.error(
-          `⚠️ 알 수 없는 오류 (${response?.status}): ${errorMessage}`,
-        );
+        console.error(`⚠️ 알 수 없는 오류 (${response?.status}): ${errorMessage}`);
     }
 
     return Promise.reject(error);
@@ -115,19 +108,12 @@ apiClient.interceptors.response.use(
 
 // response.data를 직접 반환하고, 불필요한 메서드 제거 - 미사용 중
 export const api = {
-  get: async <T = any>(
-    url: string,
-    config?: AxiosRequestConfig,
-  ): Promise<T> => {
+  get: async <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.get<ApiResponse<T>>(url, config);
     return response.data.data as T; // 실제 데이터인 response.data.data를 직접 반환
   },
 
-  post: async <T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig,
-  ): Promise<T> => {
+  post: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.post<ApiResponse<T>>(url, data, config);
     return response.data.data as T; // 실제 데이터인 response.data.data를 직접 반환
   },

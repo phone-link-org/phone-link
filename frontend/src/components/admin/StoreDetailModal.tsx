@@ -21,14 +21,8 @@ interface StoreDetailModalProps {
   storeId: number;
 }
 
-const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
-  isOpen,
-  onClose,
-  storeId,
-}) => {
-  const [storeDetail, setStoreDetail] = useState<StoreRegisterFormData | null>(
-    null,
-  );
+const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onClose, storeId }) => {
+  const [storeDetail, setStoreDetail] = useState<StoreRegisterFormData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -37,10 +31,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
 
   const handleConfirm = (approvalStatus: "APPROVED" | "REJECTED") => {
     Swal.fire({
-      title:
-        approvalStatus === "APPROVED"
-          ? "승인하시겠습니까?"
-          : "거부하시겠습니까?",
+      title: approvalStatus === "APPROVED" ? "승인하시겠습니까?" : "거부하시겠습니까?",
       icon: "question",
       showCancelButton: true,
       background: theme === "dark" ? "#343434" : "#fff",
@@ -57,17 +48,11 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
             approvalStatus,
             sellerId: storeDetail?.createdBy,
           });
-          toast.success(
-            approvalStatus === "APPROVED"
-              ? "승인되었습니다."
-              : "거부되었습니다.",
-          );
+          toast.success(approvalStatus === "APPROVED" ? "승인되었습니다." : "거부되었습니다.");
         } catch (error) {
           console.error("Error confirm store:", error);
           toast.error(
-            approvalStatus === "APPROVED"
-              ? "승인하는 중 오류가 발생했습니다."
-              : "거부하는 중 오류가 발생했습니다.",
+            approvalStatus === "APPROVED" ? "승인하는 중 오류가 발생했습니다." : "거부하는 중 오류가 발생했습니다.",
           );
         } finally {
           onClose();
@@ -76,9 +61,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
     });
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setStoreDetail((prev) => {
       if (!prev) return prev;
@@ -108,9 +91,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
     const fetchStoreDetail = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get<StoreRegisterFormData>(
-          `/store/${storeId}/detail`,
-        );
+        const response = await api.get<StoreRegisterFormData>(`/store/${storeId}/detail`);
         setStoreDetail(response);
       } catch (error) {
         console.error("매장 상세정보 조회 실패:", error);
@@ -129,9 +110,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
         <div className="bg-white dark:bg-[#292929] rounded-lg p-8 max-w-2xl w-full mx-4">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-light dark:border-primary-dark"></div>
-            <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">
-              매장 정보를 불러오는 중...
-            </span>
+            <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">매장 정보를 불러오는 중...</span>
           </div>
         </div>
       </div>
@@ -143,9 +122,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white dark:bg-[#292929] rounded-lg p-8 max-w-2xl w-full mx-4">
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-400">
-              매장 정보를 불러올 수 없습니다.
-            </p>
+            <p className="text-gray-600 dark:text-gray-400">매장 정보를 불러올 수 없습니다.</p>
           </div>
         </div>
       </div>
@@ -157,9 +134,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
       <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-600">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            매장 등록 요청 상세정보
-          </h3>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">매장 등록 요청 상세정보</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -281,9 +256,7 @@ const StoreDetailModal: React.FC<StoreDetailModalProps> = ({
                     </div>
                   ) : (
                     <div className="flex items-center justify-center">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        이미지 없음
-                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">이미지 없음</p>
                     </div>
                   )}
                 </div>

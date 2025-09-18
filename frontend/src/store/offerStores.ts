@@ -10,11 +10,7 @@ import type {
   OfferSearchRequest,
   OfferSearchResult,
 } from "../../../shared/types";
-import {
-  SORT_ORDER,
-  type OfferType,
-  type SortOrder,
-} from "../../../shared/constants";
+import { SORT_ORDER, type OfferType, type SortOrder } from "../../../shared/constants";
 
 // 1. Store의 상태(state)와 액션(actions)에 대한 타입을 정의합니다.
 interface OfferState {
@@ -71,15 +67,7 @@ export const useOfferStore = create<OfferState & OfferActions>((set, get) => ({
   },
 
   fetchOffers: async (isNewSearch = false) => {
-    const {
-      loading,
-      page,
-      sortOrder,
-      selectedRegions,
-      selectedModels,
-      selectedCarriers,
-      selectedOfferTypes,
-    } = get();
+    const { loading, page, sortOrder, selectedRegions, selectedModels, selectedCarriers, selectedOfferTypes } = get();
 
     if (loading) return; // 중복 호출 방지
     set({ loading: true });
@@ -106,9 +94,7 @@ export const useOfferStore = create<OfferState & OfferActions>((set, get) => ({
       const data = await response.data;
 
       set((state) => ({
-        offerDatas: isNewSearch
-          ? data.offers
-          : [...state.offerDatas, ...data.offers],
+        offerDatas: isNewSearch ? data.offers : [...state.offerDatas, ...data.offers],
         hasNextPage: data.hasNextPage,
         page: data.hasNextPage ? currentPage + 1 : currentPage,
       }));

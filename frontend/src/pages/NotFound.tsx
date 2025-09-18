@@ -7,14 +7,10 @@ const NotFound: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
       <div className="max-w-md mx-auto text-center px-4">
         {/* 404 숫자 */}
-        <div className="text-9xl font-bold text-gray-300 dark:text-gray-500 mb-4">
-          404
-        </div>
+        <div className="text-9xl font-bold text-gray-300 dark:text-gray-500 mb-4">404</div>
 
         {/* 메인 메시지 */}
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">
-          페이지를 찾을 수 없습니다
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">페이지를 찾을 수 없습니다</h1>
 
         {/* 설명 */}
         <p className="text-gray-600 dark:text-gray-300 mb-8 text-md">

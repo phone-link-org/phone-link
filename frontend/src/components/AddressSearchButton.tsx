@@ -17,9 +17,7 @@ interface AddressSearchButtonProps {
   onAddressComplete: (data: DaumPostcodeData) => void;
 }
 
-const AddressSearchButton: React.FC<AddressSearchButtonProps> = ({
-  onAddressComplete,
-}) => {
+const AddressSearchButton: React.FC<AddressSearchButtonProps> = ({ onAddressComplete }) => {
   const open = useDaumPostcodePopup();
 
   const handleComplete = (data: DaumPostcodeData) => {

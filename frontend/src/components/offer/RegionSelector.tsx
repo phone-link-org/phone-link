@@ -68,9 +68,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
     const sidoCode = lastSelectedSido.code;
     const isAll = clickedSigungu.code === "-" + sidoCode;
 
-    const alreadyExists = selectedRegions.some(
-      (item) => item.code === clickedSigungu.code,
-    );
+    const alreadyExists = selectedRegions.some((item) => item.code === clickedSigungu.code);
 
     const trimmedSidoCode = sidoCode.substring(
       0,
@@ -81,30 +79,21 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       // '전체'를 선택한 경우
       if (alreadyExists) {
         // 이미 '전체'가 선택되어 있다면 제거
-        onRegionsChange(
-          selectedRegions.filter((item) => item.code !== clickedSigungu.code),
-        );
+        onRegionsChange(selectedRegions.filter((item) => item.code !== clickedSigungu.code));
       } else {
         // '전체'를 새로 선택한 경우, 같은 부모를 가진 다른 하위 지역들을 모두 제거하고 '전체'만 추가
-        const others = selectedRegions.filter(
-          (item) => !item.code.startsWith(trimmedSidoCode),
-        );
+        const others = selectedRegions.filter((item) => !item.code.startsWith(trimmedSidoCode));
         onRegionsChange([...others, clickedSigungu]);
       }
     } else if (alreadyExists) {
       // 이미 선택된 항목을 다시 클릭한 경우, 해당 항목을 제거합니다.
       // '전체' 항목도 함께 제거합니다.
       onRegionsChange(
-        selectedRegions.filter(
-          (item) =>
-            item.code !== clickedSigungu.code && item.code !== "-" + sidoCode,
-        ),
+        selectedRegions.filter((item) => item.code !== clickedSigungu.code && item.code !== "-" + sidoCode),
       );
     } else {
       // 새로운 하위 지역을 선택한 경우, '전체' 항목을 제거하고 새 항목을 추가합니다.
-      const others = selectedRegions.filter(
-        (item) => item.code !== "-" + sidoCode,
-      );
+      const others = selectedRegions.filter((item) => item.code !== "-" + sidoCode);
       onRegionsChange([...others, clickedSigungu]);
     }
   };
@@ -114,10 +103,7 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       <div className="w-full md:w-1/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-3 md:grid-cols-2 gap-2">
           {sidoOptions?.map((sido) => (
-            <label
-              key={sido.name}
-              className="flex justify-center items-center cursor-pointer"
-            >
+            <label key={sido.name} className="flex justify-center items-center cursor-pointer">
               <CustomCheckbox
                 label={sido.name}
                 checked={lastSelectedSido?.name === sido.name}
@@ -131,22 +117,15 @@ const RegionSelector: React.FC<RegionSelectorProps> = ({
       <div className="w-full md:w-3/4 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-400 rounded-lg p-3 bg-white dark:bg-[#292929]">
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
           {!lastSelectedSido ? (
-            <div className="text-gray-400 text-xs">
-              시/도를 먼저 선택하세요.
-            </div>
+            <div className="text-gray-400 text-xs">시/도를 먼저 선택하세요.</div>
           ) : !sigunguOptions ? (
             <span className="text-gray-400 text-xs">구/군 데이터 없음</span>
           ) : (
             sigunguOptions?.map((sigungu) => (
-              <label
-                key={sigungu.name}
-                className="flex justify-center items-center cursor-pointer"
-              >
+              <label key={sigungu.name} className="flex justify-center items-center cursor-pointer">
                 <CustomCheckbox
                   label={sigungu.name}
-                  checked={selectedRegions.some(
-                    (item) => sigungu.code === item.code,
-                  )}
+                  checked={selectedRegions.some((item) => sigungu.code === item.code)}
                   onChange={() => handleSubRegionChange(sigungu)}
                   customStyle="text-sm w-[81px]"
                 />

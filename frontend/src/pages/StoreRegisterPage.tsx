@@ -3,14 +3,7 @@ import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import { toast } from "sonner";
-import {
-  HiBuildingStorefront,
-  HiMapPin,
-  HiPhone,
-  HiUser,
-  HiLink,
-  HiMiniInformationCircle,
-} from "react-icons/hi2";
+import { HiBuildingStorefront, HiMapPin, HiPhone, HiUser, HiLink, HiMiniInformationCircle } from "react-icons/hi2";
 import type { StoreRegisterFormData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import ImageUpload from "../components/ImageUpload";
@@ -48,19 +41,13 @@ const StoreRegisterPage: React.FC = () => {
   });
   const [isNameChecked, setIsNameChecked] = useState<boolean>(false);
 
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof StoreRegisterFormData, string>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof StoreRegisterFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
   const addressDetailRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
     setFormData((prev) => ({
@@ -91,8 +78,7 @@ const StoreRegisterPage: React.FC = () => {
         extraAddress += data.bname;
       }
       if (data.buildingName !== "") {
-        extraAddress +=
-          extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
+        extraAddress += extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
       }
       fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
     }
@@ -163,12 +149,9 @@ const StoreRegisterPage: React.FC = () => {
         return;
       }
 
-      const response = await api.get<{ isDuplicate: boolean; message: string }>(
-        `/store/check-name`,
-        {
-          params: { inputStoreName: storeName },
-        },
-      );
+      const response = await api.get<{ isDuplicate: boolean; message: string }>(`/store/check-name`, {
+        params: { inputStoreName: storeName },
+      });
 
       if (response.isDuplicate === false) {
         toast.success("사용 가능한 매장명입니다.");
@@ -181,9 +164,7 @@ const StoreRegisterPage: React.FC = () => {
       }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        toast.error(
-          error.response.data.message || "매장명 확인 중 오류가 발생했습니다.",
-        );
+        toast.error(error.response.data.message || "매장명 확인 중 오류가 발생했습니다.");
       } else {
         toast.error("매장명 확인 중 알 수 없는 오류가 발생했습니다.");
       }
@@ -235,9 +216,7 @@ const StoreRegisterPage: React.FC = () => {
       }, 5000);
     } catch (error) {
       console.error("매장 등록 요청 실패:", error);
-      toast.error(
-        "매장 등록 요청 과정에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
-      );
+      toast.error("매장 등록 요청 과정에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.");
     } finally {
       setIsSubmitting(false);
     }
@@ -246,14 +225,11 @@ const StoreRegisterPage: React.FC = () => {
   return (
     <>
       <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
-        <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">
-          매장 등록 요청
-        </h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">매장 등록 요청</h1>
         <p className="text-gray-600 dark:text-gray-300 mb-6">
           새로운 매장을 등록하기 위해 필요한 정보를 입력해주세요.
           <br />
-          아래 정보들은 매장 등록 후 <b>매장 관리 페이지</b>에서 수정이
-          가능합니다.
+          아래 정보들은 매장 등록 후 <b>매장 관리 페이지</b>에서 수정이 가능합니다.
         </p>
 
         <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6">
@@ -263,10 +239,7 @@ const StoreRegisterPage: React.FC = () => {
               <div className="space-y-6">
                 {/* 매장명 */}
                 <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <HiBuildingStorefront className="inline h-4 w-4 mr-1" />
                     매장명 <span className="text-red-500">*</span>
                   </label>
@@ -292,17 +265,12 @@ const StoreRegisterPage: React.FC = () => {
                       중복 확인
                     </button>
                   </div>
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.name || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.name || " "}</p>
                 </div>
 
                 {/* 주소 */}
                 <div>
-                  <label
-                    htmlFor="address"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <HiMapPin className="inline h-4 w-4 mr-1" />
                     주소 <span className="text-red-500">*</span>
                   </label>
@@ -318,13 +286,9 @@ const StoreRegisterPage: React.FC = () => {
                         errors.address ? "border-red-500" : ""
                       }`}
                     />
-                    <AddressSearchButton
-                      onAddressComplete={handleAddressComplete}
-                    />
+                    <AddressSearchButton onAddressComplete={handleAddressComplete} />
                   </div>
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.address || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.address || " "}</p>
                 </div>
 
                 {/* 상세주소 */}
@@ -351,10 +315,7 @@ const StoreRegisterPage: React.FC = () => {
 
                 {/* 연락처 */}
                 <div>
-                  <label
-                    htmlFor="contact"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
+                  <label htmlFor="contact" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <HiPhone className="inline h-4 w-4 mr-1" />
                     연락처 <span className="text-red-500">*</span>
                   </label>
@@ -370,9 +331,7 @@ const StoreRegisterPage: React.FC = () => {
                     }`}
                     placeholder="숫자와 대시(-)만 입력해주세요"
                   />
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.contact || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.contact || " "}</p>
                 </div>
 
                 {/* 대표자명 */}
@@ -452,9 +411,7 @@ const StoreRegisterPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <p className="h-4 text-xs text-red-500">
-                    {errors.link_1 || errors.link_2 || " "}
-                  </p>
+                  <p className="h-4 text-xs text-red-500">{errors.link_1 || errors.link_2 || " "}</p>
                 </div>
                 {/* 매장 소개글 */}
                 <div>

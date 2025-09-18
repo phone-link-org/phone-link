@@ -12,12 +12,7 @@ interface StorageModalProps {
   onSave: () => void;
 }
 
-const StorageModal: React.FC<StorageModalProps> = ({
-  isOpen,
-  onClose,
-  storageData,
-  onSave,
-}) => {
+const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, storageData, onSave }) => {
   const {
     register,
     handleSubmit,
@@ -74,21 +69,12 @@ const StorageModal: React.FC<StorageModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-background-light dark:bg-background-dark p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100"
-                >
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
                   {storageData?.id ? "용량 수정" : "용량 추가"}
                 </Dialog.Title>
-                <form
-                  onSubmit={handleSubmit(onValid)}
-                  className="mt-4 space-y-4"
-                >
+                <form onSubmit={handleSubmit(onValid)} className="mt-4 space-y-4">
                   <div>
-                    <label
-                      htmlFor="storage"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
+                    <label htmlFor="storage" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       용량
                     </label>
                     <input
@@ -100,11 +86,7 @@ const StorageModal: React.FC<StorageModalProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
                       placeholder="예: 256GB"
                     />
-                    {errors.storage && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.storage.message}
-                      </p>
-                    )}
+                    {errors.storage && <p className="mt-1 text-sm text-red-600">{errors.storage.message}</p>}
                   </div>
 
                   <div className="mt-6 flex justify-end space-x-2">

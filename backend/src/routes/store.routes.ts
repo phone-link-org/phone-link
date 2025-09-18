@@ -307,130 +307,135 @@ router.get("/:storeId/offers", async (req, res) => {
   }
 });
 
-router.post("/:storeId/offers", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req: AuthenticatedRequest, res) => {
-  const { storeId } = req.params;
-  const { offers } = req.body;
-  const userId = req.user!.id; // ❕인증된 요청이므로 user 객체는 항상 존재
+router.post(
+  "/:storeId/offers",
+  isAuthenticated,
+  hasRole([ROLES.SELLER, ROLES.ADMIN]),
+  async (req: AuthenticatedRequest, res) => {
+    const { storeId } = req.params;
+    const { offers } = req.body;
+    const userId = req.user!.id; // ❕인증된 요청이므로 user 객체는 항상 존재
 
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-  try {
-    const offerRepo = queryRunner.manager.getRepository(Offer);
-    const deviceRepo = queryRunner.manager.getRepository(PhoneDevice);
+    try {
+      const offerRepo = queryRunner.manager.getRepository(Offer);
+      const deviceRepo = queryRunner.manager.getRepository(PhoneDevice);
 
-    // N+1 문제 해결을 위해 필요한 모든 device 정보를 미리 조회
-    const deviceIdentifiers = offers.flatMap((model: StoreOfferModel) =>
-      model.storages.map((storage) => ({
-        modelId: model.modelId,
-        storageId: storage.storageId,
-      })),
-    );
-    const devices = await deviceRepo.find({ where: deviceIdentifiers });
-    // 빠른 조회를 위해 Map으로 변환: '모델ID-스토리지ID'를 키로 사용
-    const deviceMap = new Map(devices.map((d) => [`${d.modelId}-${d.storageId}`, d] as [string, PhoneDeviceDto]));
+      // N+1 문제 해결을 위해 필요한 모든 device 정보를 미리 조회
+      const deviceIdentifiers = offers.flatMap((model: StoreOfferModel) =>
+        model.storages.map((storage) => ({
+          modelId: model.modelId,
+          storageId: storage.storageId,
+        })),
+      );
+      const devices = await deviceRepo.find({ where: deviceIdentifiers });
+      // 빠른 조회를 위해 Map으로 변환: '모델ID-스토리지ID'를 키로 사용
+      const deviceMap = new Map(devices.map((d) => [`${d.modelId}-${d.storageId}`, d] as [string, PhoneDeviceDto]));
 
-    // 클라이언트에서 받은 데이터를 DB에 저장할 최종 형태로 가공
-    const newOfferMap = new Map<string, OfferDto>();
-    for (const model of offers) {
-      for (const storage of model.storages) {
-        for (const carrier of storage.carriers) {
-          for (const offerType of carrier.offerTypes) {
-            const device = deviceMap.get(`${model.modelId}-${storage.storageId}`);
-            if (device) {
-              // 유니크한 키를 생성하여 Offer를 식별
-              const offerKey = `${carrier.carrierId}-${device.id}-${offerType.offerType}`;
-              const offerData: OfferDto = {
-                storeId: parseInt(storeId),
-                carrierId: carrier.carrierId,
-                deviceId: device.id,
-                offerType: offerType.offerType,
-                price: offerType.price,
-                updatedBy: userId,
-              };
-              newOfferMap.set(offerKey, offerData);
+      // 클라이언트에서 받은 데이터를 DB에 저장할 최종 형태로 가공
+      const newOfferMap = new Map<string, OfferDto>();
+      for (const model of offers) {
+        for (const storage of model.storages) {
+          for (const carrier of storage.carriers) {
+            for (const offerType of carrier.offerTypes) {
+              const device = deviceMap.get(`${model.modelId}-${storage.storageId}`);
+              if (device) {
+                // 유니크한 키를 생성하여 Offer를 식별
+                const offerKey = `${carrier.carrierId}-${device.id}-${offerType.offerType}`;
+                const offerData: OfferDto = {
+                  storeId: parseInt(storeId),
+                  carrierId: carrier.carrierId,
+                  deviceId: device.id,
+                  offerType: offerType.offerType,
+                  price: offerType.price,
+                  updatedBy: userId,
+                };
+                newOfferMap.set(offerKey, offerData);
+              }
             }
           }
         }
       }
-    }
 
-    // DB에 저장된 기존 Offer 데이터를 조회
-    const existingOffers = await offerRepo.findBy({
-      storeId: parseInt(storeId),
-    });
-    const existingOfferMap = new Map(
-      existingOffers.map((o) => {
-        const key = `${o.carrierId}-${o.deviceId}-${o.offerType}`;
-        return [key, o];
-      }),
-    );
+      // DB에 저장된 기존 Offer 데이터를 조회
+      const existingOffers = await offerRepo.findBy({
+        storeId: parseInt(storeId),
+      });
+      const existingOfferMap = new Map(
+        existingOffers.map((o) => {
+          const key = `${o.carrierId}-${o.deviceId}-${o.offerType}`;
+          return [key, o];
+        }),
+      );
 
-    // 추가(Insert), 수정(Update), 삭제(Delete)할 대상을 분류
-    const toInsert: OfferDto[] = [];
-    const toUpdate: Offer[] = [];
-    const toDelete: number[] = []; // id 배열
+      // 추가(Insert), 수정(Update), 삭제(Delete)할 대상을 분류
+      const toInsert: OfferDto[] = [];
+      const toUpdate: Offer[] = [];
+      const toDelete: number[] = []; // id 배열
 
-    // 새로운 데이터를 기준으로 Insert/Update 대상 찾기
-    for (const [key, newOffer] of newOfferMap.entries()) {
-      const existingOffer = existingOfferMap.get(key);
+      // 새로운 데이터를 기준으로 Insert/Update 대상 찾기
+      for (const [key, newOffer] of newOfferMap.entries()) {
+        const existingOffer = existingOfferMap.get(key);
 
-      if (existingOffer) {
-        // 기존에 데이터가 있으면
-        // 가격이 다를 경우에만 업데이트 목록에 추가
-        if (existingOffer.price !== newOffer.price) {
-          toUpdate.push({ ...existingOffer, price: newOffer.price ?? null });
+        if (existingOffer) {
+          // 기존에 데이터가 있으면
+          // 가격이 다를 경우에만 업데이트 목록에 추가
+          if (existingOffer.price !== newOffer.price) {
+            toUpdate.push({ ...existingOffer, price: newOffer.price ?? null });
+          }
+          // 비교가 끝난 항목은 기존 맵에서 제거
+          existingOfferMap.delete(key);
+        } else {
+          // 기존에 데이터가 없으면
+          toInsert.push(newOffer); // 추가 목록에 추가
         }
-        // 비교가 끝난 항목은 기존 맵에서 제거
-        existingOfferMap.delete(key);
-      } else {
-        // 기존에 데이터가 없으면
-        toInsert.push(newOffer); // 추가 목록에 추가
       }
-    }
 
-    // 이제 existingOfferMap에 남아있는 데이터는 삭제 대상입니다.
-    for (const offerToDelete of existingOfferMap.values()) {
-      toDelete.push(offerToDelete.id);
-    }
+      // 이제 existingOfferMap에 남아있는 데이터는 삭제 대상입니다.
+      for (const offerToDelete of existingOfferMap.values()) {
+        toDelete.push(offerToDelete.id);
+      }
 
-    // 5. 분류된 데이터를 바탕으로 DB 작업을 실행합니다.
-    if (toDelete.length > 0) {
-      await offerRepo.delete(toDelete);
-    }
-    if (toUpdate.length > 0) {
-      await offerRepo.save(toUpdate);
-    }
-    if (toInsert.length > 0) {
-      await offerRepo.insert(toInsert);
-    }
+      // 5. 분류된 데이터를 바탕으로 DB 작업을 실행합니다.
+      if (toDelete.length > 0) {
+        await offerRepo.delete(toDelete);
+      }
+      if (toUpdate.length > 0) {
+        await offerRepo.save(toUpdate);
+      }
+      if (toInsert.length > 0) {
+        await offerRepo.insert(toInsert);
+      }
 
-    // 6. 모든 작업이 성공했으므로 트랜잭션을 커밋합니다.
-    await queryRunner.commitTransaction();
+      // 6. 모든 작업이 성공했으므로 트랜잭션을 커밋합니다.
+      await queryRunner.commitTransaction();
 
-    res.status(200).json({
-      success: true,
-      data: {
-        inserted: toInsert.length,
-        updated: toUpdate.length,
-        deleted: toDelete.length,
-      },
-    });
-  } catch (error) {
-    // 에러 발생 시 모든 변경사항을 롤백합니다.
-    await queryRunner.rollbackTransaction();
-    console.error("Error during saving offers", error);
-    res.status(500).json({
-      success: false,
-      message: "가격 정보 저장 중 오류가 발생했습니다.",
-      error: "Internal Server Error",
-    });
-  } finally {
-    // 사용한 QueryRunner를 반드시 해제해줘야 합니다.
-    await queryRunner.release();
-  }
-});
+      res.status(200).json({
+        success: true,
+        data: {
+          inserted: toInsert.length,
+          updated: toUpdate.length,
+          deleted: toDelete.length,
+        },
+      });
+    } catch (error) {
+      // 에러 발생 시 모든 변경사항을 롤백합니다.
+      await queryRunner.rollbackTransaction();
+      console.error("Error during saving offers", error);
+      res.status(500).json({
+        success: false,
+        message: "가격 정보 저장 중 오류가 발생했습니다.",
+        error: "Internal Server Error",
+      });
+    } finally {
+      // 사용한 QueryRunner를 반드시 해제해줘야 합니다.
+      await queryRunner.release();
+    }
+  },
+);
 
 router.get("/:storeId/addons", async (req, res) => {
   try {

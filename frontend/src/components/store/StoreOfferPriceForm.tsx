@@ -33,6 +33,12 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
   const [offers, setOffers] = useState<StoreOfferModel[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [focusedCell, setFocusedCell] = useState<{
+    modelId: number;
+    storageId: number;
+    carrierId: number;
+    offerType: string;
+  } | null>(null);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -98,6 +104,14 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
 
     fetchData();
   }, [storeId]);
+
+  const handleCellFocus = (modelId: number, storageId: number, carrierId: number, offerType: string) => {
+    setFocusedCell({ modelId, storageId, carrierId, offerType });
+  };
+
+  const handleCellBlur = () => {
+    setFocusedCell(null);
+  };
 
   const handleRemoveRow = (modelId: number, storageId: number) => {
     setOffers((prev) =>
@@ -170,7 +184,21 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
 
     setIsSubmitting(true);
     try {
-      await apiClient.post(`/store/${storeId}/offers`, { offers });
+      // 모든 price가 NULL인 모델-용량 조합을 제거
+      const filteredOffers = offers
+        .map((model) => ({
+          ...model,
+          storages: model.storages.filter((storage) => {
+            // 해당 모델-용량 조합의 모든 price가 NULL인지 확인
+            const allPricesNull = storage.carriers.every((carrier) =>
+              carrier.offerTypes.every((offerType) => offerType.price === null),
+            );
+            return !allPricesNull; // 모든 price가 NULL이 아닌 경우만 유지
+          }),
+        }))
+        .filter((model) => model.storages.length > 0); // storages가 비어있는 모델도 제거
+
+      await apiClient.post(`/store/${storeId}/offers`, { offers: filteredOffers });
       toast.success("가격 정보가 성공적으로 등록되었습니다.");
     } catch (error) {
       toast.error("데이터 제출에 실패했습니다.");
@@ -187,7 +215,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
       <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white dark:bg-[#292929] rounded-b-lg">
         <div className="overflow-x-auto">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-end">단위: 만원</p>
-          <div className="h-[600px] overflow-y-auto border dark:border-gray-600 rounded-md">
+          <div className="h-[600px] overflow-y-auto border dark:border-gray-500 rounded-md">
             <table className="min-w-full table-fixed">
               <thead className="sticky top-0 bg-[#a8a8a8] dark:bg-[#737373]">
                 <tr>
@@ -204,20 +232,25 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                     용량
                   </th>
                   {carriers.map((carrier) =>
-                    offerTypes.map((type) => (
-                      <th
-                        key={`th-${carrier.id}-${type.value}`}
-                        scope="col"
-                        className="w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider"
-                      >
-                        <img
-                          src={getCarrierImageUrl(carrier.name)}
-                          alt={carrier.name}
-                          className="max-w-6 max-h-6 object-contain mx-auto mb-1"
-                        />
-                        {type.label}
-                      </th>
-                    )),
+                    offerTypes.map((type) => {
+                      const isFocused = focusedCell?.carrierId === carrier.id && focusedCell?.offerType === type.value;
+                      return (
+                        <th
+                          key={`th-${carrier.id}-${type.value}`}
+                          scope="col"
+                          className={`w-32 px-6 py-3 text-center text-sm font-medium text-white uppercase tracking-wider transition-colors duration-200 ${
+                            isFocused ? "bg-primary-light/50 dark:bg-primary-dark/50" : ""
+                          }`}
+                        >
+                          <img
+                            src={getCarrierImageUrl(carrier.name)}
+                            alt={carrier.name}
+                            className="max-w-6 max-h-6 object-contain mx-auto mb-1"
+                          />
+                          {type.label}
+                        </th>
+                      );
+                    }),
                   )}
                   <th
                     scope="col"
@@ -254,22 +287,32 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                       return (
                         <tr
                           key={`${model.modelId}-${storage.storageId}`}
-                          className={
-                            modelIndex > 0 || storageIndex > 0 ? "border-t border-gray-200 dark:border-gray-600" : ""
-                          }
+                          className={`${
+                            modelIndex > 0 || storageIndex > 0 ? "border-t border-gray-200 dark:border-gray-500" : ""
+                          } ${modelIndex % 2 === 0 ? "bg-white dark:bg-[#292929]" : "bg-gray-50 dark:bg-[#333333]"}`}
                         >
                           {/* 모델명: storage 개수만큼 rowSpan */}
                           {storageIndex === 0 && (
                             <td
                               rowSpan={model.storages.length}
-                              className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-600"
+                              className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-middle text-center border-r border-gray-200 dark:border-gray-500 transition-colors duration-200 ${
+                                focusedCell?.modelId === model.modelId
+                                  ? "bg-primary-light/40 dark:bg-primary-dark/40"
+                                  : ""
+                              }`}
                             >
                               {model.modelName}
                             </td>
                           )}
 
                           {/* 스토리지명 */}
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-600">
+                          <td
+                            className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 align-middle text-center border-r border-gray-200 dark:border-gray-500 transition-colors duration-200 ${
+                              focusedCell?.modelId === model.modelId && focusedCell?.storageId === storage.storageId
+                                ? "bg-primary-light/40 dark:bg-primary-dark/40"
+                                : ""
+                            }`}
+                          >
                             {storage.storage}
                           </td>
                           {carriers.map((carrier) =>
@@ -285,7 +328,7 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                                 >
                                   <input
                                     type="number"
-                                    className={`w-full px-1 py-1 border border-gray-300 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                                    className={`w-full px-1 py-1 border border-gray-300 dark:border-gray-500 rounded-md dark:bg-background-dark dark:text-white no-spinner placeholder:text-center focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
                                     value={offerTypeData?.price ?? ""}
                                     onChange={(e) =>
                                       handlePriceChange(
@@ -296,6 +339,11 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                                         e.target.value,
                                       )
                                     }
+                                    onFocus={() =>
+                                      handleCellFocus(model.modelId, storage.storageId, carrier.id, offerType.value)
+                                    }
+                                    onBlur={handleCellBlur}
+                                    onWheel={(e) => e.currentTarget.blur()}
                                     disabled={!isEditable}
                                   />
                                 </td>

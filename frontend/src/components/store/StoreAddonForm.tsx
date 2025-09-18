@@ -6,6 +6,7 @@ import { api } from "../../api/axios";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
 import { useTheme } from "../../hooks/useTheme";
+import LoadingSpinner from "../LoadingSpinner";
 
 const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ storeId, isEditable = true }) => {
   const [carriers, setCarriers] = useState<CarrierDto[]>([]);
@@ -18,6 +19,7 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
       penaltyFee: 0,
     },
   ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { theme } = useTheme();
 
@@ -170,6 +172,7 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
       cancelButtonText: "취소",
     }).then(async (result) => {
       if (result.isConfirmed) {
+        setIsSubmitting(true);
         try {
           await api.post(`/store/${storeId}/addon-save`, {
             addons,
@@ -178,211 +181,216 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
         } catch (error) {
           console.error("Error saving addons:", error);
           toast.error("부가서비스를 저장하는 중 오류가 발생했습니다.");
+        } finally {
+          setIsSubmitting(false);
         }
       }
     });
   };
 
   return (
-    <div className="p-4 sm:p-6 rounded-b-lg">
-      {/* 헤더 - 데스크톱에서만 표시 */}
-      <div className="hidden lg:flex gap-3 px-2 text-center mb-4">
-        <div className="w-32">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">통신사</label>
+    <>
+      <LoadingSpinner isVisible={isSubmitting} title="부가서비스 정보 저장 중" subtitle="잠시만 기다려주세요..." />
+      <div className="p-4 sm:p-6 rounded-b-lg">
+        {/* 헤더 - 데스크톱에서만 표시 */}
+        <div className="hidden lg:flex gap-3 px-2 text-center mb-4">
+          <div className="w-32">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">통신사</label>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">부가서비스명</label>
+          </div>
+          <div className="w-32">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">월 요금 (원)</label>
+          </div>
+          <div className="w-28">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">기간 (개월)</label>
+          </div>
+          <div className="w-32">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">추가 요금 (만원)</label>
+          </div>
+          <div className="w-8">{/* 삭제 버튼 공간 */}</div>
         </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">부가서비스명</label>
-        </div>
-        <div className="w-32">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">월 요금 (원)</label>
-        </div>
-        <div className="w-28">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">기간 (개월)</label>
-        </div>
-        <div className="w-32">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">추가 요금 (만원)</label>
-        </div>
-        <div className="w-8">{/* 삭제 버튼 공간 */}</div>
-      </div>
 
-      <div className="space-y-4">
-        {addons.map((addon, index) => (
-          <div key={index} className="border border-gray-200 dark:border-gray-500 rounded-lg p-4 sm:p-6">
-            {/* 모바일/태블릿: 카드 형태, 데스크톱: 테이블 형태 */}
-            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-              {/* 통신사 선택 */}
-              <div className="w-full lg:w-32">
-                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
-                  통신사
-                </label>
-                {isEditable ? (
-                  <Combobox
-                    value={carriers.find((carrier) => carrier.id === addon.carrierId) || null}
-                    onChange={(carrier) => handleAddonChange(index, "carrierId", carrier?.id || null)}
-                  >
-                    <div className="relative">
-                      <Combobox.Input
-                        className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light"
-                        displayValue={(carrier: CarrierDto | null) => carrier?.name || "통신사 선택"}
-                        readOnly
-                      />
-                      <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3">
-                        <FaChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                      </Combobox.Button>
-                      <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                        {carriers.map((carrier) => (
-                          <Combobox.Option
-                            key={carrier.id}
-                            value={carrier}
-                            className={({ active }) =>
-                              `relative cursor-default select-none py-2 pl-3 pr-9 ${
-                                active ? "bg-primary-light text-white" : "text-gray-900 dark:text-gray-100"
-                              }`
-                            }
-                          >
-                            {carrier.name}
-                          </Combobox.Option>
-                        ))}
-                      </Combobox.Options>
+        <div className="space-y-4">
+          {addons.map((addon, index) => (
+            <div key={index} className="border border-gray-200 dark:border-gray-500 rounded-lg p-4 sm:p-6">
+              {/* 모바일/태블릿: 카드 형태, 데스크톱: 테이블 형태 */}
+              <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+                {/* 통신사 선택 */}
+                <div className="w-full lg:w-32">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                    통신사
+                  </label>
+                  {isEditable ? (
+                    <Combobox
+                      value={carriers.find((carrier) => carrier.id === addon.carrierId) || null}
+                      onChange={(carrier) => handleAddonChange(index, "carrierId", carrier?.id || null)}
+                    >
+                      <div className="relative">
+                        <Combobox.Input
+                          className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light"
+                          displayValue={(carrier: CarrierDto | null) => carrier?.name || "통신사 선택"}
+                          readOnly
+                        />
+                        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <FaChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        </Combobox.Button>
+                        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                          {carriers.map((carrier) => (
+                            <Combobox.Option
+                              key={carrier.id}
+                              value={carrier}
+                              className={({ active }) =>
+                                `relative cursor-default select-none py-2 pl-3 pr-9 ${
+                                  active ? "bg-primary-light text-white" : "text-gray-900 dark:text-gray-100"
+                                }`
+                              }
+                            >
+                              {carrier.name}
+                            </Combobox.Option>
+                          ))}
+                        </Combobox.Options>
+                      </div>
+                    </Combobox>
+                  ) : (
+                    <div className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      {carriers.find((carrier) => carrier.id === addon.carrierId)?.name || "통신사 선택"}
                     </div>
-                  </Combobox>
-                ) : (
-                  <div className="w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                    {carriers.find((carrier) => carrier.id === addon.carrierId)?.name || "통신사 선택"}
+                  )}
+                </div>
+
+                {/* 부가서비스명 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                    부가서비스명
+                  </label>
+                  <input
+                    type="text"
+                    value={addon.name}
+                    onChange={(e) => handleAddonChange(index, "name", e.target.value)}
+                    placeholder="부가서비스명을 입력하세요"
+                    className={`w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                    disabled={!isEditable}
+                  />
+                </div>
+
+                {/* 숫자 입력 필드들을 그룹화 */}
+                <div className="flex flex-col gap-4 lg:flex-col xl:flex-row">
+                  {/* 월 납부 요금 */}
+                  <div className="w-full lg:w-32 xl:w-32">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                      월 요금
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formatNumberWithComma(addon.monthlyFee)}
+                        onChange={(e) => handleAddonChange(index, "monthlyFee", e.target.value)}
+                        placeholder="0"
+                        maxLength={7}
+                        className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                        disabled={!isEditable}
+                      />
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                        원
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 기간과 추가 요금을 같은 row에 배치 */}
+                  <div className="flex flex-row gap-2 sm:flex-row sm:gap-4 lg:flex-col xl:flex-row">
+                    {/* 유지 기간 */}
+                    <div className="w-1/2 sm:w-32 lg:w-28 xl:w-28">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                        기간
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={addon.durationMonths || ""}
+                          onChange={(e) => handleAddonChange(index, "durationMonths", e.target.value)}
+                          placeholder="0"
+                          maxLength={2}
+                          className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                          disabled={!isEditable}
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                          개월
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 미가입시 추가 요금 */}
+                    <div className="w-1/2 sm:w-40 lg:w-32 xl:w-32">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
+                        추가 요금
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={addon.penaltyFee || ""}
+                          onChange={(e) => handleAddonChange(index, "penaltyFee", e.target.value)}
+                          placeholder="0"
+                          maxLength={2}
+                          className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
+                          disabled={!isEditable}
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                          만원
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 삭제 버튼 - 편집 가능할 때만 표시 */}
+                {isEditable && (
+                  <div className="flex justify-center lg:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => removeAddon(index)}
+                      className="flex items-center justify-center w-10 h-10 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="삭제"
+                    >
+                      <FaTrashAlt className="text-sm" />
+                    </button>
                   </div>
                 )}
               </div>
-
-              {/* 부가서비스명 */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
-                  부가서비스명
-                </label>
-                <input
-                  type="text"
-                  value={addon.name}
-                  onChange={(e) => handleAddonChange(index, "name", e.target.value)}
-                  placeholder="부가서비스명을 입력하세요"
-                  className={`w-full px-2 py-2 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                  disabled={!isEditable}
-                />
-              </div>
-
-              {/* 숫자 입력 필드들을 그룹화 */}
-              <div className="flex flex-col gap-4 lg:flex-col xl:flex-row">
-                {/* 월 납부 요금 */}
-                <div className="w-full lg:w-32 xl:w-32">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
-                    월 요금
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formatNumberWithComma(addon.monthlyFee)}
-                      onChange={(e) => handleAddonChange(index, "monthlyFee", e.target.value)}
-                      placeholder="0"
-                      maxLength={7}
-                      className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                      disabled={!isEditable}
-                    />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
-                      원
-                    </span>
-                  </div>
-                </div>
-
-                {/* 기간과 추가 요금을 같은 row에 배치 */}
-                <div className="flex flex-row gap-2 sm:flex-row sm:gap-4 lg:flex-col xl:flex-row">
-                  {/* 유지 기간 */}
-                  <div className="w-1/2 sm:w-32 lg:w-28 xl:w-28">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
-                      기간
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={addon.durationMonths || ""}
-                        onChange={(e) => handleAddonChange(index, "durationMonths", e.target.value)}
-                        placeholder="0"
-                        maxLength={2}
-                        className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                        disabled={!isEditable}
-                      />
-                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
-                        개월
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 미가입시 추가 요금 */}
-                  <div className="w-1/2 sm:w-40 lg:w-32 xl:w-32">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 lg:hidden">
-                      추가 요금
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={addon.penaltyFee || ""}
-                        onChange={(e) => handleAddonChange(index, "penaltyFee", e.target.value)}
-                        placeholder="0"
-                        maxLength={2}
-                        className={`w-full px-2 py-2 pr-8 text-sm sm:text-base border border-gray-300 rounded-md dark:bg-background-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light ${!isEditable ? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed" : ""}`}
-                        disabled={!isEditable}
-                      />
-                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
-                        만원
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 삭제 버튼 - 편집 가능할 때만 표시 */}
-              {isEditable && (
-                <div className="flex justify-center lg:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => removeAddon(index)}
-                    className="flex items-center justify-center w-10 h-10 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                    title="삭제"
-                  >
-                    <FaTrashAlt className="text-sm" />
-                  </button>
-                </div>
-              )}
             </div>
+          ))}
+        </div>
+
+        {/* 부가서비스 추가 버튼 - 편집 가능할 때만 표시 */}
+        {isEditable && (
+          <div className="flex justify-center px-2 py-4">
+            <button
+              type="button"
+              onClick={addAddon}
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-md font-medium transition-colors"
+            >
+              + 부가서비스 추가
+            </button>
           </div>
-        ))}
+        )}
+
+        {/* 저장 버튼 - 편집 가능할 때만 표시 */}
+        {isEditable && (
+          <div className="flex justify-center mt-4 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                handleAddonSave();
+              }}
+              className="w-full sm:w-auto px-6 py-3 sm:py-2 rounded-md bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light text-white dark:text-foreground-light text-sm sm:text-base font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-primary-dark"
+            >
+              저장하기
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* 부가서비스 추가 버튼 - 편집 가능할 때만 표시 */}
-      {isEditable && (
-        <div className="flex justify-center px-2 py-4">
-          <button
-            type="button"
-            onClick={addAddon}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-md font-medium transition-colors"
-          >
-            + 부가서비스 추가
-          </button>
-        </div>
-      )}
-
-      {/* 저장 버튼 - 편집 가능할 때만 표시 */}
-      {isEditable && (
-        <div className="flex justify-center mt-4 pt-4">
-          <button
-            type="button"
-            onClick={() => {
-              handleAddonSave();
-            }}
-            className="w-full sm:w-auto px-6 py-3 sm:py-2 rounded-md bg-primary-light hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light text-white dark:text-foreground-light text-sm sm:text-base font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-primary-dark"
-          >
-            저장하기
-          </button>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

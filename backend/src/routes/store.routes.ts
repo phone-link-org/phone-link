@@ -1,21 +1,26 @@
 import { AuthenticatedRequest, hasRole, isAuthenticated } from "../middlewares/auth.middleware";
-import ReqPlanDto from "shared/reqPlan.types";
-import { PhoneDeviceDto } from "shared/phone.types";
-import { OfferDto } from "shared/offer.types";
+import {
+  AddonFormData,
+  StoreOfferModel,
+  StoreOfferPriceFormData,
+  OfferDto,
+  PhoneDeviceDto,
+  ReqPlanDto,
+  PendingStoreDto,
+  StoreRegisterFormData,
+  StoreStaffData,
+} from "shared/types";
 import { PhoneDevice } from "../typeorm/phoneDevices.entity";
-import { StoreOfferModel, StoreOfferPriceFormData } from "shared/offer.types";
 import { Offer } from "../typeorm/offers.entity";
-import { AddonFormData } from "shared/addon.types";
 import { Addon } from "../typeorm/addons.entity";
-import { PendingStoreDto, StoreRegisterFormData } from "../../../shared/store.types";
 import { Store } from "../typeorm/stores.entity";
+import { ReqPlan } from "../typeorm/reqPlans.entity";
+import { User } from "../typeorm/users.entity";
+import { Seller } from "../typeorm/sellers.entity";
+import { UserFavorites } from "../typeorm/userFavorites.entity";
 import { AppDataSource } from "../db";
 import { Router } from "express";
-import { ReqPlan } from "../typeorm/reqPlans.entity";
-import { UserFavorites } from "../typeorm/userFavorites.entity";
 import { ROLES } from "../../../shared/constants";
-import { User } from "../typeorm/users.entity";
-import { StoreStaffData } from "../../../shared/user.types";
 
 const router = Router();
 
@@ -745,6 +750,150 @@ router.get("/:storeId/staffs", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADM
     res.status(500).json({
       success: false,
       message: "직원 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.post("/update-staff-status", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { storeId, userId, newStatus } = req.body;
+    const sellerRepo = AppDataSource.getRepository(Seller);
+    const seller = await sellerRepo.findOne({ where: { storeId: parseInt(storeId), userId: parseInt(userId) } });
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "직원 조회 중 오류가 발생했습니다.",
+      });
+    }
+
+    seller.status = newStatus as "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";
+    await sellerRepo.save(seller);
+
+    res.status(200).json({
+      success: true,
+      message: "직원 상태 업데이트 완료",
+    });
+  } catch (error) {
+    console.error("Error during updating staff status", error);
+    res.status(500).json({
+      success: false,
+      message: "직원 상태 업데이트 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 사용 가능한 모델 목록 조회 (아직 등록되지 않은 모델들)
+router.get("/:storeId/available-models", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const query = `
+      SELECT
+          pm.id,
+          pm.name_ko,
+          pm.manufacturer_id
+      FROM
+          phone_models pm
+      JOIN (
+          SELECT model_id, COUNT(*) AS total_storage_count
+          FROM phone_devices
+          GROUP BY model_id
+      ) AS model_storage_totals ON pm.id = model_storage_totals.model_id
+      LEFT JOIN (
+          SELECT pd.model_id, COUNT(DISTINCT pd.storage_id) AS offered_storage_count
+          FROM offers o
+          JOIN phone_devices pd ON o.device_id = pd.id
+          WHERE o.store_id = ?
+          GROUP BY pd.model_id
+      ) AS store_offer_counts ON pm.id = store_offer_counts.model_id
+      WHERE
+          model_storage_totals.total_storage_count > COALESCE(store_offer_counts.offered_storage_count, 0)
+      ORDER BY
+          pm.manufacturer_id,
+          pm.release_date DESC,
+          pm.name_ko;
+    `;
+
+    const result = await AppDataSource.query(query, [parseInt(storeId)]);
+
+    // pm.id와 pm.manufacturer_id를 number로 파싱
+    const parsedResult = result.map((item: { id: string; name_ko: string; manufacturer_id: string }) => ({
+      ...item,
+      id: parseInt(item.id),
+      manufacturer_id: parseInt(item.manufacturer_id),
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: parsedResult,
+    });
+  } catch (error) {
+    console.error("Error during fetching available models", error);
+    res.status(500).json({
+      success: false,
+      message: "사용 가능한 모델 목록을 불러오는 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 선택된 모델의 사용 가능한 용량 목록 조회
+router.get("/:storeId/available-storages", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { modelId } = req.query;
+
+    if (!modelId) {
+      return res.status(400).json({
+        success: false,
+        message: "모델 ID가 필요합니다.",
+      });
+    }
+
+    const query = `
+      SELECT
+          ps.id,
+          ps.storage
+      FROM
+          phone_storages ps
+      JOIN
+          phone_devices pd ON ps.id = pd.storage_id
+      WHERE
+          pd.model_id = ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM offers o
+              WHERE
+                  o.store_id = ?
+                  AND o.device_id = pd.id
+          )
+      ORDER BY
+          CASE
+              WHEN ps.storage LIKE '%TB' THEN CAST(REPLACE(ps.storage, 'TB', '') AS UNSIGNED) * 1024
+              WHEN ps.storage LIKE '%GB' THEN CAST(REPLACE(ps.storage, 'GB', '') AS UNSIGNED)
+              ELSE 0
+          END ASC;
+    `;
+
+    const result = await AppDataSource.query(query, [parseInt(modelId as string), parseInt(storeId)]);
+
+    // ps.id를 number로 파싱
+    const parsedResult = result.map((item: { id: string; storage: string }) => ({
+      ...item,
+      id: parseInt(item.id),
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: parsedResult,
+    });
+  } catch (error) {
+    console.error("Error during fetching available storages", error);
+    res.status(500).json({
+      success: false,
+      message: "사용 가능한 용량 목록을 불러오는 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

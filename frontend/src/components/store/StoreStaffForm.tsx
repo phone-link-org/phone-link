@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { FaPhone, FaEnvelope, FaUser } from "react-icons/fa";
+import Swal from "sweetalert2";
 import { api } from "../../api/axios";
+import { ThemeContext } from "../../context/ThemeContext";
 import type { StoreStaffData } from "../../../../shared/types";
+import { toast } from "sonner";
 
 interface StoreStaffFormProps {
   storeId: number;
@@ -11,6 +14,85 @@ interface StoreStaffFormProps {
 const StoreStaffForm: React.FC<StoreStaffFormProps> = ({ storeId }) => {
   const [staffMembers, setStaffMembers] = useState<StoreStaffData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const themeContext = useContext(ThemeContext);
+  const theme = themeContext?.theme || "light";
+
+  // Swal 알림창 스타일 설정
+  const getSwalConfig = (isDark: boolean) => ({
+    background: isDark ? "#343434" : "#fff",
+    color: isDark ? "#e5e7eb" : "#1f2937",
+    confirmButtonColor: isDark ? "#9DC183" : "#4F7942",
+    cancelButtonColor: isDark ? "#F97171" : "#EF4444",
+  });
+
+  // 직원 상태 변경 처리 (승인/퇴사 통합)
+  const handleStaffStatusChange = async (
+    userId: number,
+    newStatus: "ACTIVE" | "INACTIVE",
+    successMessage: string,
+    errorMessage: string,
+  ) => {
+    try {
+      await api.post("store/update-staff-status", { storeId, userId, newStatus });
+      // 로컬 상태 업데이트
+      setStaffMembers((prev) =>
+        prev.map((staff) => (staff.userId === userId ? { ...staff, storeStatus: newStatus } : staff)),
+      );
+
+      toast.success(successMessage);
+    } catch (error) {
+      console.error(errorMessage, error);
+      toast.error(errorMessage);
+    }
+  };
+
+  // 직원 카드 클릭 핸들러
+  const handleStaffCardClick = (staff: StoreStaffData) => {
+    const { systemStatus, storeStatus, userId } = staff;
+
+    // 승인 대기 상태
+    if (systemStatus === "ACTIVE" && storeStatus === "PENDING") {
+      Swal.fire({
+        title: "승인하시겠습니까?",
+        text: "승인 시, 해당 사용자에게 매장 관리 권한이 부여됩니다.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "승인",
+        cancelButtonText: "취소",
+        ...getSwalConfig(theme === "dark"),
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleStaffStatusChange(
+            userId,
+            "ACTIVE",
+            "직원이 성공적으로 승인되었습니다.",
+            "직원 승인 중 오류가 발생했습니다:",
+          );
+        }
+      });
+    }
+    // 재직 중 상태
+    else if (systemStatus === "ACTIVE" && storeStatus === "ACTIVE") {
+      Swal.fire({
+        title: "퇴사 처리하시겠습니까?",
+        text: "퇴사 시, 해당 사용자에게 매장 관리 권한이 해제됩니다.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "퇴사 처리",
+        cancelButtonText: "취소",
+        ...getSwalConfig(theme === "dark"),
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleStaffStatusChange(
+            userId,
+            "INACTIVE",
+            "직원이 성공적으로 퇴사 처리되었습니다.",
+            "직원 퇴사 처리 중 오류가 발생했습니다:",
+          );
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchStaffMembers = async () => {
@@ -114,82 +196,93 @@ const StoreStaffForm: React.FC<StoreStaffFormProps> = ({ storeId }) => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {staffMembers.map((staff) => (
-              <div
-                key={staff.userId}
-                className="bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-500 rounded-lg p-4 sm:p-6 lg:p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  {/* 직원 기본 정보 */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-4 lg:mb-0">
-                      {/* 프로필 이미지 */}
-                      <div className="flex-shrink-0">
-                        {staff.profileImageUrl ? (
-                          <img
-                            src={`${import.meta.env.VITE_API_URL}${staff.profileImageUrl}`}
-                            alt={staff.name}
-                            className="w-16 h-16 lg:w-12 lg:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-500"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 lg:w-12 lg:h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
-                            <FaUser className="w-8 h-8 lg:w-6 lg:h-6 text-gray-400 dark:text-gray-500" />
-                          </div>
-                        )}
-                      </div>
+            {staffMembers.map((staff) => {
+              const isClickable =
+                (staff.systemStatus === "ACTIVE" && staff.storeStatus === "PENDING") ||
+                (staff.systemStatus === "ACTIVE" && staff.storeStatus === "ACTIVE");
 
-                      {/* 직원 정보 */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 lg:mb-1">
-                          <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-2">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-lg lg:text-base font-semibold text-gray-900 dark:text-white">
-                                {staff.name}
-                              </h4>
-                              {/* 모바일에서만 상태 배지 표시 */}
-                              <span className="lg:hidden">
-                                <span
-                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusInfo(staff.systemStatus, staff.storeStatus).style}`}
-                                >
-                                  {getStatusInfo(staff.systemStatus, staff.storeStatus).text}
-                                </span>
-                              </span>
-                            </div>
-                            {staff.nickname && (
-                              <span className="text-sm lg:text-xs text-gray-500 dark:text-gray-400">
-                                {staff.nickname}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 lg:gap-2 text-sm lg:text-xs">
-                          <div className="flex items-center gap-2">
-                            <FaEnvelope className="w-3 h-3 text-gray-400" />
-                            <span className="text-gray-900 dark:text-white truncate">{staff.email}</span>
-                          </div>
-                          {staff.phoneNumber && (
-                            <div className="flex items-center gap-2">
-                              <FaPhone className="w-3 h-3 text-gray-400" />
-                              <span className="text-gray-900 dark:text-white">{staff.phoneNumber}</span>
+              return (
+                <div
+                  key={staff.userId}
+                  onClick={() => isClickable && handleStaffCardClick(staff)}
+                  className={`bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-500 rounded-lg p-4 sm:p-6 lg:p-4 transition-all ${
+                    isClickable
+                      ? "hover:shadow-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      : "hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* 직원 기본 정보 */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-4 lg:mb-0">
+                        {/* 프로필 이미지 */}
+                        <div className="flex-shrink-0">
+                          {staff.profileImageUrl ? (
+                            <img
+                              src={`${import.meta.env.VITE_API_URL}${staff.profileImageUrl}`}
+                              alt={staff.name}
+                              className="w-16 h-16 lg:w-12 lg:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-500"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 lg:w-12 lg:h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
+                              <FaUser className="w-8 h-8 lg:w-6 lg:h-6 text-gray-400 dark:text-gray-500" />
                             </div>
                           )}
                         </div>
+
+                        {/* 직원 정보 */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 lg:mb-1">
+                            <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-2">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-lg lg:text-base font-semibold text-gray-900 dark:text-white">
+                                  {staff.name}
+                                </h4>
+                                {/* 모바일에서만 상태 배지 표시 */}
+                                <span className="lg:hidden">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusInfo(staff.systemStatus, staff.storeStatus).style}`}
+                                  >
+                                    {getStatusInfo(staff.systemStatus, staff.storeStatus).text}
+                                  </span>
+                                </span>
+                              </div>
+                              {staff.nickname && (
+                                <span className="text-sm lg:text-xs text-gray-500 dark:text-gray-400">
+                                  {staff.nickname}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 lg:gap-2 text-sm lg:text-xs">
+                            <div className="flex items-center gap-2">
+                              <FaEnvelope className="w-3 h-3 text-gray-400" />
+                              <span className="text-gray-900 dark:text-white truncate">{staff.email}</span>
+                            </div>
+                            {staff.phoneNumber && (
+                              <div className="flex items-center gap-2">
+                                <FaPhone className="w-3 h-3 text-gray-400" />
+                                <span className="text-gray-900 dark:text-white">{staff.phoneNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* 상태 표시 - 큰 화면에서만 표시 */}
-                  <div className="hidden lg:flex flex-shrink-0">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusInfo(staff.systemStatus, staff.storeStatus).style}`}
-                    >
-                      {getStatusInfo(staff.systemStatus, staff.storeStatus).text}
-                    </span>
+                    {/* 상태 표시 - 큰 화면에서만 표시 */}
+                    <div className="hidden lg:flex flex-shrink-0">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusInfo(staff.systemStatus, staff.storeStatus).style}`}
+                      >
+                        {getStatusInfo(staff.systemStatus, staff.storeStatus).text}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

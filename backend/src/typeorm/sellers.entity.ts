@@ -29,7 +29,7 @@ export class Seller {
     type: "enum",
     enum: ["ACTIVE", "INACTIVE", "PENDING", "REJECTED"],
     nullable: false,
-    default: "ACTIVE",
+    default: "PENDING",
     comment: "ACTIVE: 재직, INACTIVE: 퇴사, PENDING: 승인대기, REJECTED: 승인거절",
   })
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";

@@ -131,14 +131,15 @@ router.get("/devices-structured", async (_, res) => {
     const deviceRepo = AppDataSource.getRepository(PhoneDevice);
 
     // 1. getRawMany()를 사용해 필요한 모든 데이터를 평평한 구조로 조회
-    const flatData = await deviceRepo.createQueryBuilder("device")
+    const flatData = await deviceRepo
+      .createQueryBuilder("device")
       .select([
         "m.id as manufacturerId",
         "m.name_ko as manufacturerName",
         "model.id as modelId",
         "model.name_ko as modelName",
         "storage.id as storageId",
-        "storage.storage as capacity"
+        "storage.storage as capacity",
       ])
       .innerJoin("device.model", "model")
       .innerJoin("model.manufacturer", "m")
@@ -146,7 +147,14 @@ router.get("/devices-structured", async (_, res) => {
       .orderBy("m.id", "ASC")
       .addOrderBy("model.releaseDate", "DESC")
       .addOrderBy("model.name_ko", "ASC")
-      .addOrderBy("CAST(REPLACE(storage.storage, 'GB', '') AS UNSIGNED)", "ASC")
+      .addOrderBy(
+        `CASE
+            WHEN storage.storage LIKE '%TB' THEN CAST(REPLACE(storage.storage, 'TB', '') AS UNSIGNED) * 1024
+            WHEN storage.storage LIKE '%GB' THEN CAST(REPLACE(storage.storage, 'GB', '') AS UNSIGNED)
+            ELSE 0
+         END`,
+        "ASC",
+      )
       .getRawMany();
 
     // 2. 평평한 데이터를 계층적 구조로 재조립
@@ -181,7 +189,7 @@ router.get("/devices-structured", async (_, res) => {
     }
 
     // Map을 최종 배열 형태로 변환
-    const structuredData = Array.from(manufacturersMap.values()).map(m => ({
+    const structuredData = Array.from(manufacturersMap.values()).map((m) => ({
       ...m,
       models: Array.from(m.models.values()),
     }));

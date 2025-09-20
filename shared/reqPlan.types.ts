@@ -1,5 +1,5 @@
 // 요금제 데이터의 타입 정의
-export default interface ReqPlanDto {
+export interface ReqPlanDto {
   storeId: number;
   name: string;
   carrierId: number;

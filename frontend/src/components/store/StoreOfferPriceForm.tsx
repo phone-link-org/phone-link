@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import type { CarrierDto, StoreOfferModel } from "../../../../shared/types";
 import apiClient from "../../api/axios";
-import { FaTrashAlt } from "react-icons/fa";
+import { FaTrashAlt, FaPlus } from "react-icons/fa";
 import { toast } from "sonner";
 import { produce } from "immer";
 import LoadingSpinner from "../LoadingSpinner";
 import { ClipLoader } from "react-spinners";
 import { useTheme } from "../../hooks/useTheme";
 import { OFFER_TYPES, type OfferType } from "../../../../shared/constants";
+import AddOfferModal from "./AddOfferModal";
 
 // 프론트엔드에서 사용할 기기 데이터 타입
 interface StructuredDevice {
@@ -39,59 +40,71 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
     carrierId: number;
     offerType: string;
   } | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const { theme } = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // 1. 여러 API를 동시에 호출
-        const [devicesRes, offersRes, carriersRes] = await Promise.all([
-          apiClient.get<{ data: StructuredDevice[] }>("/phone/devices-structured"),
-          apiClient.get<{ data: StoreOfferModel[] }>(`/store/${storeId}/offers`),
-          apiClient.get<{ data: CarrierDto[] }>("/phone/carriers"),
-        ]);
-
-        const allDevices = devicesRes.data.data;
+        // 1. 먼저 기존 시세표 조회
+        const offersRes = await apiClient.get<{ data: StoreOfferModel[] }>(`/store/${storeId}/offers`);
         const existingOffers = offersRes.data.data;
-        setCarriers(carriersRes.data.data);
 
-        // 2. 전체 기기 목록을 기반으로 시세표 구조 생성
-        const newOffers = allDevices.flatMap((manufacturer) =>
-          manufacturer.models.map((model) => {
-            return {
-              manufacturerId: manufacturer.id,
-              modelId: model.id,
-              modelName: model.name,
-              storages: model.storages.map((storage) => {
-                // 3. 기존 가격 정보가 있는지 찾아서 병합
-                const existingModel = existingOffers.find((o) => o.modelId === model.id);
-                const existingStorage = existingModel?.storages.find((s) => s.storageId === storage.id);
+        // 기존 시세표가 있는지 확인
+        const hasExistingOffers = existingOffers && existingOffers.length > 0;
 
-                return {
-                  storageId: storage.id,
-                  storage: storage.capacity,
-                  carriers: carriersRes.data.data.map((carrier) => {
-                    const existingCarrier = existingStorage?.carriers.find((c) => c.carrierId === carrier.id);
-                    return {
-                      carrierId: carrier.id,
-                      carrierName: carrier.name,
-                      offerTypes: offerTypes.map((offerType) => {
-                        const existingOfferType = existingCarrier?.offerTypes.find(
-                          (ot) => ot.offerType === offerType.value,
-                        );
-                        return {
-                          offerType: offerType.value,
-                          price: existingOfferType?.price ?? null,
-                        };
-                      }),
-                    };
-                  }),
-                };
-              }),
-            };
-          }),
-        );
+        let newOffers;
+
+        if (hasExistingOffers) {
+          // 기존 시세표가 있는 경우: offersRes만 사용
+          newOffers = existingOffers;
+
+          // 캐리어 정보만 별도로 조회 (기존 시세표에서 캐리어 정보 추출)
+          const carriersFromOffers = existingOffers
+            .flatMap((offer) => offer.storages)
+            .flatMap((storage) => storage.carriers)
+            .map((carrier) => ({ id: carrier.carrierId, name: carrier.carrierName }))
+            .filter((carrier, index, self) => index === self.findIndex((c) => c.id === carrier.id));
+          setCarriers(carriersFromOffers);
+        } else {
+          // 신규 매장인 경우: 전체 기기 목록과 캐리어 정보를 조회하여 시세표 구조 생성
+          const [devicesRes, carriersRes] = await Promise.all([
+            apiClient.get<{ data: StructuredDevice[] }>("/phone/devices-structured"),
+            apiClient.get<{ data: CarrierDto[] }>("/phone/carriers"),
+          ]);
+
+          const allDevices = devicesRes.data.data;
+          setCarriers(carriersRes.data.data);
+
+          newOffers = allDevices.flatMap((manufacturer) =>
+            manufacturer.models.map((model) => {
+              return {
+                manufacturerId: manufacturer.id,
+                modelId: model.id,
+                modelName: model.name,
+                storages: model.storages.map((storage) => {
+                  return {
+                    storageId: storage.id,
+                    storage: storage.capacity,
+                    carriers: carriersRes.data.data.map((carrier) => {
+                      return {
+                        carrierId: carrier.id,
+                        carrierName: carrier.name,
+                        offerTypes: offerTypes.map((offerType) => {
+                          return {
+                            offerType: offerType.value,
+                            price: null, // 신규 매장이므로 모든 가격은 null
+                          };
+                        }),
+                      };
+                    }),
+                  };
+                }),
+              };
+            }),
+          );
+        }
 
         setOffers(newOffers);
       } catch (error) {
@@ -124,9 +137,43 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
               }
             : model,
         )
-        // 🔹 storages 가 비어 있으면 모델 자체도 제거
+        // storages 가 비어 있으면 모델 자체도 제거
         .filter((model) => model.storages.length > 0),
     );
+  };
+
+  const handleAddRow = () => {
+    setIsAddModalOpen(true);
+  };
+
+  // 모달에서 확인 버튼 클릭 시 호출되는 핸들러
+  const handleModalConfirm = (
+    selectedModel: { id: number; name_ko: string; manufacturer_id: number },
+    selectedStorages: { id: number; storage: string }[],
+  ) => {
+    // 선택된 모델과 용량들로 새로운 StoreOfferModel 생성
+    const newOfferModel: StoreOfferModel = {
+      manufacturerId: selectedModel.manufacturer_id,
+      modelId: selectedModel.id,
+      modelName: selectedModel.name_ko,
+      storages: selectedStorages.map((storage) => ({
+        storageId: storage.id,
+        storage: storage.storage,
+        carriers: carriers.map((carrier) => ({
+          carrierId: carrier.id,
+          carrierName: carrier.name,
+          offerTypes: offerTypes.map((offerType) => ({
+            offerType: offerType.value,
+            price: null,
+          })),
+        })),
+      })),
+    };
+
+    // setOffers를 사용해서 새로운 StoreOfferModel 추가
+    setOffers((prevOffers) => [...prevOffers, newOfferModel]);
+
+    toast.success(`${selectedModel.name_ko} 모델이 추가되었습니다.`);
   };
 
   const handlePriceChange = (
@@ -369,6 +416,25 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
                     });
                   })
                 )}
+
+                {/* 추가하기 버튼 행 */}
+                {isEditable && (
+                  <tr>
+                    <td
+                      colSpan={2 + carriers.length * offerTypes.length + 1}
+                      className="p-0 border-t border-gray-200 dark:border-gray-500"
+                    >
+                      <button
+                        type="button"
+                        onClick={handleAddRow}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium text-primary-light dark:text-primary-dark hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 transition-colors duration-200 focus:outline-none"
+                      >
+                        <FaPlus />
+                        추가하기
+                      </button>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -391,6 +457,14 @@ const StoreOfferPriceForm: React.FC<{ storeId: number; isEditable?: boolean }> =
           </div>
         )}
       </form>
+
+      {/* 추가하기 모달 */}
+      <AddOfferModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onConfirm={handleModalConfirm}
+        storeId={storeId}
+      />
     </>
   );
 };

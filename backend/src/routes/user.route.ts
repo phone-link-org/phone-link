@@ -9,7 +9,7 @@ import { SignupFormData, UserUpdateData } from "../../../shared/types";
 import { nanoid } from "nanoid";
 import { ROLES } from "../../../shared/constants";
 import { Not } from "typeorm";
-import { isAuthenticated } from "../middlewares/auth.middleware";
+import { isAuthenticated, AuthenticatedRequest } from "../middlewares/auth.middleware";
 
 // 타입을 명확하게 하기 위해 TokenPayload 인터페이스 정의
 interface SsoSignupTokenPayload {
@@ -442,6 +442,112 @@ router.get("/social-accounts/:userId", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "소셜 계정 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 사용자 즐겨찾기 매장 조회
+router.get("/favorites", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "인증이 필요합니다.",
+      });
+    }
+
+    const query = `
+      SELECT 
+        s.id,
+        s.thumbnail_url,
+        s.name,
+        s.address,
+        s.address_detail
+      FROM users u 
+      JOIN user_favorites f ON u.id = f.user_id 
+      JOIN stores s ON f.store_id = s.id
+      WHERE u.id = ?
+      ORDER BY f.created_at DESC;
+    `;
+
+    const result = await AppDataSource.query(query, [userId]);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("User favorites error:", error);
+    res.status(500).json({
+      success: false,
+      message: "즐겨찾기 매장 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+router.get("/check-unlink/:provider", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { provider } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "인증이 필요합니다.",
+      });
+    }
+
+    // 소셜 계정 존재 여부 확인
+    const socialAccounts = await AppDataSource.getRepository(SocialAccount).find({
+      where: { userId: userId, provider: provider },
+    });
+
+    if (socialAccounts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "소셜 계정을 찾을 수 없습니다.",
+      });
+    }
+
+    // 소셜 계정 해제 가능 여부 확인 쿼리
+    const canRemoveQuery = `
+      SELECT
+          CASE
+              WHEN 
+                  user_info.password IS NULL 
+                  AND user_info.account_count = 1 
+                  AND user_info.single_provider = ? 
+              THEN 0
+              ELSE 1 
+          END AS result
+      FROM (
+          SELECT
+              u.password,
+              COUNT(sa.id) AS account_count,
+              MAX(sa.provider) AS single_provider
+          FROM users u
+          LEFT JOIN social_accounts sa ON u.id = sa.user_id
+          WHERE u.id = ?
+          GROUP BY u.id, u.password
+      ) AS user_info;
+    `;
+
+    const canRemoveResult = await AppDataSource.query(canRemoveQuery, [provider, userId]);
+    const canRemove = Number(canRemoveResult[0]?.result) === 1;
+
+    res.status(200).json({
+      success: true,
+      data: canRemove,
+    });
+  } catch (error) {
+    console.error("소셜 계정 해제 가능 여부 확인 중 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "서버 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
   }

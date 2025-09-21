@@ -15,6 +15,10 @@ export type SocialLoginResult =
       status: number; // 200 (일반) 또는 202 (매장 등록 필요)
     }
   | {
+      type: "EXISTING_ACCOUNT";
+      status: number; // 기존 계정이 존재하니 로그인 후 마이페이지에서 연동하라고 메시지 출력
+    }
+  | {
       type: "SIGNUP_REQUIRED";
       ssoData: any;
       signupToken: string;
@@ -113,6 +117,18 @@ export const useAuthStore = create<AuthStore>((set) => {
             type: "SIGNUP_REQUIRED",
             ssoData: responseData.ssoData,
             signupToken: responseData.signupToken,
+          };
+        }
+
+        if (
+          !responseData.isNewUser &&
+          status === 202 &&
+          responseData.userAuthData === null &&
+          responseData.token === null
+        ) {
+          return {
+            type: "EXISTING_ACCOUNT",
+            status: status,
           };
         }
 

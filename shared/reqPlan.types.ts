@@ -3,6 +3,6 @@ export interface ReqPlanDto {
   storeId: number;
   name: string;
   carrierId: number;
-  monthlyFee: number | "";
+  monthlyFee: number;
   duration: number | ""; // 유지기간 (개월)
 }

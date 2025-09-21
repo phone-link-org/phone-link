@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { toast } from "sonner";
 import { ssoConfig } from "../config/sso-config";
+import Swal from "sweetalert2";
+import { useTheme } from "../hooks/useTheme";
 
 import appleLogo from "../assets/images/apple.png";
 import googleLogo from "../assets/images/google.png";
@@ -28,6 +30,7 @@ const LoginPage: React.FC = () => {
   const [passwordError, setPasswordError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   // 미입력 시 포커스를 주기 위한 ref
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +98,7 @@ const LoginPage: React.FC = () => {
     return state;
   };
 
-  const handleSsoLogin = (provider: SsoProvider) => {
+  const handleSsoLogin = async (provider: SsoProvider) => {
     if (provider === SSO_PROVIDERS.NAVER) {
       const { clientId, redirectUri, authUrl } = ssoConfig.naver;
       const state = getState();
@@ -108,8 +111,18 @@ const LoginPage: React.FC = () => {
       sessionStorage.setItem("kakao_oauth_state", state);
       const kakaoAuthUrl = `${authUrl}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
       window.location.href = kakaoAuthUrl;
+    } else if (provider === SSO_PROVIDERS.APPLE || provider === SSO_PROVIDERS.GOOGLE) {
+      // 애플과 구글 소셜로그인은 아직 지원하지 않음을 알림
+      await Swal.fire({
+        title: "서비스 준비 중",
+        text: "네이버 혹은 카카오 소셜로그인을 이용해주세요.",
+        icon: "info",
+        confirmButtonText: "확인",
+        background: theme === "dark" ? "#343434" : "#fff",
+        color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+        confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+      });
     }
-    // TODO: google, apple 프로바이더 추가
   };
 
   return (

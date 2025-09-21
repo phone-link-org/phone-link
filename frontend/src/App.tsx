@@ -16,6 +16,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import SsoCallbackPage from "./pages/SsoCallbackPage";
+import SocialLinkCallbackPage from "./pages/SocialLinkCallbackPage";
 import AdminPage from "./pages/AdminPage";
 
 import { useAuthStore } from "./store/authStore";
@@ -66,6 +67,7 @@ function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback/:provider" element={<SsoCallbackPage />} />
+        <Route path="/social-link/:provider/callback" element={<SocialLinkCallbackPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/offer" element={<OfferPage />} />
         <Route path="/store/:storeId" element={<StorePage />} />

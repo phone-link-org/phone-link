@@ -7,6 +7,94 @@ import { SORT_ORDER } from "../../../shared/constants";
 
 const router = Router();
 
+router.get("/latest", async (req, res) => {
+  try {
+    const qb = AppDataSource.getRepository(Offer)
+      .createQueryBuilder("o")
+      .select([
+        "o.id AS id",
+        "s.id AS storeId",
+        "s.name AS storeName",
+        "r.name AS regionName",
+        "c.name AS carrierName",
+        "CONCAT_WS(' ', pm.name_ko, ps.storage) AS modelName",
+        "CASE WHEN o.offer_type = 'MNP' THEN '번호이동' WHEN o.offer_type = 'CHG' THEN '기기변경' ELSE o.offer_type END AS offerType",
+        "o.price AS price",
+        "pm.image_url AS imageUrl",
+        "pm2.id AS manufacturerId",
+      ])
+      .innerJoin("o.store", "s")
+      .innerJoin("s.region", "r")
+      .innerJoin("o.device", "pd")
+      .innerJoin("pd.model", "pm")
+      .innerJoin("pd.storage", "ps")
+      .innerJoin("pm.manufacturer", "pm2")
+      .innerJoin("o.carrier", "c")
+      .where("1=1")
+      .andWhere("r.is_active = :isActive", { isActive: true })
+      .andWhere("(CHAR_LENGTH(r.name) - CHAR_LENGTH(REPLACE(r.name, ' ', ''))) = 1")
+      .andWhere("s.status = :status", { status: "OPEN" })
+      .andWhere("o.price IS NOT NULL")
+      .andWhere("s.approval_status = :approvalStatus", { approvalStatus: "APPROVED" })
+      .orderBy("o.createdAt", "DESC");
+
+    const allOffers: OfferSearchResult[] = await qb.getRawMany();
+
+    // 모델명으로 그룹바이해서 각각 다른 모델의 데이터만 선택
+    const modelGroups = new Map<string, OfferSearchResult[]>();
+
+    allOffers.forEach((offer) => {
+      // modelName에서 용량 부분 제거 (뒤에서 첫 번째 공백 기준으로 자르기)
+      const fullModelName = offer.modelName;
+      const lastSpaceIndex = fullModelName.lastIndexOf(" ");
+      const baseModelName = lastSpaceIndex !== -1 ? fullModelName.substring(0, lastSpaceIndex) : fullModelName;
+
+      if (!modelGroups.has(baseModelName)) {
+        modelGroups.set(baseModelName, []);
+      }
+      modelGroups.get(baseModelName)!.push(offer);
+    });
+
+    // 각 모델 그룹에서 첫 번째 데이터 1개씩 선택 (최대 4개)
+    // 이미 createdAt DESC로 정렬되어 있으므로 첫 번째가 가장 최신 데이터
+    const uniqueModelOffers: OfferSearchResult[] = [];
+    const manufacturerCounts = new Map<number, number>(); // 제조사별 카운트
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const [_modelName, offers] of modelGroups) {
+      if (uniqueModelOffers.length >= 4) break;
+
+      // 해당 모델의 첫 번째 데이터 선택 (이미 최신순으로 정렬됨)
+      const latestOffer = offers[0];
+
+      // 제조사 ID 사용 (쿼리에서 pm2.id를 select했으므로 사용 가능)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const manufacturerId = (latestOffer as any).manufacturerId;
+
+      // 특정 제조사(예: ID 1)는 최대 2개만 허용
+      if (manufacturerId === 1) {
+        const currentCount = manufacturerCounts.get(manufacturerId) || 0;
+        if (currentCount >= 2) continue; // 이미 2개면 스킵
+        manufacturerCounts.set(manufacturerId, currentCount + 1);
+      }
+
+      uniqueModelOffers.push(latestOffer);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: uniqueModelOffers,
+    });
+  } catch (error) {
+    console.error("Error fetching latest offers:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "최근 등록 조건을 불러오는 중 오류가 발생했습니다.",
+    });
+  }
+});
+
 router.get("/:offerId", async (req, res) => {
   try {
     const { offerId } = req.params;

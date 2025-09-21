@@ -426,13 +426,14 @@ const OfferPage: React.FC = () => {
                   <div
                     ref={isLastElement ? lastOfferElementRef : null}
                     key={`offer_${data.id}_${index}`}
-                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:border-primary-light dark:hover:border-primary-dark transition-shadow duration-300 p-4 sm:p-6 cursor-pointer"
+                    className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-500 rounded-lg shadow-md hover:border-primary-light dark:hover:border-primary-dark transition-shadow duration-300 p-4 sm:p-6 cursor-pointer"
                     onClick={() => navigate(`/offer/${data.id}`)}
                   >
                     {/* 상단: 대리점명 / 지역 (클릭 시 매장 상세로 이동) */}
                     <Link
                       to={`/store/${data.storeId}`}
                       className="flex flex-col items-center sm:flex-row sm:justify-between sm:items-center text-sm text-gray-600 dark:text-gray-400 mb-4 hover:opacity-90"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <span className="font-semibold text-gray-800 dark:text-gray-200 hover:underline hover:text-primary-light dark:hover:text-primary-dark">
                         {data.storeName}

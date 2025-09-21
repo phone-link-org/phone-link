@@ -43,7 +43,7 @@ const BannerSlider = () => {
 
   return (
     <div
-      className="relative w-full h-24 sm:h-32 md:h-40 lg:h-48 overflow-hidden rounded-lg shadow-lg"
+      className="relative w-full h-16 sm:h-20 md:h-24 lg:h-28 overflow-hidden rounded-lg shadow-lg"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -87,19 +87,21 @@ const BannerSlider = () => {
         </>
       )}
 
-      {/* 인디케이터 점들 */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-200 ${
-              index === currentIndex ? "bg-white scale-125" : "bg-white bg-opacity-50 hover:bg-opacity-75"
-            }`}
-            aria-label={`배너 ${index + 1}로 이동`}
-          />
-        ))}
-      </div>
+      {/* 인디케이터 점들 (hover 시에만 표시) */}
+      {isHovered && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                index === currentIndex ? "bg-white scale-125" : "bg-white bg-opacity-50 hover:bg-opacity-75"
+              }`}
+              aria-label={`배너 ${index + 1}로 이동`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

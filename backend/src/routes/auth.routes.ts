@@ -226,30 +226,50 @@ router.post("/callback/:provider", async (req, res) => {
     } else if (userProfile.phone_number) {
       // 소셜 연동 데이터는 없는데 기존 사용자면 자동 연동
       // TODO: 이런 식으로 처리해도 되는지 검토 후 개선 필요!!
-      let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
-      formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
-      if (formattedPhoneNumber.length === 11) {
-        formattedPhoneNumber = formattedPhoneNumber.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
-      } else {
-        formattedPhoneNumber = "";
+      // let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
+      // formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
+      // if (formattedPhoneNumber.length === 11) {
+      //   formattedPhoneNumber = formattedPhoneNumber.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
+      // } else {
+      //   formattedPhoneNumber = "";
+      // }
+      // if (formattedPhoneNumber) {
+      //   const existingUser = await userRepo.findOne({
+      //     where: { phoneNumber: formattedPhoneNumber },
+      //     relations: ["sellers"],
+      //   });
+      //   if (existingUser) {
+      //     const newSocialAccount = socialAccountRepo.create({
+      //       user: existingUser,
+      //       provider,
+      //       providerUserId: userProfile.sso_id,
+      //     });
+      //     await socialAccountRepo.save(newSocialAccount);
+      //     user = existingUser;
+      //   }
+      // }
+
+      // 이미 가입된 정보가 있을 경우, 로그인 후 마이페이지에서 연동하도록 유도
+      const tempSocialAccount = new SocialAccount();
+      tempSocialAccount.provider = provider;
+      tempSocialAccount.providerUserId = userProfile.sso_id;
+      tempSocialAccount.accessToken = userProfile.accessToken;
+      tempSocialAccount.refreshToken = userProfile.refreshToken;
+
+      // 사용자가 동의했기 때문에 프로바이더 측에는 정상적으로 연동된걸로 처리되기 때문에 다시 연동 해제
+      switch (provider) {
+        case SSO_PROVIDERS.NAVER:
+          await unlinkNaverAccount(tempSocialAccount);
+          break;
+        case SSO_PROVIDERS.KAKAO:
+          await unlinkKakaoAccount(tempSocialAccount);
+          break;
       }
 
-      if (formattedPhoneNumber) {
-        const existingUser = await userRepo.findOne({
-          where: { phoneNumber: formattedPhoneNumber },
-          relations: ["sellers"],
-        });
-
-        if (existingUser) {
-          const newSocialAccount = socialAccountRepo.create({
-            user: existingUser,
-            provider,
-            providerUserId: userProfile.sso_id,
-          });
-          await socialAccountRepo.save(newSocialAccount);
-          user = existingUser;
-        }
-      }
+      return res.status(202).json({
+        success: true,
+        data: { isNewUser: false, token: null, userAuthData: null },
+      });
     }
 
     // 사용자 존재 여부에 따라 분기 처리
@@ -402,7 +422,7 @@ async function unlinkKakaoAccount(account: SocialAccount): Promise<void> {
   });
 
   const response = await axios.post(unlinkUrl, params, { headers });
-  if (response.data?.id?.toString() !== account.providerUserId) {
+  if (!response.data.id) {
     throw new Error(`카카오 연동 해제 실패 (사용자 ID: ${account.providerUserId})`);
   }
 }
@@ -475,12 +495,195 @@ router.post("/withdrawal", async (req, res) => {
   }
 });
 
-async function getUserProfile(provider: string, code: string): Promise<UserProfile | null> {
+router.post("/unlink/:provider", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { provider } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "인증이 필요합니다.",
+      });
+    }
+
+    const socialAccounts = await AppDataSource.getRepository(SocialAccount).find({
+      where: { userId: userId, provider: provider },
+    });
+
+    if (socialAccounts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "소셜 계정을 찾을 수 없습니다.",
+      });
+    }
+
+    switch (provider) {
+      case SSO_PROVIDERS.NAVER:
+        await unlinkNaverAccount(socialAccounts[0]);
+        break;
+      case SSO_PROVIDERS.KAKAO:
+        await unlinkKakaoAccount(socialAccounts[0]);
+        break;
+    }
+
+    await AppDataSource.getRepository(SocialAccount).delete(socialAccounts[0].id);
+
+    res.status(200).json({
+      success: true,
+      data: true,
+    });
+  } catch (error) {
+    console.error("소셜 계정 해제 중 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "소셜 계정 해제 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+/**
+ * 🔒 안전한 소셜 계정 연동 엔드포인트
+ * 인증된 사용자만 자신의 계정에 소셜 계정을 연동할 수 있습니다.
+ * 팝업 기반으로 CSRF 공격을 방지하고, 중복 연동을 체크합니다.
+ */
+router.post("/link/:provider", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { provider } = req.params;
+    const { code } = req.body;
+    const userId = req.user?.id;
+
+    // 🔒 보안 검증 1: 인증된 사용자인지 확인
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "인증이 필요합니다.",
+      });
+    }
+
+    // 🔒 보안 검증 2: 지원하는 프로바이더인지 확인
+    if (!Object.values(SSO_PROVIDERS).includes(provider as (typeof SSO_PROVIDERS)[keyof typeof SSO_PROVIDERS])) {
+      return res.status(400).json({
+        success: false,
+        message: "지원하지 않는 소셜 로그인 프로바이더입니다.",
+      });
+    }
+
+    // 🔒 보안 검증 3: Authorization code가 있는지 확인
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "Authorization code가 필요합니다.",
+      });
+    }
+
+    // 소셜 프로필 정보 가져오기 (연동 모드)
+    const userProfile = await getUserProfile(provider, code, true);
+    if (!userProfile) {
+      return res.status(500).json({
+        success: false,
+        message: "소셜 프로필을 가져올 수 없습니다.",
+      });
+    }
+
+    const socialAccountRepo = AppDataSource.getRepository(SocialAccount);
+    const userRepo = AppDataSource.getRepository(User);
+
+    // 🔒 보안 검증 4: 이미 다른 계정에 연동된 소셜 계정인지 확인
+    const existingAccount = await socialAccountRepo.findOne({
+      where: {
+        provider,
+        providerUserId: userProfile.sso_id,
+      },
+      relations: ["user"],
+    });
+
+    if (existingAccount) {
+      // 이미 연동된 계정이지만 현재 사용자와 다른 경우
+      if (existingAccount.user.id !== userId) {
+        return res.status(409).json({
+          success: false,
+          message: "이미 다른 계정에 연동된 소셜 계정입니다.",
+        });
+      }
+      // 이미 현재 사용자에게 연동된 경우 - 토큰만 갱신
+      existingAccount.accessToken = userProfile.accessToken;
+      existingAccount.refreshToken = userProfile.refreshToken;
+      await socialAccountRepo.save(existingAccount);
+
+      return res.status(200).json({
+        success: true,
+        message: "소셜 계정 토큰이 갱신되었습니다.",
+      });
+    }
+
+    // 🔒 보안 검증 5: 현재 사용자가 존재하는지 확인
+    const user = await userRepo.findOne({
+      where: { id: userId },
+      relations: ["sellers"],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    // 🔒 보안 검증 6: 동일한 프로바이더로 이미 연동된 계정이 있는지 확인
+    const userSocialAccounts = await socialAccountRepo.find({
+      where: {
+        userId: userId,
+        provider: provider,
+      },
+    });
+
+    if (userSocialAccounts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "이미 해당 프로바이더로 연동된 계정이 있습니다.",
+      });
+    }
+
+    // 🔒 트랜잭션으로 안전하게 연동 처리
+    await AppDataSource.transaction(async (transactionalEntityManager) => {
+      const socialRepo = transactionalEntityManager.getRepository(SocialAccount);
+
+      const newSocialAccount = socialRepo.create({
+        user,
+        provider,
+        providerUserId: userProfile.sso_id,
+        accessToken: userProfile.accessToken,
+        refreshToken: userProfile.refreshToken,
+      });
+
+      await socialRepo.save(newSocialAccount);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "소셜 계정이 성공적으로 연동되었습니다.",
+    });
+  } catch (error) {
+    console.error("소셜 계정 연동 중 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "소셜 계정 연동 중 오류가 발생했습니다.",
+    });
+  }
+});
+
+async function getUserProfile(
+  provider: string,
+  code: string,
+  isLinkMode: boolean = false,
+): Promise<UserProfile | null> {
   switch (provider) {
     case SSO_PROVIDERS.NAVER:
       return await getNaverUserProfile(code);
     case SSO_PROVIDERS.KAKAO:
-      return await getKakaoUserProfile(code);
+      return await getKakaoUserProfile(code, isLinkMode);
     default:
       console.warn(`지원하지 않는 SSO 프로바이더입니다: ${provider}`);
       return null;
@@ -537,11 +740,16 @@ async function getNaverUserProfile(code: string): Promise<UserProfile | null> {
   }
 }
 
-async function getKakaoUserProfile(code: string): Promise<UserProfile | null> {
+async function getKakaoUserProfile(code: string, isLinkMode: boolean = false): Promise<UserProfile | null> {
   try {
     const { clientId, clientSecret, redirectUri, tokenUrl, userInfoUrl } = ssoConfig.kakao;
 
-    const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${redirectUri}`;
+    // 연동 모드일 때는 연동용 콜백 URL 사용
+    const actualRedirectUri = isLinkMode
+      ? `${process.env.PHONE_LINK_CLIENT_URL || "http://localhost:5173"}/social-link/kakao/callback`
+      : redirectUri;
+
+    const tokenApiUrl = `${tokenUrl}?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&redirect_uri=${encodeURIComponent(actualRedirectUri)}`;
 
     const tokenResponse = await axios.get(tokenApiUrl, {
       headers: {
@@ -563,15 +771,17 @@ async function getKakaoUserProfile(code: string): Promise<UserProfile | null> {
     // 응답 데이터와 그 안의 response 객체가 존재하는지 확인
     if (profileResponse?.data) {
       const kakaoProfile = profileResponse.data;
-      console.log(kakaoProfile);
+      console.log("Kakao profile data:", kakaoProfile);
+
+      // 안전한 데이터 파싱
       const userProfile: UserProfile = {
-        sso_id: kakaoProfile.id,
-        name: kakaoProfile.kakao_account.name,
-        email: kakaoProfile.kakao_account.email,
-        phone_number: kakaoProfile.kakao_account.phone_number.replace("+82 ", "0"),
-        birthyear: kakaoProfile.kakao_account.birthyear,
-        birthday: kakaoProfile.kakao_account.birthday.replace(/(\d{2})(\d{2})/, "$1-$2"),
-        gender: kakaoProfile.kakao_account.gender === "male" ? "M" : "F",
+        sso_id: kakaoProfile.id?.toString() || "",
+        name: kakaoProfile.kakao_account?.name || "",
+        email: kakaoProfile.kakao_account?.email || "",
+        phone_number: kakaoProfile.kakao_account?.phone_number?.replace("+82 ", "0") || "",
+        birthyear: kakaoProfile.kakao_account?.birthyear || "",
+        birthday: kakaoProfile.kakao_account?.birthday?.replace(/(\d{2})(\d{2})/, "$1-$2") || "",
+        gender: kakaoProfile.kakao_account?.gender === "male" ? "M" : "F",
         accessToken: tokenResponse.data.access_token,
         refreshToken: tokenResponse.data.refresh_token,
       };

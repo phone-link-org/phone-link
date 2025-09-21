@@ -5,21 +5,19 @@ import type { UserDto, UserUpdateData } from "../../../shared/types";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../hooks/useTheme";
 import Swal from "sweetalert2";
-import { FiUser, FiEdit3, FiMessageSquare, FiLink, FiStar, FiHeart, FiChevronRight } from "react-icons/fi";
+import { FiUser, FiEdit3, FiMessageSquare, FiLink, FiStar, FiChevronRight } from "react-icons/fi";
 import ProfileEditModal from "../components/mypage/ProfileEditModal";
 import PostsModal from "../components/mypage/PostsModal";
 import CommentsModal from "../components/mypage/CommentsModal";
 import SocialModal from "../components/mypage/SocialModal";
 import FavoritesModal from "../components/mypage/FavoritesModal";
-import LikesModal from "../components/mypage/LikesModal";
 
 // 마이페이지 메뉴 타입 정의
 type MyPageMenu =
   | "posts" // 내가 쓴 글
   | "comments" // 내가 쓴 댓글
   | "social" // 소셜계정 관리
-  | "favorites" // 관심 매장
-  | "likes"; // 좋아요 (offers)
+  | "favorites"; // 관심 매장
 
 // 메뉴 목록 정의
 const MENU_ITEMS = [
@@ -50,13 +48,6 @@ const MENU_ITEMS = [
     icon: FiStar,
     description: "즐겨찾기한 매장을 확인하세요",
     hoverColor: "group-hover:text-yellow-500",
-  },
-  {
-    id: "likes" as MyPageMenu,
-    label: "좋아요",
-    icon: FiHeart,
-    description: "좋아요한 상품을 확인하세요",
-    hoverColor: "group-hover:text-red-500",
   },
 ];
 
@@ -248,7 +239,6 @@ const MyPage: React.FC = () => {
       <CommentsModal isOpen={activeModal === "comments"} onClose={closeModal} />
       <SocialModal isOpen={activeModal === "social"} onClose={closeModal} />
       <FavoritesModal isOpen={activeModal === "favorites"} onClose={closeModal} />
-      <LikesModal isOpen={activeModal === "likes"} onClose={closeModal} />
     </div>
   );
 };

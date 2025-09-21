@@ -3,12 +3,15 @@ import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/authStore";
 import { SSO_PROVIDERS, type SsoProvider } from "../../../shared/constants";
+import Swal from "sweetalert2";
+import { useTheme } from "../hooks/useTheme";
 
 const SsoCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { handleSocialLoginCallback } = useAuthStore();
   const { provider } = useParams<{ provider: SsoProvider }>(); // URL로부터 provider 동적 추출
+  const { theme } = useTheme();
 
   const effectRan = useRef(false);
 
@@ -65,11 +68,22 @@ const SsoCallbackPage: React.FC = () => {
                 signupToken: result.signupToken,
               },
             });
+          } else if (result.type === "EXISTING_ACCOUNT") {
+            await Swal.fire({
+              title: "이미 가입된 사용자입니다.",
+              text: "로그인 후 마이페이지에서 소셜계정을 연결하세요.",
+              icon: "info",
+              confirmButtonText: "확인",
+              background: theme === "dark" ? "#343434" : "#fff",
+              color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+              confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+            });
+            window.location.href = "/login";
           }
         } catch (error) {
           console.error(`${provider} 로그인 중 오류가 발생했습니다.`, error);
           toast.error("로그인 처리 중 오류가 발생했습니다.");
-          navigate("/login");
+          window.location.href = "/login";
         }
       };
       processLogin();

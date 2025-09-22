@@ -9,21 +9,12 @@ import { upload } from "../middlewares/upload.middleware";
 const router = Router();
 
 // Multer 에러 핸들러
-const handleUploadErrors = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+const handleUploadErrors = (err: Error, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res
-        .status(400)
-        .json({ message: "이미지 파일 크기는 5MB를 초과할 수 없습니다." });
+      return res.status(400).json({ message: "이미지 파일 크기는 5MB를 초과할 수 없습니다." });
     }
-    return res
-      .status(400)
-      .json({ message: `파일 업로드 오류: ${err.message}` });
+    return res.status(400).json({ message: `파일 업로드 오류: ${err.message}` });
   } else if (err) {
     return res.status(400).json({ message: err.message });
   }
@@ -37,14 +28,8 @@ const handleUploadErrors = (
  */
 router.post("/delete", isAuthenticated, (req, res) => {
   const { imageUrl } = req.body;
-  if (
-    !imageUrl ||
-    typeof imageUrl !== "string" ||
-    !imageUrl.startsWith("/uploads/images/")
-  ) {
-    return res
-      .status(400)
-      .json({ message: "유효하지 않은 이미지 경로입니다." });
+  if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.startsWith("/uploads/images/")) {
+    return res.status(400).json({ message: "유효하지 않은 이미지 경로입니다." });
   }
 
   try {
@@ -53,14 +38,10 @@ router.post("/delete", isAuthenticated, (req, res) => {
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      res
-        .status(200)
-        .json({ success: true, message: "이미지가 삭제되었습니다." });
+      res.status(200).json({ success: true, message: "이미지가 삭제되었습니다." });
     } else {
       // 파일이 없어도 에러를 반환하지 않고 성공으로 처리 (이미 삭제되었을 수 있으므로)
-      res
-        .status(200)
-        .json({ success: true, message: "이미지가 존재하지 않습니다." });
+      res.status(200).json({ success: true, message: "이미지가 존재하지 않습니다." });
     }
   } catch (error) {
     console.error("이미지 삭제 중 오류 발생:", error);

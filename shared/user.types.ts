@@ -64,7 +64,9 @@ export type UserUpdateData = Pick<
   | "sido"
   | "sigungu"
   | "role"
->;
+> & {
+  storeId?: StoreDto["id"];
+};
 
 //Pick은 특정 타입에서 특정 키를 선택한 타입을 생성하는 타입
 export type LoginFormData = Pick<Required<UserDto>, "email" | "password">;

@@ -1,10 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { api } from "../../api/axios";
 import { toast } from "sonner";
 import AddressSearchButton from "../AddressSearchButton";
 import ImageUpload from "../ImageUpload";
+import StoreSearchableSelect from "../StoreSearchableSelect";
 import axios from "axios";
-import type { UserDto, UserUpdateData } from "../../../../shared/types";
+import type { UserDto, UserUpdateData, StoreDto } from "../../../../shared/types";
 import { ROLES } from "../../../../shared/constants";
 import Modal from "./Modal";
 
@@ -21,14 +22,16 @@ interface DaumPostcodeData {
 interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  formData: UserDto | null;
-  setFormData: React.Dispatch<React.SetStateAction<UserDto | null>>;
+  formData: (UserDto & { storeId?: number }) | null;
+  setFormData: React.Dispatch<React.SetStateAction<(UserDto & { storeId?: number }) | null>>;
   newPassword: string;
   setNewPassword: React.Dispatch<React.SetStateAction<string>>;
   passwordConfirm: string;
   setPasswordConfirm: React.Dispatch<React.SetStateAction<string>>;
-  errors: Partial<Record<keyof UserUpdateData | "passwordConfirm", string>>;
-  setErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof UserUpdateData | "passwordConfirm", string>>>>;
+  errors: Partial<Record<keyof UserUpdateData | "passwordConfirm" | "storeId", string>>;
+  setErrors: React.Dispatch<
+    React.SetStateAction<Partial<Record<keyof UserUpdateData | "passwordConfirm" | "storeId", string>>>
+  >;
   isSubmitting: boolean;
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   user: any;
@@ -52,6 +55,42 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   handleWithdrawal,
 }) => {
   const addressDetailRef = useRef<HTMLInputElement>(null);
+  const [selectedStore, setSelectedStore] = useState<StoreDto | null>(null);
+  const [stores, setStores] = useState<StoreDto[]>([]);
+  const [isOriginalSeller, setIsOriginalSeller] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // 매장 목록 가져오기
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const storesData = await api.get<StoreDto[]>("/store/stores");
+        setStores(storesData);
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          toast.error(error.response.data.message || "매장 목록을 불러오는데 실패했습니다.");
+        } else {
+          console.error("Unexpected error:", error);
+        }
+      }
+    };
+
+    if (isOpen) {
+      fetchStores();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setSelectedStore(stores.find((store) => store.id === formData?.storeId) || null);
+  }, [stores]);
+
+  // 기존 사용자가 SELLER인지 확인 (최초 한 번만)
+  useEffect(() => {
+    if (formData && !hasInitialized) {
+      setIsOriginalSeller(formData.role === ROLES.SELLER);
+      setHasInitialized(true);
+    }
+  }, [formData, hasInitialized]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -64,7 +103,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         return {
           ...prev,
           [name]: value,
-        } as UserDto;
+        } as UserDto & { storeId?: number };
       });
     }
 
@@ -93,7 +132,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       return {
         ...prev,
         address: fullAddress,
-      } as UserDto;
+      } as UserDto & { storeId?: number };
     });
 
     // 상세 주소 필드로 포커스 이동
@@ -149,7 +188,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const newErrors: Partial<Record<keyof UserUpdateData | "passwordConfirm", string>> = {};
+    const newErrors: Partial<Record<keyof UserUpdateData | "passwordConfirm" | "storeId", string>> = {};
     let formIsValid = true;
 
     // 비밀번호 변경 시에만 유효성 검사
@@ -161,10 +200,20 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       }
     }
 
+    // 판매자 계정 전환 시 소속 매장 선택 검증 (기존 판매자는 제외)
+    if (formData?.role === ROLES.SELLER && !isOriginalSeller && !selectedStore) {
+      newErrors.storeId = "판매자 계정으로 전환하려면 소속 매장을 선택해주세요.";
+      formIsValid = false;
+    }
+
     setErrors(newErrors);
 
     if (!formIsValid) {
-      toast.error("입력 정보를 다시 확인해주세요.");
+      if (formData?.role === ROLES.SELLER && !isOriginalSeller && !selectedStore) {
+        toast.error("판매자 계정으로 전환하려면 소속 매장을 선택해주세요.");
+      } else {
+        toast.error("입력 정보를 다시 확인해주세요.");
+      }
       return;
     }
 
@@ -186,6 +235,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         sido: formData.sido,
         sigungu: formData.sigungu,
         role: user?.role === ROLES.ADMIN ? ROLES.ADMIN : formData.role,
+        storeId: selectedStore?.id,
       };
 
       if (newPassword) {
@@ -221,7 +271,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       return {
         ...previous,
         role: previous.role === ROLES.SELLER ? ROLES.USER : ROLES.SELLER,
-      } as UserDto;
+      } as UserDto & { storeId?: number };
     });
   };
 
@@ -391,13 +441,13 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   return {
                     ...prev,
                     profileImageUrl: imageUrl,
-                  } as UserDto;
+                  } as UserDto & { storeId?: number };
                 })
               }
               onImageRemove={() =>
                 setFormData((prev) => {
                   if (!prev) return prev;
-                  return { ...prev, profileImageUrl: "" } as UserDto;
+                  return { ...prev, profileImageUrl: "" } as UserDto & { storeId?: number };
                 })
               }
               label="프로필 이미지"
@@ -449,24 +499,70 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
                     일반 사용자
                   </span>
-                  <label htmlFor="role" className="relative cursor-pointer">
+                  <label
+                    htmlFor="role"
+                    className={`relative ${isOriginalSeller ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  >
                     <input
                       id="role"
                       name="role"
                       type="checkbox"
                       className="sr-only peer"
                       checked={formData?.role === ROLES.SELLER}
-                      onChange={toggleRole}
+                      onChange={isOriginalSeller ? undefined : toggleRole}
+                      disabled={isOriginalSeller}
                     />
-                    <div className="w-11 h-6 transition-colors duration-200 bg-gray-200 rounded-full peer peer-checked:bg-primary-light dark:bg-gray-700 dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    <div
+                      className={`w-11 h-6 transition-colors duration-200 rounded-full peer peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${
+                        isOriginalSeller
+                          ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                          : "bg-gray-200 dark:bg-gray-700"
+                      }`}
+                    ></div>
                   </label>
                   <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">판매자</span>
                 </div>
                 <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {formData?.role === ROLES.SELLER
-                    ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
-                    : "일반 사용자 계정입니다."}
+                  {isOriginalSeller
+                    ? "기존 판매자 계정입니다. 계정 유형은 변경할 수 없습니다."
+                    : formData?.role === ROLES.SELLER
+                      ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
+                      : "일반 사용자 계정입니다."}
                 </p>
+              </div>
+            )}
+
+            {/* Store Selector (Conditional) */}
+            {formData?.role === ROLES.SELLER && (
+              <div className="transition-all duration-300 ease-in-out">
+                <label htmlFor="storeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  소속 매장 {!isOriginalSeller && <span className="text-red-500">*</span>}
+                </label>
+                {isOriginalSeller ? (
+                  // 기존 판매자: 읽기전용 표시
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed">
+                    {selectedStore ? selectedStore.name : "매장 정보 없음"}
+                  </div>
+                ) : (
+                  // 새로 판매자로 전환하는 경우: 선택 가능
+                  <StoreSearchableSelect
+                    stores={stores}
+                    selectedStore={selectedStore}
+                    onStoreSelect={(store) => {
+                      setSelectedStore(store);
+                      // 매장 선택 시 에러 메시지 제거
+                      if (errors.storeId) {
+                        setErrors((prev) => ({ ...prev, storeId: undefined }));
+                      }
+                    }}
+                  />
+                )}
+                <p className="h-4 mt-1 text-xs text-red-500">{errors.storeId || " "}</p>
+                {isOriginalSeller && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    기존 판매자 계정의 소속 매장은 변경할 수 없습니다.
+                  </p>
+                )}
               </div>
             )}
           </div>

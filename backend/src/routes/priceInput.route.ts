@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { AppDataSource } from "../db";
-import { PriceSubmissionData } from "shared/types";
+import { PriceSubmissionData } from "../../../shared/types";
 import { Addon } from "../typeorm/addons.entity";
 import { Offer } from "../typeorm/offers.entity";
 import { PhoneDevice } from "../typeorm/phoneDevices.entity";
@@ -17,12 +17,7 @@ router.post("/", async (req, res) => {
       const savedAddons: Addon[] = [];
       if (addons && addons.length > 0) {
         for (let i = 0; i < addons.length; i++) {
-          if (
-            !addons[i].name ||
-            !addons[i].monthlyFee ||
-            !addons[i].requiredDuration ||
-            !addons[i].penaltyFee
-          )
+          if (!addons[i].name || !addons[i].monthlyFee || !addons[i].requiredDuration || !addons[i].penaltyFee)
             continue;
 
           const newAddon = new Addon();
@@ -54,9 +49,7 @@ router.post("/", async (req, res) => {
           .getOne();
 
         if (!phoneDevice) {
-          console.warn(
-            `Device not found for model: ${priceInput.model} with capacity: ${priceInput.capacity}`,
-          );
+          console.warn(`Device not found for model: ${priceInput.model} with capacity: ${priceInput.capacity}`);
           continue;
         }
 
@@ -107,11 +100,7 @@ router.get("/devices", async (_, res) => {
   try {
     const devices = await AppDataSource.getRepository(PhoneDevice)
       .createQueryBuilder("device")
-      .select([
-        'model.name_ko AS "modelName"',
-        "storage.storage AS storage",
-        'manufacturer.id AS "manufacturerId"',
-      ])
+      .select(['model.name_ko AS "modelName"', "storage.storage AS storage", 'manufacturer.id AS "manufacturerId"'])
       .innerJoin("device.model", "model")
       .innerJoin("model.manufacturer", "manufacturer")
       .innerJoin("device.storage", "storage")

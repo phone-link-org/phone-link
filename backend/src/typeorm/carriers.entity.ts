@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  Unique,
-} from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, Unique } from "typeorm";
 import { Addon } from "./addons.entity";
 import { ReqPlan } from "./reqPlans.entity";
 import { Offer } from "./offers.entity";

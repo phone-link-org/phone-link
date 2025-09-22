@@ -1,11 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  Index,
-  JoinColumn,
-} from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn } from "typeorm";
 import { Store } from "./stores.entity";
 import { Carrier } from "./carriers.entity";
 

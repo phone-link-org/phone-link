@@ -56,10 +56,7 @@ router.post("/store-confirm", async (req, res) => {
     // 3. 트랜잭션 성공 후 최종 응답 전송
     res.status(200).json({
       success: true,
-      message:
-        approvalStatus === "APPROVED"
-          ? "매장 승인 처리가 완료되었습니다."
-          : "매장 거부 처리가 완료되었습니다.",
+      message: approvalStatus === "APPROVED" ? "매장 승인 처리가 완료되었습니다." : "매장 거부 처리가 완료되었습니다.",
     });
   } catch (error) {
     console.error("Error during store confirm transaction:", error);
@@ -114,9 +111,7 @@ router.get("/phone-detail/:id", async (req, res) => {
     });
 
     if (!model) {
-      return res
-        .status(404)
-        .json({ message: "해당 핸드폰 모델 정보를 찾을 수 없습니다." });
+      return res.status(404).json({ message: "해당 핸드폰 모델 정보를 찾을 수 없습니다." });
     }
 
     const responseData: PhoneDetailFormData = {
@@ -161,19 +156,11 @@ router.post("/phone-detail/:id", async (req, res) => {
 
   try {
     const idParam = req.params.id;
-    const modelId =
-      idParam === "null" || isNaN(parseInt(idParam, 10))
-        ? null
-        : parseInt(idParam, 10);
+    const modelId = idParam === "null" || isNaN(parseInt(idParam, 10)) ? null : parseInt(idParam, 10);
     const data: PhoneDetailFormData = req.body;
 
     // 1. 필수 정보 유효성 검사
-    if (
-      !data.modelName_ko ||
-      !data.modelName_en ||
-      !data.imageUrl ||
-      !data.releaseDate
-    ) {
+    if (!data.modelName_ko || !data.modelName_en || !data.imageUrl || !data.releaseDate) {
       return res.status(400).json({
         success: false,
         error: "Bad Request",
@@ -183,9 +170,7 @@ router.post("/phone-detail/:id", async (req, res) => {
 
     const modelRepo = queryRunner.manager.getRepository(PhoneModel);
     const deviceRepo = queryRunner.manager.getRepository(PhoneDevice);
-    const existingModel = modelId
-      ? await modelRepo.findOne({ where: { id: modelId } })
-      : null;
+    const existingModel = modelId ? await modelRepo.findOne({ where: { id: modelId } }) : null;
 
     if (existingModel) {
       // --- UPDATE LOGIC ---
@@ -210,9 +195,7 @@ router.post("/phone-detail/:id", async (req, res) => {
       const existingDevices = await deviceRepo.find({
         where: { modelId: existingModel.id },
       });
-      const existingDevicesMap = new Map(
-        existingDevices.map((d) => [d.storageId, d]),
-      );
+      const existingDevicesMap = new Map(existingDevices.map((d) => [d.storageId, d]));
       const incomingStoragesMap = new Map(data.storages.map((s) => [s.id, s]));
 
       const devicesToAdd = [];
@@ -233,17 +216,13 @@ router.post("/phone-detail/:id", async (req, res) => {
         if (existingDevice) {
           // 수정할 디바이스
           const deviceNeedsUpdate =
-            existingDevice.retailPrice !==
-              incomingStorage.devices[0].retailPrice ||
-            existingDevice.unlockedPrice !==
-              incomingStorage.devices[0].unlockedPrice ||
-            existingDevice.coupangLink !==
-              incomingStorage.devices[0].coupangLink;
+            existingDevice.retailPrice !== incomingStorage.devices[0].retailPrice ||
+            existingDevice.unlockedPrice !== incomingStorage.devices[0].unlockedPrice ||
+            existingDevice.coupangLink !== incomingStorage.devices[0].coupangLink;
 
           if (deviceNeedsUpdate) {
             existingDevice.retailPrice = incomingStorage.devices[0].retailPrice;
-            existingDevice.unlockedPrice =
-              incomingStorage.devices[0].unlockedPrice;
+            existingDevice.unlockedPrice = incomingStorage.devices[0].unlockedPrice;
             existingDevice.coupangLink = incomingStorage.devices[0].coupangLink;
             devicesToUpdate.push(existingDevice);
           }
@@ -551,12 +530,9 @@ router.get("/region", async (req, res) => {
   try {
     const API_KEY = process.env.DATA_GO_KR_REGION_API_KEY;
     if (!API_KEY) {
-      throw new Error(
-        "API key for data.go.kr is not configured on the server.",
-      );
+      throw new Error("API key for data.go.kr is not configured on the server.");
     }
-    const baseUrl =
-      "https://api.odcloud.kr/api/15123287/v1/uddi:b68902fa-d058-4a17-b188-ff46b7eaaac7";
+    const baseUrl = "https://api.odcloud.kr/api/15123287/v1/uddi:b68902fa-d058-4a17-b188-ff46b7eaaac7";
     const response = await axios.get(baseUrl, {
       params: {
         page: 1,
@@ -587,9 +563,7 @@ router.post("/regions-sync-db", async (req, res) => {
   try {
     const API_KEY = process.env.DATA_GO_KR_REGION_API_KEY;
     if (!API_KEY) {
-      throw new Error(
-        "API key for data.go.kr is not configured on the server.",
-      );
+      throw new Error("API key for data.go.kr is not configured on the server.");
     }
     const uddi = "b68902fa-d058-4a17-b188-ff46b7eaaac7";
     const baseUrl = `https://api.odcloud.kr/api/15123287/v1/uddi:${uddi}`;
@@ -617,9 +591,7 @@ router.post("/regions-sync-db", async (req, res) => {
 
       if (fetchedCount > 0) {
         totalFetched += fetchedCount;
-        console.log(
-          `- ${fetchedCount}건의 데이터를 가져왔습니다. (총 ${totalFetched}건)`,
-        );
+        console.log(`- ${fetchedCount}건의 데이터를 가져왔습니다. (총 ${totalFetched}건)`);
 
         const regionRepository = AppDataSource.getRepository(Region);
         const now = new Date();

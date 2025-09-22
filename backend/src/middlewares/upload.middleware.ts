@@ -4,13 +4,7 @@ import multer from "multer";
 import path from "path";
 
 // 허용된 업로드 타입과 디렉토리명
-const ALLOWED_TYPES = [
-  "store",
-  "device",
-  "profile",
-  "post",
-  "carrier",
-] as const;
+const ALLOWED_TYPES = ["store", "device", "profile", "post", "carrier"] as const;
 type UploadType = (typeof ALLOWED_TYPES)[number];
 
 const baseUploadDir = path.join(__dirname, "../../uploads/images");

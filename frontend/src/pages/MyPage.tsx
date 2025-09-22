@@ -59,10 +59,12 @@ const MyPage: React.FC = () => {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [activeModal, setActiveModal] = useState<MyPageMenu | null>(null);
 
-  const [formData, setFormData] = useState<UserDto | null>(null);
+  const [formData, setFormData] = useState<(UserDto & { storeId?: number }) | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [errors, setErrors] = useState<Partial<Record<keyof UserUpdateData | "passwordConfirm", string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof UserUpdateData | "passwordConfirm" | "storeId", string>>>(
+    {},
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -71,9 +73,10 @@ const MyPage: React.FC = () => {
 
       try {
         const userId = user?.id;
-        const response = await api.get<UserDto>("/user/profile", {
+        const response = await api.get<UserDto & { storeId?: number }>("/user/profile", {
           params: { userId },
         });
+
         setFormData(response);
       } catch (error) {
         toast.error("사용자 정보를 불러오는 중 오류가 발생했습니다.");

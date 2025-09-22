@@ -343,9 +343,33 @@ router.get("/profile", async (req, res) => {
     const userRepo = AppDataSource.getRepository(User);
     const user = await userRepo.findOne({ where: { id: Number(userId) } });
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    // 사용자 정보를 응답 데이터로 복사
+    const responseData = { ...user } as User & { storeId?: number };
+
+    // 사용자가 판매자인 경우 sellers 테이블에서 매장 정보 조회
+    if (user.role === ROLES.SELLER) {
+      const sellerRepo = AppDataSource.getRepository(Seller);
+      const sellerInfo = await sellerRepo.findOne({
+        where: { userId: user.id },
+      });
+
+      // 판매자 정보를 응답 데이터에 추가
+      if (sellerInfo) responseData.storeId = sellerInfo.storeId;
+    }
+
+    // 비밀번호 필드 제거
+    delete responseData.password;
+
     res.status(200).json({
       success: true,
-      data: user,
+      data: responseData,
     });
   } catch (error) {
     console.error("Error fetching user information:", error);
@@ -364,57 +388,103 @@ router.post("/profile", isAuthenticated, async (req, res) => {
   }
 
   try {
-    const userRepo = AppDataSource.getRepository(User);
-    const userToUpdate = await userRepo.findOne({
-      where: { id: userUpdateData.id },
-    });
+    // 트랜잭션 시작
+    const result = await AppDataSource.transaction(async (transactionalEntityManager) => {
+      const userRepo = transactionalEntityManager.getRepository(User);
+      const sellerRepo = transactionalEntityManager.getRepository(Seller);
 
-    if (!userToUpdate) {
-      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
-    }
-
-    // 닉네임 변경 시 중복 확인
-    if (userUpdateData.nickname && userUpdateData.nickname !== userToUpdate.nickname) {
-      const existingUser = await userRepo.findOne({
-        where: {
-          nickname: userUpdateData.nickname,
-          id: Not(userUpdateData.id),
-        },
+      // 사용자 조회
+      const userToUpdate = await userRepo.findOne({
+        where: { id: userUpdateData.id },
       });
-      if (existingUser) {
-        return res.status(409).json({ success: false, message: "이미 사용 중인 닉네임입니다." });
+
+      if (!userToUpdate) {
+        throw new Error("사용자를 찾을 수 없습니다.");
       }
-      userToUpdate.nickname = userUpdateData.nickname;
-    }
 
-    // 비밀번호 변경
-    if (userUpdateData.password) {
-      userToUpdate.password = await bcrypt.hash(userUpdateData.password, 10);
-    }
+      // 닉네임 변경 시 중복 확인
+      if (userUpdateData.nickname && userUpdateData.nickname !== userToUpdate.nickname) {
+        const existingUser = await userRepo.findOne({
+          where: {
+            nickname: userUpdateData.nickname,
+            id: Not(userUpdateData.id),
+          },
+        });
+        if (existingUser) {
+          throw new Error("이미 사용 중인 닉네임입니다.");
+        }
+        userToUpdate.nickname = userUpdateData.nickname;
+      }
 
-    // 기타 정보 업데이트
-    if (userUpdateData.profileImageUrl !== undefined) userToUpdate.profileImageUrl = userUpdateData.profileImageUrl;
-    if (userUpdateData.address !== undefined) userToUpdate.address = userUpdateData.address;
-    if (userUpdateData.addressDetail !== undefined) userToUpdate.addressDetail = userUpdateData.addressDetail;
-    if (userUpdateData.postalCode !== undefined) userToUpdate.postalCode = userUpdateData.postalCode;
-    if (userUpdateData.sido !== undefined) userToUpdate.sido = userUpdateData.sido;
-    if (userUpdateData.sigungu !== undefined) userToUpdate.sigungu = userUpdateData.sigungu;
-    if (userUpdateData.role && [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)) {
-      userToUpdate.role = userUpdateData.role;
-    }
+      // 비밀번호 변경
+      if (userUpdateData.password) {
+        userToUpdate.password = await bcrypt.hash(userUpdateData.password, 10);
+      }
 
-    await userRepo.save(userToUpdate);
+      // 기타 정보 업데이트
+      if (userUpdateData.profileImageUrl !== undefined) userToUpdate.profileImageUrl = userUpdateData.profileImageUrl;
+      if (userUpdateData.address !== undefined) userToUpdate.address = userUpdateData.address;
+      if (userUpdateData.addressDetail !== undefined) userToUpdate.addressDetail = userUpdateData.addressDetail;
+      if (userUpdateData.postalCode !== undefined) userToUpdate.postalCode = userUpdateData.postalCode;
+      if (userUpdateData.sido !== undefined) userToUpdate.sido = userUpdateData.sido;
+      if (userUpdateData.sigungu !== undefined) userToUpdate.sigungu = userUpdateData.sigungu;
 
-    // 응답 데이터에서 비밀번호 필드 제거
-    delete userToUpdate.password;
+      // 일반 사용자 -> 판매자 전환인 경우
+      if (userToUpdate.role === ROLES.USER && userUpdateData.role === ROLES.SELLER && userUpdateData.storeId) {
+        console.log("여기 타는지 확인용 로그 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+        // 이미 판매자로 등록되어 있는지 확인
+        const existingSeller = await sellerRepo.findOne({
+          where: {
+            userId: userToUpdate.id,
+            storeId: userUpdateData.storeId,
+          },
+        });
+
+        if (existingSeller) {
+          throw new Error("이미 해당 매장의 판매자로 등록되어 있습니다.");
+        }
+
+        const newSeller = new Seller();
+        newSeller.userId = userToUpdate.id;
+        newSeller.storeId = userUpdateData.storeId;
+        newSeller.status = "PENDING";
+        await sellerRepo.save(newSeller);
+      }
+
+      if (userUpdateData.role && [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)) {
+        userToUpdate.role = userUpdateData.role;
+      }
+
+      // 사용자 정보 저장
+      const savedUser = await userRepo.save(userToUpdate);
+
+      // 응답 데이터에서 비밀번호 필드 제거
+      delete savedUser.password;
+
+      return savedUser;
+    });
 
     res.status(200).json({
       success: true,
       message: "프로필이 성공적으로 업데이트되었습니다.",
-      data: userToUpdate,
+      data: result,
     });
   } catch (error) {
     console.error("Profile update error:", error);
+
+    // 특정 에러 메시지에 따른 상태 코드 결정
+    if (error instanceof Error) {
+      if (error.message === "사용자를 찾을 수 없습니다.") {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      if (error.message === "이미 사용 중인 닉네임입니다.") {
+        return res.status(409).json({ success: false, message: error.message });
+      }
+      if (error.message === "이미 해당 매장의 판매자로 등록되어 있습니다.") {
+        return res.status(409).json({ success: false, message: error.message });
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: "프로필 업데이트 중 오류가 발생했습니다.",

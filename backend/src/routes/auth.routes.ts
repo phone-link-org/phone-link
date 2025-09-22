@@ -214,6 +214,12 @@ router.post("/callback/:provider", async (req, res) => {
       relations: ["user", "user.sellers"],
     });
 
+    // 프로바이더 측에서 가져온 전화번호로 사용자 조회
+    const existingUser = await userRepo.findOne({
+      where: { phoneNumber: userProfile.phone_number },
+      relations: ["sellers"],
+    });
+
     if (socialAccount) {
       // Access & Refresh 토큰 갱신
       socialAccount.accessToken = userProfile.accessToken;
@@ -223,33 +229,8 @@ router.post("/callback/:provider", async (req, res) => {
       user = socialAccount.user;
       user.lastLoginType = provider;
       await userRepo.save(user);
-    } else if (userProfile.phone_number) {
-      // 소셜 연동 데이터는 없는데 기존 사용자면 자동 연동
-      // TODO: 이런 식으로 처리해도 되는지 검토 후 개선 필요!!
-      // let formattedPhoneNumber = userProfile.phone_number.replace("+82 ", "0");
-      // formattedPhoneNumber = formattedPhoneNumber.replace(/[^0-9]/g, "");
-      // if (formattedPhoneNumber.length === 11) {
-      //   formattedPhoneNumber = formattedPhoneNumber.replace(/^(\d{3})(\d{4})(\d{4})$/, "$1-$2-$3");
-      // } else {
-      //   formattedPhoneNumber = "";
-      // }
-      // if (formattedPhoneNumber) {
-      //   const existingUser = await userRepo.findOne({
-      //     where: { phoneNumber: formattedPhoneNumber },
-      //     relations: ["sellers"],
-      //   });
-      //   if (existingUser) {
-      //     const newSocialAccount = socialAccountRepo.create({
-      //       user: existingUser,
-      //       provider,
-      //       providerUserId: userProfile.sso_id,
-      //     });
-      //     await socialAccountRepo.save(newSocialAccount);
-      //     user = existingUser;
-      //   }
-      // }
-
-      // 이미 가입된 정보가 있을 경우, 로그인 후 마이페이지에서 연동하도록 유도
+    } else if (existingUser) {
+      // 가입 정보(사용자 정보)가 존재할 경우
       const tempSocialAccount = new SocialAccount();
       tempSocialAccount.provider = provider;
       tempSocialAccount.providerUserId = userProfile.sso_id;

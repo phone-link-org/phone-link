@@ -242,7 +242,7 @@ const PostPage: React.FC = () => {
   };
 
   // 답글 작성
-  const handleReplySubmit = (parentCommentId: number) => {
+  const handleReplySubmit = () => {
     if (replyText.trim()) {
       const reply: Comment = {
         id: comments.length + 1,
@@ -474,7 +474,8 @@ const PostPage: React.FC = () => {
                           취소
                         </button>
                         <button
-                          onClick={() => handleReplySubmit(comment.id)}
+                          //onClick={() => handleReplySubmit(comment.id)}
+                          onClick={() => handleReplySubmit()}
                           disabled={!replyText.trim()}
                           className="bg-primary-light dark:bg-primary-dark text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >

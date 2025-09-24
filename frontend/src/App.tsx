@@ -18,6 +18,9 @@ import MyPage from "./pages/MyPage";
 import SsoCallbackPage from "./pages/SsoCallbackPage";
 import SocialLinkCallbackPage from "./pages/SocialLinkCallbackPage";
 import AdminPage from "./pages/AdminPage";
+import TipsPage from "./pages/TipsPage";
+import PostPage from "./pages/PostPage";
+import PostWritePage from "./pages/PostWritePage";
 
 import { useAuthStore } from "./store/authStore";
 import { ROLES } from "../../shared/constants";
@@ -73,6 +76,10 @@ function App() {
         <Route path="/store/:storeId" element={<StorePage />} />
         <Route path="/offer/:id" element={<OfferDetailPage />} />
         <Route path="/store" element={<StorePage />} />
+        <Route path="/tips" element={<TipsPage />} />
+        <Route path="/post/:id" element={<PostPage />} />
+        <Route path="/post/write/:categoryId" element={<PostWritePage />} />
+        <Route path="/post/edit/:postId" element={<PostWritePage />} />
         <Route path="/community" element={<CommunityPage />} />
 
         {/* role 상관없이 로그인만 체크 */}

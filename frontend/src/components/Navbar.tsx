@@ -40,7 +40,7 @@ const Navbar: React.FC = () => {
           )}
           <li>
             <a
-              href="#"
+              href="/tips"
               className="text-base text-foreground-light dark:text-foreground-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors"
             >
               정보

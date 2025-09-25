@@ -27,7 +27,7 @@ export interface PostDto {
 
 // 게시글 생성 시 사용할 데이터
 export type PostCreateData = Pick<PostDto, "userId" | "title" | "content"> & {
-  categoryIds?: CategoryDto["id"][];
+  categoryIds?: CategoryDto["id"];
   imageUrls?: string[];
   files?: {
     fileName: string;

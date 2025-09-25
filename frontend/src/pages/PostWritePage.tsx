@@ -25,13 +25,19 @@ import {
   FaPalette,
 } from "react-icons/fa";
 import { MdFormatSize } from "react-icons/md";
+import type { PostCreateData } from "../../../shared/types";
+import { api } from "../api/axios";
+import { useAuthStore } from "../store/authStore";
+import { toast } from "sonner";
 
 const PostWritePage: React.FC = () => {
-  const { postId } = useParams<{ postId?: string }>();
+  const { category } = useParams<{ category?: string }>();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isEditMode, setIsEditMode] = useState(false);
   const [isFontSizeOpen, setIsFontSizeOpen] = useState(false);
+  const { user } = useAuthStore();
 
   // Tiptap 에디터 설정
   const editor = useEditor({
@@ -60,7 +66,7 @@ const PostWritePage: React.FC = () => {
         types: ["heading", "paragraph"],
       }),
       Placeholder.configure({
-        placeholder: "글 내용을 작성해주세요.",
+        placeholder: "내용을 작성하세요",
       }),
       Underline,
     ],
@@ -74,19 +80,18 @@ const PostWritePage: React.FC = () => {
   });
 
   // 편집 모드 확인
-  useEffect(() => {
-    if (postId) {
-      setIsEditMode(true);
-      // TODO: 기존 게시글 데이터 로드
-      // loadExistingPost(postId);
-    }
-  }, [postId]);
+  //   useEffect(() => {
+  //     if (포스트 아이디) {
+  //       setIsEditMode(true);
+  //       // TODO: 기존 게시글 데이터 로드
+  //       // loadExistingPost(postId);
+  //     }
+  //   }, [category]);
 
   // 페이지 벗어날 때 확인 메시지
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = "작성 중인 내용이 있습니다. 정말 페이지를 벗어나시겠습니까?";
       return "작성 중인 내용이 있습니다. 정말 페이지를 벗어나시겠습니까?";
     };
 
@@ -134,28 +139,36 @@ const PostWritePage: React.FC = () => {
   };
 
   // 글 저장 함수
-  const handleSave = () => {
-    if (!title.trim()) {
-      alert("제목을 입력해주세요.");
-      return;
+  const handleSave = async () => {
+    if (user?.id) {
+      if (!title.trim()) {
+        alert("제목을 입력해주세요.");
+        return;
+      }
+      if (!editor?.getText().trim()) {
+        alert("내용을 입력해주세요.");
+        return;
+      }
+
+      const content = editor?.getHTML() || "";
+
+      const requestBody: PostCreateData = {
+        title,
+        content,
+        userId: user?.id,
+      };
+
+      const response = await api.post(`/post/write/${category}`, requestBody);
+      if (response) {
+        toast.success("게시글이 저장되었습니다.");
+        navigate(`/${category}/${response.id}`);
+      } else {
+        toast.error("게시글 저장 도중 오류가 발생했습니다.");
+      }
+    } else {
+      toast.error("로그인 후 이용해주세요.");
+      navigate("/login");
     }
-    if (!editor?.getText().trim()) {
-      alert("내용을 입력해주세요.");
-      return;
-    }
-
-    const content = editor?.getHTML() || "";
-
-    // TODO: 실제 저장 로직 구현
-    console.log("저장할 데이터:", {
-      title,
-      content,
-      isEdit: isEditMode,
-      postId: postId || null,
-    });
-
-    // 저장 후 목록으로 이동
-    navigate("/tips");
   };
 
   // 취소 함수
@@ -196,7 +209,7 @@ const PostWritePage: React.FC = () => {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="제목을 입력하세요..."
+              placeholder="제목을 입력하세요"
               className="w-full p-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-[#292929] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent outline-none text-xl font-semibold"
             />
           </div>

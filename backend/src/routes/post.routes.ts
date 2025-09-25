@@ -321,4 +321,54 @@ router.get("/detail/:id", async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// 인기 게시글 조회 (3일 전부터 현재까지 좋아요 수가 많은 게시글 5개)
+router.get("/popular/:category", async (req, res) => {
+  const { category } = req.params;
+  try {
+    // 3일 전 날짜 계산
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    // 인기 게시글 조회 쿼리
+    const query = `
+      SELECT 
+        p.id AS id,
+        p.title AS title,
+        p.thumbnail_url AS thumbnailUrl,
+        p.view_count AS viewCount,
+        p.like_count AS likeCount,
+        p.created_at AS createdAt,
+        u.id AS authorId,
+        u.nickname AS authorNickname,
+        u.profile_image_url AS authorProfileImageUrl,
+        c.id AS categoryId,
+        c.name AS categoryName,
+        (SELECT COUNT(id) FROM comments WHERE post_id = p.id) AS commentCount
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      JOIN post_categories pc ON p.id = pc.post_id
+      JOIN categories c ON pc.category_id = c.id
+      WHERE p.is_deleted = false 
+        AND c.name = ?
+        AND p.created_at >= ?
+      ORDER BY p.like_count DESC, p.view_count DESC
+      LIMIT 6
+    `;
+
+    const popularPosts: PostListDto[] = await AppDataSource.query(query, [category, threeDaysAgo]);
+    console.log("인기 게시글 조회 데이터: " + popularPosts);
+    res.status(200).json({
+      success: true,
+      data: popularPosts,
+    });
+  } catch (error) {
+    console.error("인기 게시글 조회 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "인기 게시글을 불러오는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
 export default router;

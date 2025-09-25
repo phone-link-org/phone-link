@@ -13,6 +13,8 @@ import { Post } from "./posts.entity";
 import { Seller } from "./sellers.entity";
 import { SocialAccount } from "./socialAccounts.entity";
 import { UserFavorites } from "./userFavorites.entity";
+import { PostLike } from "./postLikes.entity";
+import { CommentLike } from "./commentLikes.entity";
 import { ROLES, Role } from "../../../shared/constants";
 
 @Entity("users")
@@ -115,4 +117,12 @@ export class User {
   /** 사용자가 즐겨찾기한 매장 목록 */
   @OneToMany(() => UserFavorites, (favorite) => favorite.user)
   favorites: UserFavorites[];
+
+  /** 사용자가 좋아요한 게시글 목록 */
+  @OneToMany(() => PostLike, (like) => like.user)
+  postLikes: PostLike[];
+
+  /** 사용자가 좋아요한 댓글 목록 */
+  @OneToMany(() => CommentLike, (like) => like.user)
+  commentLikes: CommentLike[];
 }

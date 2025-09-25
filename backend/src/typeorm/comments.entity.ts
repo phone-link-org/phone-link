@@ -4,12 +4,14 @@ import {
   Entity,
   Index,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   JoinColumn,
 } from "typeorm";
 import { Post } from "./posts.entity";
 import { User } from "./users.entity";
+import { CommentLike } from "./commentLikes.entity";
 
 @Entity("comments")
 export class Comment {
@@ -24,8 +26,15 @@ export class Comment {
   @Index()
   userId: number;
 
+  @Column({ name: "parent_id", type: "bigint", nullable: true })
+  @Index()
+  parentId?: number;
+
   @Column({ type: "text", nullable: false })
   content: string;
+
+  @Column({ name: "like_count", type: "int", nullable: false, default: 0 })
+  likeCount: number;
 
   @Column({
     name: "is_deleted",
@@ -50,4 +59,16 @@ export class Comment {
   @ManyToOne(() => User, (user) => user.comments)
   @JoinColumn({ name: "user_id" })
   user: User;
+
+  @ManyToOne(() => Comment, (comment) => comment.replies, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "parent_id" })
+  parent?: Comment;
+
+  @OneToMany(() => Comment, (comment) => comment.parent)
+  replies: Comment[];
+
+  @OneToMany(() => CommentLike, (like) => like.comment)
+  likes: CommentLike[];
 }

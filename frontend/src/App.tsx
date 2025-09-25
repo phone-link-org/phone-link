@@ -18,7 +18,7 @@ import MyPage from "./pages/MyPage";
 import SsoCallbackPage from "./pages/SsoCallbackPage";
 import SocialLinkCallbackPage from "./pages/SocialLinkCallbackPage";
 import AdminPage from "./pages/AdminPage";
-import TipsPage from "./pages/TipsPage";
+import TipsPage from "./pages/BoardPage";
 import PostPage from "./pages/PostPage";
 import PostWritePage from "./pages/PostWritePage";
 
@@ -76,10 +76,10 @@ function App() {
         <Route path="/store/:storeId" element={<StorePage />} />
         <Route path="/offer/:id" element={<OfferDetailPage />} />
         <Route path="/store" element={<StorePage />} />
-        <Route path="/tips" element={<TipsPage />} />
+        <Route path="/:category" element={<TipsPage />} />
         <Route path="/post/:id" element={<PostPage />} />
-        <Route path="/post/write/:categoryId" element={<PostWritePage />} />
-        <Route path="/post/edit/:postId" element={<PostWritePage />} />
+        <Route path="/:category/write/" element={<PostWritePage />} />
+        <Route path="/:category/edit/:postId" element={<PostWritePage />} />
         <Route path="/community" element={<CommunityPage />} />
 
         {/* role 상관없이 로그인만 체크 */}

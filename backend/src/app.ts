@@ -12,6 +12,7 @@ import regionRoutes from "./routes/region.routes";
 import phoneRoutes from "./routes/phone.routes";
 import authRoutes from "./routes/auth.routes";
 import uploadRoutes from "./routes/upload.routes";
+import postRoutes from "./routes/post.routes";
 
 dotenv.config();
 
@@ -40,5 +41,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/region", regionRoutes);
 app.use("/api/phone", phoneRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/post", postRoutes);
 
 export default app;

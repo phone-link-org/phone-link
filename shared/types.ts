@@ -10,3 +10,4 @@ export * from "./phone.types";
 export * from "./carrier.types";
 export * from "./addon.types";
 export * from "./reqPlan.types";
+export * from "./post.types";

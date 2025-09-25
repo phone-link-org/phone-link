@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { AppDataSource } from "../db";
 import type { PostListDto } from "../../../shared/post.types";
+import { Post } from "../typeorm/posts.entity";
+import { Category } from "../typeorm/categories.entity";
+import { PostCategory } from "../typeorm/postCategories.entity";
 
 const router = Router();
 
@@ -43,6 +46,47 @@ router.get("/:category", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "게시글 목록을 불러오는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
+router.post("/write/:category", async (req, res) => {
+  const { category } = req.params;
+  const { title, content, userId } = req.body;
+
+  try {
+    const categoryEntity = await AppDataSource.getRepository(Category).findOne({ where: { name: category } });
+    if (!categoryEntity) {
+      return res.status(404).json({ message: "존재하지 않은 카테고리입니다." });
+    }
+
+    const newPost = new Post();
+    newPost.title = title;
+    newPost.content = content;
+    newPost.userId = userId;
+    newPost.viewCount = 0;
+    newPost.likeCount = 0;
+    newPost.createdAt = new Date();
+    newPost.updatedAt = new Date();
+
+    const savedPost = await AppDataSource.getRepository(Post).save(newPost);
+
+    const newPostCategory = new PostCategory();
+    newPostCategory.postId = savedPost.id;
+    newPostCategory.categoryId = categoryEntity.id;
+
+    await AppDataSource.getRepository(PostCategory).save(newPostCategory);
+
+    res.status(201).json({
+      message: "게시글이 저장되었습니다.",
+      data: savedPost,
+    });
+  } catch (error) {
+    console.error("게시글 저장 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "게시글 저장 중 오류가 발생했습니다.",
       error: error instanceof Error ? error.message : "알 수 없는 오류",
     });
   }

@@ -15,7 +15,7 @@ const TipsPage: React.FC = () => {
       setPosts(response);
     };
     fetchPosts();
-  }, []);
+  }, [category]);
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string | Date) => {
@@ -36,20 +36,31 @@ const TipsPage: React.FC = () => {
 
   // 카드 클릭 시 상세 페이지로 이동
   const handlePostClick = (postId: number) => {
-    navigate(`/post/${postId}`);
+    navigate(`/${category}/${postId}`);
   };
 
   // 글쓰기 버튼 클릭
   const handleWriteClick = () => {
     // tips 카테고리로 글쓰기 페이지 이동
-    navigate("/tips/write");
+    navigate(`/${category}/write`);
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
       {/* 헤더 */}
       <div>
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">정보 게시판</h1>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+          {category === "tips"
+            ? "정보"
+            : category === "free"
+              ? "자유"
+              : category === "question"
+                ? "질문"
+                : category === "review"
+                  ? "리뷰"
+                  : category}{" "}
+          게시판
+        </h1>
       </div>
 
       {/* 글쓰기 버튼 */}

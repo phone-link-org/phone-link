@@ -77,7 +77,7 @@ function App() {
         <Route path="/offer/:id" element={<OfferDetailPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/:category" element={<TipsPage />} />
-        <Route path="/post/:id" element={<PostPage />} />
+        <Route path="/:category/:id" element={<PostPage />} />
         <Route path="/:category/write/" element={<PostWritePage />} />
         <Route path="/:category/edit/:postId" element={<PostWritePage />} />
         <Route path="/community" element={<CommunityPage />} />
@@ -97,6 +97,8 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 
+        {/* 404 페이지 */}
+        <Route path="/404" element={<NotFound />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster

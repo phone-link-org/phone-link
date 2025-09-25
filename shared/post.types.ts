@@ -62,9 +62,11 @@ export type PostListDto = Pick<
 
 // 게시글 상세 조회용 DTO (전체 정보)
 export type PostDetailDto = PostDto & {
-  author: Pick<UserDto, "id" | "nickname" | "profileImageUrl">;
+  authorId: UserDto["id"];
+  authorNickname: UserDto["nickname"];
+  authorProfileImageUrl: UserDto["profileImageUrl"];
   categories: Pick<CategoryDto, "id" | "name">[];
-  comments: CommentDto[];
+  comments: CommentListDto[];
   images: PostImageDto[];
   files: PostFileDto[];
   isLiked?: boolean; // 현재 사용자가 좋아요를 눌렀는지 여부

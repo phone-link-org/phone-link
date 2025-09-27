@@ -1,7 +1,8 @@
-import { Entity, PrimaryColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryColumn, ManyToOne, JoinColumn, Index } from "typeorm";
 import { Post } from "./posts.entity";
 import { Category } from "./categories.entity";
 
+@Index("idx_pc_category_id_post_id", ["categoryId", "postId"])
 @Entity("post_categories")
 export class PostCategory {
   @PrimaryColumn({ name: "post_id", type: "bigint", nullable: false })

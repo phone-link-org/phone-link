@@ -22,7 +22,7 @@ export class Post {
   id: number;
 
   @Column({ name: "user_id", type: "bigint", nullable: false })
-  @Index()
+  @Index("idx_posts_user_id")
   userId: number;
 
   @Column({ type: "varchar", length: 255, nullable: false })
@@ -49,6 +49,7 @@ export class Post {
   isDeleted: boolean;
 
   @CreateDateColumn({ name: "created_at", type: "datetime" })
+  @Index("idx_posts_created_at")
   createdAt: Date;
 
   @UpdateDateColumn({ name: "updated_at", type: "datetime" })

@@ -1,6 +1,6 @@
 import React from "react";
 import BannerSlider from "../components/BannerSlider";
-import ContentBox from "../components/ContentBox";
+import CommunityRecentPosts from "../components/CommunityRecentPosts";
 import RecentOffersList from "../components/RecentOffersList";
 
 const MainPage: React.FC = () => {
@@ -9,9 +9,11 @@ const MainPage: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 py-6 mt-16">
         <BannerSlider />
       </div>
-      <div className="flex flex-col sm:flex-row gap-4 max-w-4xl mx-auto px-4">
-        <RecentOffersList />
-        <ContentBox text="박스 2"></ContentBox>
+      <div className="max-w-4xl mx-auto px-4 pb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[500px]">
+          <RecentOffersList />
+          <CommunityRecentPosts />
+        </div>
       </div>
     </>
   );

@@ -15,6 +15,92 @@ import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 
 const router = Router();
 
+// 최근 게시글 조회 (카테고리별)
+router.get("/recent-posts", async (req, res) => {
+  try {
+    const query = `
+      WITH RankedPosts AS (
+          SELECT
+              p.id AS postId,
+              p.title AS title,
+              p.created_at AS createdAt,
+              pc.category_id AS categoryId,
+              c.name AS categoryName,
+              c.description AS categoryDesc,
+              ROW_NUMBER() OVER(PARTITION BY pc.category_id ORDER BY p.created_at DESC) AS rn
+          FROM
+              posts p
+          JOIN
+              post_categories pc ON p.id = pc.post_id
+          JOIN
+              categories c ON pc.category_id = c.id
+          WHERE
+              c.description LIKE '%게시판'
+      )
+      SELECT
+          postId,
+          title,
+          createdAt,
+          categoryId,
+          categoryName,
+          categoryDesc
+      FROM
+          RankedPosts
+      WHERE
+          rn <= 3
+      ORDER BY
+          categoryName, createdAt DESC;
+    `;
+
+    const result = await AppDataSource.query(query);
+
+    // 데이터 가공: 카테고리별로 그룹화
+    const boardsMap = new Map();
+
+    result.forEach(
+      (row: {
+        categoryId: number;
+        categoryName: string;
+        categoryDesc: string;
+        postId: number;
+        title: string;
+        createdAt: string;
+      }) => {
+        const categoryId = row.categoryId;
+
+        if (!boardsMap.has(categoryId)) {
+          boardsMap.set(categoryId, {
+            board: {
+              id: categoryId,
+              name: row.categoryName,
+              description: row.categoryDesc,
+            },
+            posts: [],
+          });
+        }
+
+        boardsMap.get(categoryId).posts.push({
+          id: row.postId,
+          title: row.title,
+          createdAt: row.createdAt,
+        });
+      },
+    );
+
+    const boards = Array.from(boardsMap.values());
+    res.status(200).json({
+      success: true,
+      data: boards,
+    });
+  } catch (error) {
+    console.error("Error fetching boards with posts:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
 // 특정 카테고리의 게시글 목록 조회
 router.get("/:category", async (req, res) => {
   try {
@@ -370,5 +456,4 @@ router.get("/popular/:category", async (req, res) => {
     });
   }
 });
-
 export default router;

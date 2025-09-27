@@ -51,11 +51,11 @@ const RecentOffersList: React.FC = () => {
   };
 
   return (
-    <div className="flex-1">
-      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-6">
+    <div className="h-full">
+      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-lg p-4 h-full flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">최근 등록</h2>
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">최근 등록</h2>
           <Link to="/offer" className="text-sm text-primary-light dark:text-primary-dark hover:underline font-medium">
             더보기
           </Link>
@@ -63,20 +63,20 @@ const RecentOffersList: React.FC = () => {
 
         {/* 시세 리스트 */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
+          <div className="flex justify-center items-center flex-1">
             <ClipLoader color="#4F7942" size={40} aria-label="Loading Spinner" data-testid="loader" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1">
             {latestOffers.map((offer) => (
               <Link
                 key={offer.id}
                 to={`/offer/${offer.id}`}
-                className="block aspect-[3/4] sm:aspect-[4/5] p-3 sm:p-4 bg-gray-50 dark:bg-[#1f1f1f] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2a2a] transition-colors duration-200 border border-gray-200 dark:border-gray-500 hover:border-primary-light dark:hover:border-primary-dark"
+                className="block p-2 sm:p-3 bg-gray-50 dark:bg-[#1f1f1f] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2a2a] transition-colors duration-200 border border-gray-200 dark:border-gray-500 hover:border-primary-light dark:hover:border-primary-dark h-full"
               >
-                <div className="flex flex-col items-center text-center space-y-1.5 sm:space-y-2 h-full justify-between">
+                <div className="flex flex-col items-center text-center space-y-1 sm:space-y-1.5 h-full justify-between">
                   {/* 썸네일 */}
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-12 sm:h-16 flex items-center justify-center flex-shrink-0">
                     <img
                       src={`${import.meta.env.VITE_API_URL}${offer.imageUrl}`}
                       alt={offer.modelName}

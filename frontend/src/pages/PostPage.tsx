@@ -6,6 +6,7 @@ import type { PostDetailDto } from "../../../shared/types";
 import { api } from "../api/axios";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../hooks/useTheme";
+import { toast } from "sonner";
 
 const PostPage: React.FC = () => {
   const { id: postId } = useParams<{ id: string }>();
@@ -44,9 +45,9 @@ const PostPage: React.FC = () => {
         const response = await api.get<PostDetailDto>(`/post/detail/${postId}`);
         if (response) {
           setPost(response);
+          setIsLiked(response.isLiked || false);
         } else {
           setIsNotFound(true);
-          // 404 페이지로 리다이렉트
           navigate("/404", { replace: true });
         }
       } catch (error) {
@@ -59,33 +60,42 @@ const PostPage: React.FC = () => {
       }
     };
 
-    if (postId) {
-      fetchPost();
-    }
+    if (postId) fetchPost();
   }, [postId, navigate]);
 
-  // 로딩 중일 때 스피너 표시
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <ClipLoader size={50} className="mx-auto mb-4" color={theme === "light" ? "#4F7942" : "#9DC183"} />
-            <p className="text-gray-600 dark:text-gray-400">게시글을 불러오는 중...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 게시글이 없으면 404 처리 (이미 navigate로 리다이렉트됨)
-  if (!post || isNotFound) {
-    return null;
-  }
-
   // 좋아요 토글
-  const handleLike = () => {
-    setIsLiked(!isLiked);
+  const handleLike = async () => {
+    // 로그인 상태 확인
+    if (!user?.id) {
+      toast.error("로그인이 필요합니다.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await api.post(`/post/like/${postId}`);
+      setIsLiked(response);
+
+      // 게시글 좋아요 수 업데이트
+      if (post) {
+        setPost({
+          ...post,
+          likeCount: response ? post.likeCount + 1 : post.likeCount - 1,
+        });
+      }
+    } catch (error: any) {
+      console.error("좋아요 오류:", error);
+
+      // 에러 메시지에 따른 처리
+      if (error.response?.status === 401) {
+        toast.error("로그인이 필요합니다.");
+        navigate("/login");
+      } else if (error.response?.status === 400) {
+        toast.error(error.response.data.message || "이미 좋아요를 누른 게시글입니다.");
+      } else {
+        toast.error("다시 시도해주세요.");
+      }
+    }
   };
 
   // 댓글 좋아요 토글
@@ -164,6 +174,22 @@ const PostPage: React.FC = () => {
     }
   };
 
+  // 게시글이 없으면 404 처리 (이미 navigate로 리다이렉트됨)
+  if (!post || isNotFound) return null;
+
+  // 로딩 중일 때 스피너 표시
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <ClipLoader size={50} className="mx-auto mb-4" color={theme === "light" ? "#4F7942" : "#9DC183"} />
+            <p className="text-gray-600 dark:text-gray-400">게시글을 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 mt-16">
       {/* 게시글 헤더 */}
@@ -190,7 +216,7 @@ const PostPage: React.FC = () => {
                 {post.authorNickname}
               </span>
             </div>
-            <span className="text-gray-500 dark:text-gray-500">{post.createdAt.toLocaleString()}</span>
+            <span className="text-gray-500 dark:text-gray-500">{getRelativeTime(post.createdAt.toString())}</span>
           </div>
           <button className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:underline transition-colors">
             신고하기
@@ -255,9 +281,9 @@ const PostPage: React.FC = () => {
       </div>
 
       {/* 게시글 내용 */}
-      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-md p-6 mb-6">
+      <div className="bg-white dark:bg-[#292929] rounded-lg shadow-md p-6 mb-6 min-h-[300px] flex flex-col">
         <div
-          className="prose prose-lg max-w-none dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-white prose-code:text-gray-900 dark:prose-code:text-gray-200 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-blockquote:border-gray-300 dark:prose-blockquote:border-gray-600 prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300"
+          className="prose prose-lg max-w-none dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-white prose-code:text-gray-900 dark:prose-code:text-gray-200 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-blockquote:border-gray-300 dark:prose-blockquote:border-gray-600 prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300 flex-1"
           style={{
             // 다크모드에서 텍스트 색상만 인버트 (배경은 유지)
             ...(theme === "dark" && {
@@ -279,7 +305,7 @@ const PostPage: React.FC = () => {
             }`}
           >
             <FaHeart className="h-4 w-4" />
-            좋아요 {post.likeCount + (isLiked ? 1 : 0)}
+            좋아요 {post.likeCount}
           </button>
           <button className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg flex items-center gap-2 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors active:border-gray-300 active:text-gray-600 dark:active:border-gray-600 dark:active:text-gray-400">
             <FaShare className="h-4 w-4" />

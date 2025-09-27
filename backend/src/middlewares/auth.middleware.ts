@@ -35,6 +35,31 @@ export const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: 
 };
 
 /**
+ * [선택적 인증 미들웨어]
+ * JWT 토큰이 있으면 검증하고 req.user에 설정, 없으면 그냥 통과
+ * 로그인하지 않은 사용자도 접근 가능하지만, 로그인한 사용자의 경우 추가 정보 제공
+ */
+export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // 토큰이 없으면 그냥 통과 (req.user는 undefined)
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.JWT_SECRET!, (err: VerifyErrors | null, decodedUser) => {
+    if (err) {
+      // 토큰이 유효하지 않아도 그냥 통과 (req.user는 undefined)
+      return next();
+    }
+    req.user = decodedUser as UserAuthData & JwtPayload;
+    next();
+  });
+};
+
+/**
  * [권한 부여 미들웨어 팩토리]
  * 필요한 역할(role)들을 배열로 받아, 해당 역할을 가진 사용자인지 확인하는 미들웨어를 반환
  * @param requiredRoles 허용할 역할의 배열 (예: ['ADMIN'], ['SELLER', 'ADMIN'])

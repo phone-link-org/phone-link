@@ -11,9 +11,80 @@ import type {
 import { Post } from "../typeorm/posts.entity";
 import { Category } from "../typeorm/categories.entity";
 import { PostCategory } from "../typeorm/postCategories.entity";
-import { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { AuthenticatedRequest, isAuthenticated, optionalAuth } from "../middlewares/auth.middleware";
+import { PostLike } from "../typeorm/postLikes.entity";
 
 const router = Router();
+
+router.post("/like/:postId", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const { postId } = req.params;
+    const userId = req.user?.id;
+    const postIdNumber = Number(postId);
+
+    if (!userId) {
+      await queryRunner.rollbackTransaction();
+      return res.status(401).json({
+        success: false,
+        message: "로그인이 필요합니다.",
+      });
+    }
+
+    if (isNaN(postIdNumber)) {
+      await queryRunner.rollbackTransaction();
+      return res.status(400).json({ success: false, message: "유효하지 않은 게시글 ID입니다." });
+    }
+
+    const post = await queryRunner.manager.findOne(Post, { where: { id: postIdNumber } });
+    if (!post) {
+      await queryRunner.rollbackTransaction();
+      return res.status(404).json({ success: false, message: "게시글을 찾을 수 없습니다." });
+    }
+
+    // 중복 좋아요 체크
+    const existingLike = await queryRunner.manager.findOne(PostLike, {
+      where: { postId: postIdNumber, userId },
+    });
+
+    let isLiked = false;
+    if (existingLike) {
+      // 좋아요 취소
+      isLiked = false;
+      post.likeCount--;
+      await queryRunner.manager.remove(existingLike);
+    } else {
+      // 게시글 좋아요 수 증가
+      isLiked = true;
+      post.likeCount++;
+
+      const postLike = new PostLike();
+      postLike.postId = postIdNumber;
+      postLike.userId = userId;
+      await queryRunner.manager.save(postLike);
+    }
+    await queryRunner.manager.save(post);
+    await queryRunner.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      data: isLiked,
+    });
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    console.error("좋아요 처리 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "좋아요 처리 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  } finally {
+    await queryRunner.release();
+  }
+});
 
 // 최근 게시글 조회 (카테고리별)
 router.get("/recent-posts", async (req, res) => {
@@ -211,7 +282,7 @@ router.post("/write/:category", async (req, res) => {
 });
 
 // 게시글 상세 조회
-router.get("/detail/:id", async (req: AuthenticatedRequest, res) => {
+router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) => {
   const queryRunner = AppDataSource.createQueryRunner();
   await queryRunner.connect();
   await queryRunner.startTransaction();
@@ -219,7 +290,7 @@ router.get("/detail/:id", async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const postId = parseInt(id);
-    //const userId = req.user?.id;
+    const userId = req.user?.id;
 
     if (isNaN(postId) || postId <= 0) {
       return res.status(400).json({
@@ -310,6 +381,18 @@ router.get("/detail/:id", async (req: AuthenticatedRequest, res) => {
     `;
     const files = await queryRunner.query(filesQuery, [postId]);
 
+    // 현재 사용자의 좋아요 여부 확인
+    let isLiked = false;
+    if (userId) {
+      const likeQuery = `
+        SELECT post_id
+        FROM post_likes
+        WHERE post_id = ? AND user_id = ?
+      `;
+      const likeResult = await queryRunner.query(likeQuery, [postId, userId]);
+      isLiked = likeResult && likeResult.length > 0;
+    }
+
     // 트랜잭션 커밋
     await queryRunner.commitTransaction();
 
@@ -387,7 +470,7 @@ router.get("/detail/:id", async (req: AuthenticatedRequest, res) => {
           uploadedAt: new Date(file.uploadedAt),
         }),
       ),
-      isLiked: false, // TODO: 현재 사용자의 좋아요 여부 확인
+      isLiked: isLiked,
     };
 
     res.json({

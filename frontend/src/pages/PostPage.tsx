@@ -113,6 +113,59 @@ const PostPage: React.FC = () => {
     }));
   };
 
+  // 공유 버튼 클릭 핸들러
+  const handleShare = async () => {
+    const currentUrl = window.location.href;
+
+    // 모바일에서 네이티브 공유 API 사용 (iOS Safari, Android Chrome)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post?.title || "게시글",
+          url: currentUrl,
+        });
+        return;
+      } catch (error: any) {
+        // 사용자가 공유를 취소한 경우는 에러가 아님
+        if (error.name !== "AbortError") {
+          console.error("네이티브 공유 실패:", error);
+        } else {
+          return; // 사용자가 취소한 경우 그냥 종료
+        }
+      }
+    }
+
+    // 네이티브 공유가 지원되지 않거나 실패한 경우 클립보드 복사
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      toast.success("링크가 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("클립보드 복사 실패:", error);
+      // fallback: 구형 브라우저 지원
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = currentUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          toast.success("링크가 클립보드에 복사되었습니다!");
+        } else {
+          toast.error("링크 복사에 실패했습니다. 수동으로 복사해주세요.");
+        }
+      } catch (fallbackError) {
+        console.error("Fallback 복사 실패:", fallbackError);
+        toast.error("링크 복사에 실패했습니다. 수동으로 복사해주세요.");
+      }
+    }
+  };
+
   // 사용자 프로필 클릭 핸들러 (추후 모달/팝업 구현 예정)
   const handleUserProfileClick = (userId: number) => {
     console.log("User profile clicked:", userId);
@@ -324,7 +377,10 @@ const PostPage: React.FC = () => {
             />
             좋아요 {post.likeCount}
           </button>
-          <button className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg flex items-center gap-2 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors active:border-gray-300 active:text-gray-600 dark:active:border-gray-600 dark:active:text-gray-400">
+          <button
+            onClick={handleShare}
+            className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg flex items-center gap-2 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors active:border-gray-300 active:text-gray-600 dark:active:border-gray-600 dark:active:text-gray-400"
+          >
             <FaShare className="h-4 w-4" />
             공유
           </button>

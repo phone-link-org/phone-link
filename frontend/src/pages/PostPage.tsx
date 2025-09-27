@@ -12,6 +12,7 @@ const PostPage: React.FC = () => {
   const { id: postId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
+  const [isHeartAnimating, setIsHeartAnimating] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [commentLikes, setCommentLikes] = useState<{ [key: number]: boolean }>({});
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -75,6 +76,12 @@ const PostPage: React.FC = () => {
     try {
       const response = await api.post(`/post/like/${postId}`);
       setIsLiked(response);
+
+      // 하트 애니메이션 트리거
+      if (response) {
+        setIsHeartAnimating(true);
+        setTimeout(() => setIsHeartAnimating(false), 600);
+      }
 
       // 게시글 좋아요 수 업데이트
       if (post) {
@@ -153,8 +160,14 @@ const PostPage: React.FC = () => {
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 6) return `${diffInHours}시간 전`;
 
-    // 6시간 이후는 원래 날짜/시간 형식으로 표시
-    return dateString;
+    // 6시간 이후는 yyyy/mm/dd hh:mm 형태로 표시
+    const year = commentDate.getFullYear();
+    const month = String(commentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(commentDate.getDate()).padStart(2, "0");
+    const hours = String(commentDate.getHours()).padStart(2, "0");
+    const minutes = String(commentDate.getMinutes()).padStart(2, "0");
+
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
   // 댓글 추가
@@ -304,7 +317,11 @@ const PostPage: React.FC = () => {
                 : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-500 hover:text-red-500 dark:hover:border-red-400 dark:hover:text-red-400"
             }`}
           >
-            <FaHeart className="h-4 w-4" />
+            <FaHeart
+              className={`h-4 w-4 transition-all duration-300 ${
+                isHeartAnimating ? "animate-bounce scale-125 text-red-500 dark:text-red-400" : ""
+              }`}
+            />
             좋아요 {post.likeCount}
           </button>
           <button className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg flex items-center gap-2 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors active:border-gray-300 active:text-gray-600 dark:active:border-gray-600 dark:active:text-gray-400">

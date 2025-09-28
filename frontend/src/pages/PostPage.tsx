@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaEye, FaHeart, FaComment, FaShare, FaReply, FaUser } from "react-icons/fa";
+import { FaEye, FaHeart, FaComment, FaShare, FaReply, FaUser, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { ClipLoader } from "react-spinners";
-import type { PostDetailDto } from "../../../shared/types";
+import type { CommentCreateData, CommentListDto, PostDetailDto } from "../../../shared/types";
 import { api } from "../api/axios";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../hooks/useTheme";
@@ -11,12 +11,14 @@ import { toast } from "sonner";
 const PostPage: React.FC = () => {
   const { id: postId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const [isLiked, setIsLiked] = useState(false);
   const [isHeartAnimating, setIsHeartAnimating] = useState(false);
-  const [newComment, setNewComment] = useState("");
+  const [newComment, setNewComment] = useState<CommentCreateData | null>(null);
   const [commentLikes, setCommentLikes] = useState<{ [key: number]: boolean }>({});
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
-  const [replyText, setReplyText] = useState("");
+  const [reply, setReply] = useState<CommentCreateData | null>(null);
+  const [showReplies, setShowReplies] = useState<{ [key: number]: boolean }>({});
   const [post, setPost] = useState<PostDetailDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
@@ -47,6 +49,11 @@ const PostPage: React.FC = () => {
         if (response) {
           setPost(response);
           setIsLiked(response.isLiked || false);
+          setNewComment({
+            postId: response.id,
+            userId: user ? user.id : -1,
+            content: "",
+          });
         } else {
           setIsNotFound(true);
           navigate("/404", { replace: true });
@@ -176,30 +183,45 @@ const PostPage: React.FC = () => {
   const handleReplyToggle = (commentId: number) => {
     if (replyingTo === commentId) {
       setReplyingTo(null);
-      setReplyText("");
+      setReply(null);
     } else {
-      setReplyingTo(commentId);
-      setReplyText("");
+      if (postId && user?.id) {
+        setReplyingTo(commentId);
+        setReply({
+          postId: parseInt(postId),
+          parentId: commentId,
+          userId: user.id,
+          content: "",
+        });
+      }
     }
+  };
+
+  // 대댓글 표시 토글
+  const handleShowRepliesToggle = (commentId: number) => {
+    setShowReplies((prev) => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }));
   };
 
   // 답글 작성
-  const handleReplySubmit = async (commentId: number) => {
-    if (!user?.id || !postId || !replyText.trim()) {
-      return;
-    }
+  //   const handleReplySubmit = async (commentId: number) => {
+  //     if (!user?.id || !postId || !reply?.content.trim()) {
+  //       return;
+  //     }
 
-    try {
-      // TODO: API 호출로 답글 생성
-      console.log("답글 작성:", { postId, commentId, content: replyText });
-      setReplyText("");
-      setReplyingTo(null);
-      // 답글 작성 후 댓글 목록 새로고침
-      // await fetchPost();
-    } catch (error) {
-      console.error("답글 작성 오류:", error);
-    }
-  };
+  //     try {
+  //       // TODO: API 호출로 답글 생성
+  //       console.log("답글 작성:", reply);
+  //       setReply(null);
+  //       setReplyingTo(null);
+  //       // 답글 작성 후 댓글 목록 새로고침
+  //       // await fetchPost();
+  //     } catch (error) {
+  //       console.error("답글 작성 오류:", error);
+  //     }
+  //   };
 
   // 상대적 시간 표시 함수
   const getRelativeTime = (dateString: string) => {
@@ -223,16 +245,52 @@ const PostPage: React.FC = () => {
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
+  // 댓글 작성 textarea 포커스 핸들러
+  const handleCommentFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    if (!user?.id) {
+      toast.error("로그인이 필요합니다.");
+      e.target.blur(); // 포커스 취소
+    }
+  };
+
   // 댓글 추가
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !user?.id || !postId) {
+  const handleAddComment = async (comment: CommentCreateData, parentCommentId: number | null) => {
+    const errorMsg = !user?.id
+      ? "로그인이 필요합니다."
+      : !postId
+        ? "게시글이 존재하지 않습니다."
+        : !comment?.content.trim()
+          ? "댓글을 작성해주세요."
+          : null;
+
+    if (errorMsg) {
+      toast.error(errorMsg);
       return;
     }
 
     try {
-      // TODO: API 호출로 댓글 생성
-      console.log("댓글 작성:", { postId, content: newComment });
-      setNewComment("");
+      if (parentCommentId && !comment.parentId) comment.parentId = parentCommentId;
+
+      const response = await api.post<CommentListDto>(`/post/comment`, comment);
+      if (user?.profileImageUrl && !response.author.profileImageUrl) {
+        response.author.profileImageUrl = user.profileImageUrl;
+      }
+      if (response) {
+        setNewComment({
+          postId: response.id,
+          userId: user ? user.id : -1,
+          content: "",
+        });
+
+        if (parentCommentId) {
+          handleReplyToggle(parentCommentId);
+        }
+
+        setPost({
+          ...post!,
+          comments: [...post!.comments, response],
+        });
+      }
       // 댓글 작성 후 댓글 목록 새로고침
       // await fetchPost();
     } catch (error) {
@@ -270,7 +328,7 @@ const PostPage: React.FC = () => {
               <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center group-hover:opacity-80 transition-opacity">
                 {post.authorProfileImageUrl ? (
                   <img
-                    src={post.authorProfileImageUrl}
+                    src={`${import.meta.env.VITE_API_URL}${post.authorProfileImageUrl}`}
                     alt={post.authorNickname}
                     className="w-full h-full object-cover"
                   />
@@ -307,7 +365,7 @@ const PostPage: React.FC = () => {
               <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center group-hover:opacity-80 transition-opacity">
                 {post.authorProfileImageUrl ? (
                   <img
-                    src={post.authorProfileImageUrl}
+                    src={`${import.meta.env.VITE_API_URL}${post.authorProfileImageUrl}`}
                     alt={post.authorNickname}
                     className="w-full h-full object-cover"
                   />
@@ -392,111 +450,263 @@ const PostPage: React.FC = () => {
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">댓글 ({post.comments.length})</h3>
 
         {/* 댓글 목록 */}
-        <div className="space-y-4 mb-6">
-          {post.comments.map((comment) => (
-            <div key={comment.id} className="border-b border-gray-200 dark:border-gray-500 pb-4 last:border-b-0">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="group flex items-center gap-2 cursor-pointer"
-                    onClick={() => handleUserProfileClick(comment.author.id)}
-                  >
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center group-hover:opacity-80 transition-opacity">
-                      {comment.author.profileImageUrl ? (
-                        <img
-                          src={comment.author.profileImageUrl}
-                          alt={comment.author.nickname}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <FaUser className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                      )}
-                    </div>
-                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-primary-light dark:group-hover:text-primary-dark group-hover:underline transition-colors">
-                      {comment.author.nickname}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {getRelativeTime(comment.createdAt.toString())}
-                </span>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-2">{comment.content}</p>
-              <div className="flex items-center justify-end gap-4">
-                <button
-                  onClick={() => handleReplyToggle(comment.id)}
-                  className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors text-sm"
-                >
-                  <FaReply className="h-3 w-3" />
-                  답글
-                </button>
-                <button
-                  onClick={() => handleCommentLike(comment.id)}
-                  className={`flex items-center gap-1 transition-colors ${
-                    commentLikes[comment.id]
-                      ? "text-red-500 dark:text-red-400"
-                      : "text-gray-500 dark:text-gray-400 hover:text-red-500"
-                  }`}
-                >
-                  <FaHeart className="h-3 w-3" />
-                  {comment.likeCount + (commentLikes[comment.id] ? 1 : 0)}
-                </button>
-              </div>
+        <div className="space-y-6 mb-6">
+          {post.comments
+            .filter((comment) => !comment.parentId) // 부모 댓글만 필터링
+            .map((comment) => {
+              // 해당 댓글의 대댓글들 찾기
+              const replies = post.comments.filter((reply) => reply.parentId === comment.id);
 
-              {/* 답글 작성 UI */}
-              {replyingTo === comment.id && (
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-[#242424] rounded-lg animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <FaUser className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                    </div>
-                    <div className="flex-1">
-                      <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder={`${comment.author.nickname}님에게 답글 달기...`}
-                        className="w-full p-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-[#292929] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent outline-none resize-none"
-                        rows={2}
-                      />
-                      <div className="flex justify-end gap-2 mt-2">
-                        <button
-                          onClick={() => {
-                            setReplyingTo(null);
-                            setReplyText("");
-                          }}
-                          className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors text-sm"
+              return (
+                <div key={comment.id} className="relative">
+                  {/* 부모 댓글 */}
+                  <div className="bg-gradient-to-r from-gray-50 to-white dark:from-[#1f1f1f] dark:to-[#2a2a2a] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-start gap-4">
+                      {/* 사용자 프로필 이미지 */}
+                      <div
+                        className="group flex items-center gap-2 cursor-pointer flex-shrink-0"
+                        onClick={() => handleUserProfileClick(comment.author.id)}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-lg ${
+                            comment.author.profileImageUrl
+                              ? "bg-background-light dark:bg-background-dark"
+                              : "bg-gradient-to-br from-blue-400 to-purple-500"
+                          }`}
                         >
-                          취소
-                        </button>
-                        <button
-                          onClick={() => handleReplySubmit(comment.id)}
-                          disabled={!replyText.trim()}
-                          className="bg-primary-light dark:bg-primary-dark text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        >
-                          답글 작성
-                        </button>
+                          {comment.author.profileImageUrl ? (
+                            <img
+                              src={`${import.meta.env.VITE_API_URL}${comment.author.profileImageUrl}`}
+                              alt={comment.author.nickname}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <FaUser className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 댓글 내용 영역 */}
+                      <div className="flex-1 min-w-0 relative">
+                        {/* 닉네임과 시간 */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="font-semibold text-gray-900 dark:text-white hover:text-primary-light dark:hover:text-primary-dark hover:underline transition-colors cursor-pointer"
+                              onClick={() => handleUserProfileClick(comment.author.id)}
+                            >
+                              {comment.author.nickname}
+                            </span>
+                            <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {getRelativeTime(comment.createdAt.toString())}
+                            </span>
+                          </div>
+
+                          {/* 좋아요 버튼 - 오른쪽 최상단 */}
+                          <button
+                            onClick={() => handleCommentLike(comment.id)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-medium ${
+                              commentLikes[comment.id]
+                                ? "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20"
+                                : "text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            }`}
+                          >
+                            <FaHeart className="h-3 w-3" />
+                            {comment.likeCount + (commentLikes[comment.id] ? 1 : 0)}
+                          </button>
+                        </div>
+
+                        {/* 댓글 내용 */}
+                        <p className="text-gray-700 dark:text-gray-300 mb-3 leading-relaxed pr-20 whitespace-pre-wrap">
+                          {comment.content}
+                        </p>
+
+                        {/* 답글 버튼 - 오른쪽 최하단 */}
+                        <div className="absolute bottom-0 right-0">
+                          <button
+                            onClick={() => handleReplyToggle(comment.id)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-primary-light dark:text-primary-dark hover:underline transition-all duration-200 text-sm font-medium"
+                          >
+                            <FaReply className="h-3 w-3" />
+                            답글
+                          </button>
+                        </div>
+
+                        {/* 답글 보기 버튼 - 댓글 카드 내부 */}
+                        {replies.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <button
+                              onClick={() => handleShowRepliesToggle(comment.id)}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-primary-light dark:text-primary-dark hover:underline transition-all duration-200"
+                            >
+                              <span>{showReplies[comment.id] ? "답글 숨기기" : `답글 ${replies.length}개 보기`}</span>
+                              {showReplies[comment.id] ? (
+                                <FaChevronUp className="w-3 h-3" />
+                              ) : (
+                                <FaChevronDown className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
+
+                    {/* 답글 작성 UI */}
+                    {replyingTo === comment.id && (
+                      <div className="mt-4 p-4 bg-white dark:bg-[#1f1f1f] rounded-xl border border-gray-200 dark:border-gray-600 animate-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ${
+                              user?.profileImageUrl
+                                ? "bg-background-light dark:bg-background-dark"
+                                : "bg-gradient-to-br from-green-400 to-blue-500"
+                            }`}
+                          >
+                            {user?.profileImageUrl ? (
+                              <img
+                                src={`${import.meta.env.VITE_API_URL}${user.profileImageUrl}`}
+                                alt={user.nickname}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <FaUser className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <textarea
+                              value={reply?.content}
+                              onChange={(e) => setReply({ ...reply!, content: e.target.value })}
+                              placeholder={`${comment.author.nickname}님에게 답글 달기...`}
+                              className="w-full p-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-[#292929] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent outline-none resize-none"
+                              rows={2}
+                            />
+                            <div className="flex justify-end gap-2 mt-3">
+                              <button
+                                onClick={() => {
+                                  setReplyingTo(null);
+                                  setReply(null);
+                                }}
+                                className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium"
+                              >
+                                취소
+                              </button>
+                              <button
+                                onClick={() => handleAddComment(reply!, comment.id)}
+                                disabled={!reply?.content.trim()}
+                                className="bg-gradient-to-r from-primary-light to-primary-dark text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                              >
+                                답글 작성
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 대댓글들 */}
+                  {replies.length > 0 && showReplies[comment.id] && (
+                    <div className="mt-4 ml-6 relative">
+                      {/* 대댓글 연결선 */}
+                      <div className="absolute left-0 top-0 w-px h-full bg-gradient-to-b from-gray-300 to-transparent dark:from-gray-600"></div>
+
+                      <div className="space-y-4">
+                        {replies.map((reply) => (
+                          <div key={reply.id} className="relative">
+                            {/* 대댓글 연결점 */}
+                            <div className="absolute -left-6 top-4 w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+
+                            <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all duration-200 ml-2">
+                              <div className="flex items-start gap-3">
+                                {/* 대댓글 프로필 이미지 */}
+                                <div
+                                  className="group flex items-center gap-2 cursor-pointer flex-shrink-0"
+                                  onClick={() => handleUserProfileClick(reply.author.id)}
+                                >
+                                  <div
+                                    className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-md ${
+                                      reply.author.profileImageUrl
+                                        ? "bg-primary-light dark:bg-primary-dark"
+                                        : "bg-gradient-to-br from-pink-400 to-orange-500"
+                                    }`}
+                                  >
+                                    {reply.author.profileImageUrl ? (
+                                      <img
+                                        src={`${import.meta.env.VITE_API_URL}${reply.author.profileImageUrl}`}
+                                        alt={reply.author.nickname}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <FaUser className="w-4 h-4 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* 대댓글 내용 영역 */}
+                                <div className="flex-1 min-w-0">
+                                  {/* 대댓글 닉네임과 시간 */}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="font-semibold text-gray-900 dark:text-white hover:text-primary-light dark:hover:text-primary-dark hover:underline transition-colors cursor-pointer text-sm"
+                                        onClick={() => handleUserProfileClick(reply.author.id)}
+                                      >
+                                        {reply.author.nickname}
+                                      </span>
+                                      <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {getRelativeTime(reply.createdAt.toString())}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* 대댓글 내용 */}
+                                  <p className="text-gray-700 dark:text-gray-300 mb-2 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {reply.content}
+                                  </p>
+
+                                  {/* 대댓글 좋아요 버튼 */}
+                                  <div className="flex items-center justify-end">
+                                    <button
+                                      onClick={() => handleCommentLike(reply.id)}
+                                      className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all duration-200 text-xs font-medium ${
+                                        commentLikes[reply.id]
+                                          ? "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20"
+                                          : "text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                      }`}
+                                    >
+                                      <FaHeart className="h-3 w-3" />
+                                      {reply.likeCount + (commentLikes[reply.id] ? 1 : 0)}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              );
+            })}
         </div>
 
         {/* 댓글 작성 */}
         <div>
           <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="댓글을 작성해주세요..."
+            value={newComment?.content}
+            onChange={(e) => setNewComment({ ...newComment!, content: e.target.value })}
+            onFocus={handleCommentFocus}
+            placeholder={user?.id ? "댓글을 작성해주세요." : "로그인 후 댓글 작성이 가능합니다."}
             className="w-full p-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-[#292929] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent outline-none resize-none"
             rows={3}
           />
           <div className="flex justify-end mt-2">
             <button
-              onClick={handleAddComment}
-              disabled={!newComment.trim()}
+              onClick={() => handleAddComment(newComment!, null)}
+              disabled={!newComment?.content.trim()}
               className="bg-primary-light dark:bg-primary-dark text-white px-6 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               댓글 작성

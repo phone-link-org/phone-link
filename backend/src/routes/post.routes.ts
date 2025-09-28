@@ -7,12 +7,14 @@ import type {
   PostImageDto,
   PostFileDto,
   CommentListDto,
+  CommentCreateData,
 } from "../../../shared/post.types";
 import { Post } from "../typeorm/posts.entity";
 import { Category } from "../typeorm/categories.entity";
 import { PostCategory } from "../typeorm/postCategories.entity";
 import { AuthenticatedRequest, isAuthenticated, optionalAuth } from "../middlewares/auth.middleware";
 import { PostLike } from "../typeorm/postLikes.entity";
+import { Comment } from "../typeorm/comments.entity";
 
 const router = Router();
 
@@ -539,4 +541,54 @@ router.get("/popular/:category", async (req, res) => {
     });
   }
 });
+
+//댓글 저장
+router.post("/comment", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const newComment: CommentCreateData = req.body;
+    const userId = req.user?.id;
+
+    const errorMsg = !userId ? "로그인이 필요합니다." : !newComment ? "잘못된 접근입니다." : null;
+    if (errorMsg) {
+      res.status(400).json({ success: false, message: errorMsg });
+      return;
+    }
+
+    const comment = new Comment();
+    comment.postId = newComment.postId;
+    comment.content = newComment.content;
+    comment.parentId = newComment.parentId ? newComment.parentId : undefined;
+    comment.userId = userId!;
+    comment.createdAt = new Date();
+    comment.updatedAt = new Date();
+    const savedComment = await AppDataSource.manager.save(comment);
+
+    const responseData: CommentListDto = {
+      id: savedComment.id,
+      content: savedComment.content,
+      likeCount: savedComment.likeCount,
+      createdAt: savedComment.createdAt,
+      parentId: savedComment.parentId,
+      author: {
+        id: savedComment.userId,
+        nickname: req.user?.nickname,
+        profileImageUrl: req.user?.profileImageUrl,
+      },
+      isLiked: false,
+    };
+
+    res.status(201).json({
+      success: true,
+      data: responseData,
+    });
+  } catch (error) {
+    console.error("댓글 작성 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "댓글을 작성하는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
 export default router;

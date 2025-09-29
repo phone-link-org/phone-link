@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaEye, FaHeart, FaComment, FaShare, FaReply, FaUser, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FiUser } from "react-icons/fi";
 import { ClipLoader } from "react-spinners";
 import type { CommentCreateData, CommentListDto, PostDetailDto } from "../../../shared/types";
 import { api } from "../api/axios";
@@ -15,7 +16,6 @@ const PostPage: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isHeartAnimating, setIsHeartAnimating] = useState(false);
   const [newComment, setNewComment] = useState<CommentCreateData | null>(null);
-  const [commentLikes, setCommentLikes] = useState<{ [key: number]: boolean }>({});
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [reply, setReply] = useState<CommentCreateData | null>(null);
   const [showReplies, setShowReplies] = useState<{ [key: number]: boolean }>({});
@@ -113,11 +113,41 @@ const PostPage: React.FC = () => {
   };
 
   // 댓글 좋아요 토글
-  const handleCommentLike = (commentId: number) => {
-    setCommentLikes((prev) => ({
-      ...prev,
-      [commentId]: !prev[commentId],
-    }));
+  const handleCommentLike = async (commentId: number) => {
+    try {
+      if (!user?.id) {
+        toast.error("로그인이 필요합니다.");
+        navigate("/login");
+        return;
+      }
+
+      const response = await api.post(`/post/comment/like`, {
+        commentId: commentId,
+        userId: user?.id,
+      });
+
+      // post.comments 배열에서 해당 댓글의 isLiked 상태 업데이트
+      setPost((prevPost) => {
+        if (!prevPost) return prevPost;
+
+        return {
+          ...prevPost,
+          comments: prevPost.comments.map((comment) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                isLiked: response,
+                likeCount: response ? comment.likeCount + 1 : comment.likeCount - 1,
+              };
+            }
+            return comment;
+          }),
+        };
+      });
+    } catch (error) {
+      console.log(error);
+      toast.error("다시 시도해주세요.");
+    }
   };
 
   // 공유 버튼 클릭 핸들러
@@ -253,7 +283,7 @@ const PostPage: React.FC = () => {
     }
   };
 
-  // 댓글 추가
+  // 댓글 추가 - parentCommentId가 null이면 댓글, 존재하면 답글
   const handleAddComment = async (comment: CommentCreateData, parentCommentId: number | null) => {
     const errorMsg = !user?.id
       ? "로그인이 필요합니다."
@@ -277,7 +307,7 @@ const PostPage: React.FC = () => {
       }
       if (response) {
         setNewComment({
-          postId: response.id,
+          postId: parseInt(postId!),
           userId: user ? user.id : -1,
           content: "",
         });
@@ -450,7 +480,7 @@ const PostPage: React.FC = () => {
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">댓글 ({post.comments.length})</h3>
 
         {/* 댓글 목록 */}
-        <div className="space-y-6 mb-6">
+        <div className="space-y-4 mb-6">
           {post.comments
             .filter((comment) => !comment.parentId) // 부모 댓글만 필터링
             .map((comment) => {
@@ -460,7 +490,7 @@ const PostPage: React.FC = () => {
               return (
                 <div key={comment.id} className="relative">
                   {/* 부모 댓글 */}
-                  <div className="bg-gradient-to-r from-gray-50 to-white dark:from-[#1f1f1f] dark:to-[#2a2a2a] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="bg-gradient-to-r from-gray-50 to-white dark:from-[#1f1f1f] dark:to-[#2a2a2a] rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-gray-500 hover:shadow-md transition-all duration-200">
                     <div className="flex items-start gap-4">
                       {/* 사용자 프로필 이미지 */}
                       <div
@@ -481,7 +511,9 @@ const PostPage: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <FaUser className="w-5 h-5 text-white" />
+                            <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                              <FiUser className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -507,13 +539,13 @@ const PostPage: React.FC = () => {
                           <button
                             onClick={() => handleCommentLike(comment.id)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-medium ${
-                              commentLikes[comment.id]
+                              comment.isLiked
                                 ? "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20"
                                 : "text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                             }`}
                           >
                             <FaHeart className="h-3 w-3" />
-                            {comment.likeCount + (commentLikes[comment.id] ? 1 : 0)}
+                            {comment.likeCount}
                           </button>
                         </div>
 
@@ -526,7 +558,7 @@ const PostPage: React.FC = () => {
                         <div className="absolute bottom-0 right-0">
                           <button
                             onClick={() => handleReplyToggle(comment.id)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-primary-light dark:text-primary-dark hover:underline transition-all duration-200 text-sm font-medium"
+                            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 dark:text-gray-400 hover:underline hover:text-primary-light dark:hover:text-primary-dark transition-all duration-200 text-sm font-medium"
                           >
                             <FaReply className="h-3 w-3" />
                             답글
@@ -535,7 +567,7 @@ const PostPage: React.FC = () => {
 
                         {/* 답글 보기 버튼 - 댓글 카드 내부 */}
                         {replies.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-500">
                             <button
                               onClick={() => handleShowRepliesToggle(comment.id)}
                               className="flex items-center gap-2 px-3 py-2 text-sm text-primary-light dark:text-primary-dark hover:underline transition-all duration-200"
@@ -554,7 +586,7 @@ const PostPage: React.FC = () => {
 
                     {/* 답글 작성 UI */}
                     {replyingTo === comment.id && (
-                      <div className="mt-4 p-4 bg-white dark:bg-[#1f1f1f] rounded-xl border border-gray-200 dark:border-gray-600 animate-in slide-in-from-top-2 duration-200">
+                      <div className="mt-4 p-4 bg-white dark:bg-[#1f1f1f] rounded-xl border border-gray-200 dark:border-gray-500 animate-in slide-in-from-top-2 duration-200">
                         <div className="flex items-start gap-3">
                           <div
                             className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ${
@@ -570,7 +602,9 @@ const PostPage: React.FC = () => {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <FaUser className="w-4 h-4 text-white" />
+                              <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                                <FiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              </div>
                             )}
                           </div>
                           <div className="flex-1">
@@ -581,7 +615,7 @@ const PostPage: React.FC = () => {
                               className="w-full p-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-[#292929] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent outline-none resize-none"
                               rows={2}
                             />
-                            <div className="flex justify-end gap-2 mt-3">
+                            <div className="flex justify-end gap-2">
                               <button
                                 onClick={() => {
                                   setReplyingTo(null);
@@ -594,7 +628,7 @@ const PostPage: React.FC = () => {
                               <button
                                 onClick={() => handleAddComment(reply!, comment.id)}
                                 disabled={!reply?.content.trim()}
-                                className="bg-gradient-to-r from-primary-light to-primary-dark text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                className="bg-primary-light dark:bg-primary-dark text-background-light dark:text-background-dark px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                               >
                                 답글 작성
                               </button>
@@ -609,7 +643,7 @@ const PostPage: React.FC = () => {
                   {replies.length > 0 && showReplies[comment.id] && (
                     <div className="mt-4 ml-6 relative">
                       {/* 대댓글 연결선 */}
-                      <div className="absolute left-0 top-0 w-px h-full bg-gradient-to-b from-gray-300 to-transparent dark:from-gray-600"></div>
+                      <div className="absolute left-0 top-0 w-px h-full bg-gradient-to-b from-gray-300 to-transparent dark:from-gray-500"></div>
 
                       <div className="space-y-4">
                         {replies.map((reply) => (
@@ -617,7 +651,7 @@ const PostPage: React.FC = () => {
                             {/* 대댓글 연결점 */}
                             <div className="absolute -left-6 top-4 w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
 
-                            <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all duration-200 ml-2">
+                            <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-500 hover:shadow-md transition-all duration-200 ml-2">
                               <div className="flex items-start gap-3">
                                 {/* 대댓글 프로필 이미지 */}
                                 <div
@@ -638,7 +672,9 @@ const PostPage: React.FC = () => {
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
-                                      <FaUser className="w-4 h-4 text-white" />
+                                      <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                                        <FiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -671,13 +707,13 @@ const PostPage: React.FC = () => {
                                     <button
                                       onClick={() => handleCommentLike(reply.id)}
                                       className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all duration-200 text-xs font-medium ${
-                                        commentLikes[reply.id]
+                                        reply.isLiked
                                           ? "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20"
                                           : "text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                                       }`}
                                     >
                                       <FaHeart className="h-3 w-3" />
-                                      {reply.likeCount + (commentLikes[reply.id] ? 1 : 0)}
+                                      {reply.likeCount}
                                     </button>
                                   </div>
                                 </div>
@@ -707,7 +743,7 @@ const PostPage: React.FC = () => {
             <button
               onClick={() => handleAddComment(newComment!, null)}
               disabled={!newComment?.content.trim()}
-              className="bg-primary-light dark:bg-primary-dark text-white px-6 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary-light dark:bg-primary-dark text-background-light dark:text-background-dark px-6 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               댓글 작성
             </button>

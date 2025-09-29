@@ -8,6 +8,7 @@ import type {
   PostFileDto,
   CommentListDto,
   CommentCreateData,
+  MyPostDto,
 } from "../../../shared/post.types";
 import { Post } from "../typeorm/posts.entity";
 import { Category } from "../typeorm/categories.entity";
@@ -86,6 +87,58 @@ router.post("/like/:postId", isAuthenticated, async (req: AuthenticatedRequest, 
     });
   } finally {
     await queryRunner.release();
+  }
+});
+
+router.get("/my", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "로그인이 필요합니다.",
+      });
+    }
+
+    // TypeORM을 사용하여 사용자가 작성한 게시글 조회
+    const posts = await AppDataSource.manager
+      .createQueryBuilder(Post, "p")
+      .leftJoinAndSelect("p.postCategories", "pc")
+      .leftJoinAndSelect("pc.category", "c")
+      .where("p.userId = :userId", { userId })
+      .andWhere("p.isDeleted = false")
+      .orderBy("p.createdAt", "DESC")
+      .getMany();
+
+    // MyPostDto 형태로 데이터 변환
+    const myPosts: MyPostDto[] = posts.map((post) => {
+      // 게시글은 단 하나의 카테고리에만 속함
+      const category = post.postCategories?.[0]?.category;
+
+      return {
+        id: post.id,
+        title: post.title,
+        thumbnailUrl: post.thumbnailUrl || "",
+        createdAt: post.createdAt,
+        categoryId: category?.id || 0,
+        categoryName: category?.name || "미분류",
+      };
+    });
+
+    console.log(JSON.stringify(myPosts, null, 2));
+
+    res.status(200).json({
+      success: true,
+      data: myPosts,
+    });
+  } catch (error) {
+    console.error("내가 쓴 게시글 조회 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "내가 쓴 게시글을 불러오는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
   }
 });
 
@@ -667,5 +720,7 @@ router.post("/comment/like", isAuthenticated, async (req: AuthenticatedRequest, 
     });
   }
 });
+
+// 내가 쓴 게시글 조회
 
 export default router;

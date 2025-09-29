@@ -72,6 +72,15 @@ export type PostDetailDto = PostDto & {
   isLiked?: boolean; // 현재 사용자가 좋아요를 눌렀는지 여부
 };
 
+export type MyPostDto = {
+  id: PostDto["id"];
+  title: PostDto["title"];
+  thumbnailUrl: PostDto["thumbnailUrl"];
+  createdAt: PostDto["createdAt"];
+  categoryId: CategoryDto["id"];
+  categoryName: CategoryDto["name"];
+};
+
 // =================================================================
 // Comment Types
 // =================================================================

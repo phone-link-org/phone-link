@@ -77,25 +77,35 @@ const TipsPage: React.FC = () => {
     };
   }, []);
 
-  // 날짜 포맷팅 함수
-  const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+  // 상대적 시간 표시 함수 (화면 크기에 따라 다른 형식)
+  const getRelativeTime = (dateString: string) => {
+    const now = new Date();
+    const commentDate = new Date(dateString);
+    const diffInMinutes = Math.floor((now.getTime() - commentDate.getTime()) / (1000 * 60));
 
-    return `${year}/${month}/${day} ${hours}:${minutes}`;
-  };
+    if (diffInMinutes < 1) return "방금 전";
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
 
-  // 간단한 날짜 포맷팅 함수 (월/일만)
-  const formatSimpleDate = (dateString: string | Date) => {
-    const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 6) return `${diffInHours}시간 전`;
 
-    return `${month}/${day}`;
+    // 6시간 이후는 화면 크기에 따라 다른 형식으로 표시
+    const isMobile = window.innerWidth < 640; // sm 브레이크포인트
+
+    if (isMobile) {
+      // 모바일: MM/dd 형식
+      const month = String(commentDate.getMonth() + 1).padStart(2, "0");
+      const day = String(commentDate.getDate()).padStart(2, "0");
+      return `${month}/${day}`;
+    } else {
+      // 데스크톱: yyyy/mm/dd hh:mm 형식
+      const year = commentDate.getFullYear();
+      const month = String(commentDate.getMonth() + 1).padStart(2, "0");
+      const day = String(commentDate.getDate()).padStart(2, "0");
+      const hours = String(commentDate.getHours()).padStart(2, "0");
+      const minutes = String(commentDate.getMinutes()).padStart(2, "0");
+      return `${year}/${month}/${day} ${hours}:${minutes}`;
+    }
   };
 
   // 썸네일 이미지 유효성 검사
@@ -222,7 +232,7 @@ const TipsPage: React.FC = () => {
                             </span>
                           </div>
                           <div className="text-gray-500 dark:text-gray-500 font-medium">
-                            {formatSimpleDate(post.createdAt)}
+                            {getRelativeTime(post.createdAt.toString())}
                           </div>
                         </div>
                       </div>
@@ -270,7 +280,7 @@ const TipsPage: React.FC = () => {
 
                     {/* 날짜 */}
                     <div className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-500 font-medium">
-                      {formatSimpleDate(post.createdAt)}
+                      {getRelativeTime(post.createdAt.toString())}
                     </div>
                   </div>
                 </div>
@@ -330,39 +340,38 @@ const TipsPage: React.FC = () => {
                     </div>
 
                     {/* 제목과 댓글 수 */}
-                    <div className="flex-1 min-w-0 flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors line-clamp-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center mb-1">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors line-clamp-2 flex-1 min-w-0 pr-2">
                           {post.title}
                         </h3>
-
-                        {/* 작성자|작성일|조회수|좋아요 - 제목 바로 아래 */}
-                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center gap-2">
-                            <span className="group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
-                              {post.authorNickname}
-                            </span>
-                            <span className="text-gray-300 dark:text-gray-600">|</span>
-                            <span className="group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
-                              {formatSimpleDate(post.createdAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="flex items-center gap-1 group-hover:text-blue-500 transition-colors">
-                              <FaEye className="h-3 w-3" />
-                              {post.viewCount > 999 ? `${Math.floor(post.viewCount / 1000)}k` : post.viewCount}
-                            </span>
-                            <span className="flex items-center gap-1 group-hover:text-red-500 transition-colors">
-                              <FaHeart className="h-3 w-3" />
-                              {post.likeCount > 999 ? `${Math.floor(post.likeCount / 1000)}k` : post.likeCount}
-                            </span>
-                          </div>
-                        </div>
+                        {/* 댓글 개수 - 제목 바로 옆 */}
+                        <span className="flex-shrink-0 px-2 py-1 ml-2 border border-gray-300 dark:border-gray-500 rounded text-xs text-gray-600 dark:text-gray-400 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors">
+                          {post.commentCount}
+                        </span>
                       </div>
 
-                      {/* 댓글 개수 - 정사각형 */}
-                      <div className="flex-shrink-0 ml-2 border border-gray-300 dark:border-gray-500 rounded text-xs text-gray-600 dark:text-gray-400 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors w-9 h-9 flex items-center justify-center">
-                        {post.commentCount}
+                      {/* 작성자|작성일|조회수|좋아요 - 제목 바로 아래 */}
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <span className="group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
+                            {post.authorNickname}
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-600">|</span>
+                          <span className="group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
+                            {getRelativeTime(post.createdAt.toString())}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1 group-hover:text-blue-500 transition-colors">
+                            <FaEye className="h-3 w-3" />
+                            {post.viewCount > 999 ? `${Math.floor(post.viewCount / 1000)}k` : post.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1 group-hover:text-red-500 transition-colors">
+                            <FaHeart className="h-3 w-3" />
+                            {post.likeCount > 999 ? `${Math.floor(post.likeCount / 1000)}k` : post.likeCount}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -402,12 +411,14 @@ const TipsPage: React.FC = () => {
                   {/* 제목과 작성자 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center mb-1">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors line-clamp-1 flex-1 min-w-0">
-                        {post.title}
-                      </h3>
-                      {/* 댓글 개수 */}
-                      <div className="flex-shrink-0 px-2 py-1 ml-2 border border-gray-300 dark:border-gray-500 rounded text-xs text-gray-600 dark:text-gray-400 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors">
-                        {post.commentCount}
+                      <div className="flex items-center flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors line-clamp-1">
+                          {post.title}
+                        </h3>
+                        {/* 댓글 개수 - 제목 바로 옆 (빈 공간 없이) */}
+                        <span className="px-2 py-1 ml-1 border border-gray-300 dark:border-gray-500 rounded text-xs text-gray-600 dark:text-gray-400 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors">
+                          {post.commentCount}
+                        </span>
                       </div>
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
@@ -431,7 +442,7 @@ const TipsPage: React.FC = () => {
 
                     {/* 날짜 */}
                     <div className="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
-                      {formatDate(post.createdAt)}
+                      {getRelativeTime(post.createdAt.toString())}
                     </div>
                   </div>
                 </div>

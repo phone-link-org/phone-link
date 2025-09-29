@@ -15,6 +15,7 @@ import { PostCategory } from "../typeorm/postCategories.entity";
 import { AuthenticatedRequest, isAuthenticated, optionalAuth } from "../middlewares/auth.middleware";
 import { PostLike } from "../typeorm/postLikes.entity";
 import { Comment } from "../typeorm/comments.entity";
+import { CommentLike } from "../typeorm/commentLikes.entity";
 
 const router = Router();
 
@@ -178,8 +179,24 @@ router.get("/recent-posts", async (req, res) => {
 router.get("/:category", async (req, res) => {
   try {
     const { category } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 15;
+    const offset = (page - 1) * limit;
 
-    // 카테고리명으로 게시글 목록 조회
+    // 전체 게시글 수 조회
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM categories c 
+      JOIN post_categories pc ON c.id = pc.category_id 
+      JOIN posts p ON pc.post_id = p.id 
+      WHERE c.name = ? AND p.is_deleted = false
+    `;
+
+    const countResult = await AppDataSource.query(countQuery, [category]);
+    const totalPosts = countResult[0].total;
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    // 카테고리명으로 게시글 목록 조회 (페이징 적용)
     const query = `
       SELECT 
         p.id AS id,
@@ -200,13 +217,24 @@ router.get("/:category", async (req, res) => {
       JOIN users u ON p.user_id = u.id 
       WHERE c.name = ? AND p.is_deleted = false
       ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
     `;
 
-    const posts: PostListDto[] = await AppDataSource.query(query, [category]);
+    const posts: PostListDto[] = await AppDataSource.query(query, [category, limit, offset]);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: posts,
+      data: {
+        posts: posts,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalPosts,
+          postsPerPage: limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+      },
     });
   } catch (error) {
     console.error("게시글 목록 조회 오류:", error);
@@ -218,6 +246,7 @@ router.get("/:category", async (req, res) => {
   }
 });
 
+// 게시글 작성
 router.post("/write/:category", async (req, res) => {
   const { category } = req.params;
   const { title, content, userId } = req.body;
@@ -346,26 +375,32 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
     `;
     const categories = await queryRunner.query(categoriesQuery, [postId]);
 
-    // 댓글 정보 조회 (작성자 정보 포함)
+    // 댓글 정보 조회 (작성자 정보 포함, 현재 사용자의 좋아요 여부 포함)
     const commentsQuery = `
-      SELECT 
-        c.id AS id,
-        c.post_id AS postId,
-        c.user_id AS userId,
-        c.parent_id AS parentId,
-        c.content AS content,
-        c.like_count AS likeCount,
-        c.is_deleted AS isDeleted,
-        c.created_at AS createdAt,
-        c.updated_at AS updatedAt,
-        u.nickname AS authorNickname,
-        u.profile_image_url AS authorProfileImageUrl
-      FROM comments c
-      JOIN users u ON c.user_id = u.id
-      WHERE c.post_id = ? AND c.is_deleted = false
-      ORDER BY c.created_at ASC
-    `;
-    const comments = await queryRunner.query(commentsQuery, [postId]);
+                  SELECT
+                    c.id AS id,
+                    c.post_id AS postId,
+                    c.user_id AS userId,
+                    c.parent_id AS parentId,
+                    c.content AS content,
+                    c.like_count AS likeCount,
+                    c.is_deleted AS isDeleted,
+                    c.created_at AS createdAt,
+                    c.updated_at AS updatedAt,
+                    u.nickname AS authorNickname,
+                    u.profile_image_url AS authorProfileImageUrl,
+                    CASE 
+                      WHEN ? IS NULL THEN 0
+                      WHEN cl.comment_id IS NOT NULL THEN 1 
+                      ELSE 0 
+                    END AS isLiked
+                  FROM comments c
+                  JOIN users u ON c.user_id = u.id
+                  LEFT JOIN comment_likes cl ON c.id = cl.comment_id AND cl.user_id = ?
+                  WHERE c.post_id = ? AND c.is_deleted = false
+                  ORDER BY c.created_at ASC
+                `;
+    const comments = await queryRunner.query(commentsQuery, [userId, userId, postId]);
 
     // 이미지 정보 조회
     const imagesQuery = `
@@ -383,7 +418,7 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
     `;
     const files = await queryRunner.query(filesQuery, [postId]);
 
-    // 현재 사용자의 좋아요 여부 확인
+    // 현재 사용자의 '게시글' 좋아요 여부 확인
     let isLiked = false;
     if (userId) {
       const likeQuery = `
@@ -406,6 +441,7 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
       thumbnailUrl: postData.thumbnailUrl || "",
       content: postData.content,
       viewCount: postData.viewCount + 1, // 증가된 조회수 반영
+      isLiked: isLiked,
       likeCount: postData.likeCount,
       isDeleted: Boolean(postData.isDeleted),
       createdAt: new Date(postData.createdAt),
@@ -429,11 +465,13 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
           userId: number;
           authorNickname: string;
           authorProfileImageUrl: string | null;
+          isLiked: number;
         }[]
       ).map(
         (comment): CommentListDto => ({
           id: comment.id,
           content: comment.content,
+          isLiked: Boolean(comment.isLiked == 1),
           likeCount: comment.likeCount,
           createdAt: new Date(comment.createdAt),
           parentId: comment.parentId || undefined,
@@ -442,7 +480,6 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
             nickname: comment.authorNickname,
             profileImageUrl: comment.authorProfileImageUrl || "",
           },
-          isLiked: false, // TODO: 현재 사용자의 좋아요 여부 확인
         }),
       ),
       images: (images as { id: number; postId: number; imageUrl: string; uploadedAt: string }[]).map(
@@ -472,7 +509,6 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
           uploadedAt: new Date(file.uploadedAt),
         }),
       ),
-      isLiked: isLiked,
     };
 
     res.json({
@@ -527,7 +563,7 @@ router.get("/popular/:category", async (req, res) => {
     `;
 
     const popularPosts: PostListDto[] = await AppDataSource.query(query, [category, threeDaysAgo]);
-    console.log("인기 게시글 조회 데이터: " + popularPosts);
+
     res.status(200).json({
       success: true,
       data: popularPosts,
@@ -556,7 +592,7 @@ router.post("/comment", isAuthenticated, async (req: AuthenticatedRequest, res) 
 
     const comment = new Comment();
     comment.postId = newComment.postId;
-    comment.content = newComment.content;
+    comment.content = newComment.content.trim();
     comment.parentId = newComment.parentId ? newComment.parentId : undefined;
     comment.userId = userId!;
     comment.createdAt = new Date();
@@ -586,6 +622,47 @@ router.post("/comment", isAuthenticated, async (req: AuthenticatedRequest, res) 
     res.status(500).json({
       success: false,
       message: "댓글을 작성하는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
+router.post("/comment/like", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { commentId, userId } = req.body;
+    const comment = await AppDataSource.manager.findOne(Comment, { where: { id: commentId } });
+    if (!comment) {
+      return res.status(404).json({ success: false, message: "댓글을 찾을 수 없습니다." });
+    }
+
+    const existingLike = await AppDataSource.manager.findOne(CommentLike, {
+      where: { commentId: commentId, userId: userId },
+    });
+
+    let updatedLike = false;
+    if (existingLike) {
+      comment.likeCount--;
+      await AppDataSource.manager.remove(existingLike);
+    } else {
+      updatedLike = true;
+      comment.likeCount++;
+      const newLike = new CommentLike();
+      newLike.commentId = commentId;
+      newLike.userId = userId;
+      await AppDataSource.manager.save(newLike);
+    }
+
+    await AppDataSource.manager.save(comment);
+
+    return res.status(200).json({
+      success: true,
+      data: updatedLike,
+    });
+  } catch (error) {
+    console.error("댓글 좋아요 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "댓글 좋아요 중 오류가 발생했습니다.",
       error: error instanceof Error ? error.message : "알 수 없는 오류",
     });
   }

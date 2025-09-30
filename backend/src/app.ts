@@ -14,6 +14,7 @@ import authRoutes from "./routes/auth.routes";
 import uploadRoutes from "./routes/upload.routes";
 import postRoutes from "./routes/post.routes";
 import utilRoutes from "./routes/util.routes";
+import session from "express-session";
 
 dotenv.config();
 
@@ -29,6 +30,19 @@ app.use(
     credentials: true,
   }),
 );
+
+const secretKey = process.env.SECRET_KEY
+
+app.use(session({
+  secret: secretKey!, // 실제 프로덕션에서는 .env 파일 등으로 관리하세요.
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // 프로덕션 환경에서는 https를 사용하므로 true
+    maxAge: 1000 * 60 * 60 * 24 // 쿠키 유효 기간: 1일
+  }
+}));
 
 // 정적 파일 제공을 위한 미들웨어 설정
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));

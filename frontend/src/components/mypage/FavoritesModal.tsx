@@ -57,7 +57,7 @@ const FavoritesModal: React.FC<FavoritesModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="관심 매장">
+    <Modal isOpen={isOpen} onClose={onClose} title="관심 매장" icon={FiStar}>
       <div className="max-h-96 overflow-y-auto">
         {isLoading ? (
           <div className="text-center py-12">

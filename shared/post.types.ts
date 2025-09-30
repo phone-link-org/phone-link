@@ -79,6 +79,7 @@ export type MyPostDto = {
   createdAt: PostDto["createdAt"];
   categoryId: CategoryDto["id"];
   categoryName: CategoryDto["name"];
+  categoryDesc: CategoryDto["description"];
 };
 
 // =================================================================

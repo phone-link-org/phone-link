@@ -122,11 +122,10 @@ router.get("/my", isAuthenticated, async (req: AuthenticatedRequest, res) => {
         thumbnailUrl: post.thumbnailUrl || "",
         createdAt: post.createdAt,
         categoryId: category?.id || 0,
-        categoryName: category?.name || "미분류",
+        categoryName: category?.name || "알수없음",
+        categoryDesc: category?.description || "알수없음",
       };
     });
-
-    console.log(JSON.stringify(myPosts, null, 2));
 
     res.status(200).json({
       success: true,
@@ -137,6 +136,71 @@ router.get("/my", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     res.status(500).json({
       success: false,
       message: "내가 쓴 게시글을 불러오는 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    });
+  }
+});
+
+// 내가 쓴 댓글 조회
+router.get("/my-comment", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "로그인이 필요합니다.",
+      });
+    }
+
+    // TypeORM을 사용하여 사용자가 작성한 댓글의 게시글 조회 (중복 제거)
+    const comments = await AppDataSource.manager
+      .createQueryBuilder(Comment, "c")
+      .leftJoinAndSelect("c.post", "p")
+      .leftJoinAndSelect("p.postCategories", "pc")
+      .leftJoinAndSelect("pc.category", "c2")
+      .where("c.userId = :userId", { userId })
+      .andWhere("c.isDeleted = false")
+      .andWhere("p.isDeleted = false")
+      .orderBy("c.createdAt", "DESC")
+      .getMany();
+
+    // 게시글 ID로 중복 제거 (가장 최근 댓글 기준)
+    const uniquePostsMap = new Map<number, MyPostDto>();
+
+    comments.forEach((comment) => {
+      const post = comment.post;
+      const postId = post?.id || 0;
+
+      // 이미 해당 게시글이 추가되지 않은 경우에만 추가
+      if (!uniquePostsMap.has(postId) && postId !== 0) {
+        // 게시글은 단 하나의 카테고리에만 속함
+        const category = post?.postCategories?.[0]?.category;
+
+        uniquePostsMap.set(postId, {
+          id: postId,
+          title: post?.title || "삭제된 게시글",
+          thumbnailUrl: post?.thumbnailUrl || "",
+          createdAt: comment.createdAt, // 가장 최근 댓글 작성일
+          categoryId: category?.id || 0,
+          categoryName: category?.name || "알수없음",
+          categoryDesc: category?.description || "알수없음",
+        });
+      }
+    });
+
+    // Map을 배열로 변환
+    const myComments: MyPostDto[] = Array.from(uniquePostsMap.values());
+
+    res.status(200).json({
+      success: true,
+      data: myComments,
+    });
+  } catch (error) {
+    console.error("내가 쓴 댓글 조회 오류:", error);
+    res.status(500).json({
+      success: false,
+      message: "내가 쓴 댓글을 불러오는 중 오류가 발생했습니다.",
       error: error instanceof Error ? error.message : "알 수 없는 오류",
     });
   }
@@ -720,7 +784,5 @@ router.post("/comment/like", isAuthenticated, async (req: AuthenticatedRequest, 
     });
   }
 });
-
-// 내가 쓴 게시글 조회
 
 export default router;

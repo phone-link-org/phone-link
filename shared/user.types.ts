@@ -88,3 +88,8 @@ export type StoreStaffData = {
   storeStatus: SellerDto["status"];
   systemStatus: UserDto["status"];
 };
+
+export type UserSimpleDto = Pick<
+  UserDto,
+  "id" | "profileImageUrl" | "nickname" | "role" | "status"
+>;

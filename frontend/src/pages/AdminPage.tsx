@@ -4,6 +4,7 @@ import { TbReload } from "react-icons/tb";
 import StoreDetailModal from "../components/admin/StoreDetailModal";
 import type { PendingStoreDto } from "../../../shared/types";
 import MasterDataManager from "../components/admin/MasterDataManager";
+import UserManagement from "../components/admin/UserManagement";
 
 const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -186,14 +187,7 @@ const AdminPage: React.FC = () => {
 
         {activeTab === "master-data-management" && <MasterDataManager />}
 
-        {activeTab === "user-management" && (
-          <div className="space-y-6">
-            <p className="text-gray-600 dark:text-gray-300">시스템의 모든 회원을 관리합니다.</p>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center">
-              <p className="text-gray-500 dark:text-gray-400">회원 관리 기능이 준비 중입니다.</p>
-            </div>
-          </div>
-        )}
+        {activeTab === "user-management" && <UserManagement />}
 
         {activeTab === "system-region" && (
           <div className="space-y-6">

@@ -30,9 +30,9 @@ const MENU_ITEMS = [
   },
   {
     id: "comments" as MyPageMenu,
-    label: "내가 쓴 댓글",
+    label: "댓글 단 글",
     icon: FiMessageSquare,
-    description: "작성한 댓글을 확인하세요",
+    description: "댓글을 작성한 게시글을 확인하세요",
     hoverColor: "group-hover:text-green-500",
   },
   {
@@ -124,7 +124,7 @@ const MyPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark pt-[63px] mt-6">
+    <div className="bg-background-light dark:bg-background-dark pt-20 pb-8">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           {/* 로그아웃 버튼 */}

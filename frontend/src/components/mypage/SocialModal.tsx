@@ -160,7 +160,7 @@ const SocialModal: React.FC<SocialModalProps> = ({ isOpen, onClose }) => {
   }, [isOpen, user?.id]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="소셜계정 관리">
+    <Modal isOpen={isOpen} onClose={onClose} title="소셜계정 관리" icon={HiMiniLink}>
       <div className="space-y-4">
         {/* 네이버 계정 카드 */}
         <div className="bg-white dark:bg-background-dark rounded-lg border border-gray-200 dark:border-gray-500 p-4 shadow-sm">

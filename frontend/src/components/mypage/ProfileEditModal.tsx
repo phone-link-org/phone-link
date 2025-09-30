@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import { FiUser } from "react-icons/fi";
 import { api } from "../../api/axios";
 import { toast } from "sonner";
 import AddressSearchButton from "../AddressSearchButton";
@@ -276,7 +277,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="계정 정보 수정">
+    <Modal isOpen={isOpen} onClose={onClose} title="계정 정보 수정" icon={FiUser}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 gap-y-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-x-8">
           {/* --- Left Column --- */}

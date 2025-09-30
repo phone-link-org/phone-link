@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaEye, FaHeart, FaComment, FaShare, FaReply, FaUser, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
@@ -24,6 +24,7 @@ const PostPage: React.FC = () => {
   const [isNotFound, setIsNotFound] = useState(false);
   const { user } = useAuthStore();
   const { theme } = useTheme();
+  const effectRan = useRef(false);
 
   // 다크모드에서 content의 색상을 동적으로 처리하는 함수
   const processContentForTheme = (content: string) => {
@@ -68,8 +69,14 @@ const PostPage: React.FC = () => {
       }
     };
 
-    if (postId) fetchPost();
-  }, [postId, navigate]);
+    if (effectRan.current === false) {
+      if (postId) fetchPost();
+
+      return () => {
+        effectRan.current = true;
+      };
+    }
+  }, [postId]);
 
   // 좋아요 토글
   const handleLike = async () => {

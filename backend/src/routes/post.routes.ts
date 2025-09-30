@@ -383,6 +383,10 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
       });
     }
 
+    if (!req.session.viewedPosts) {
+      req.session.viewedPosts = [];
+    }
+
     // 게시글 상세 정보 조회 쿼리
     const query = `
       SELECT 
@@ -417,7 +421,10 @@ router.get("/detail/:id", optionalAuth, async (req: AuthenticatedRequest, res) =
     const postData = postResult[0];
 
     // 조회수 증가 (트랜잭션 내에서 처리)
-    await queryRunner.query(`UPDATE posts SET view_count = view_count + 1 WHERE id = ?`, [postId]);
+    if (!req.session.viewedPosts.includes(postId)) {
+      await queryRunner.query(`UPDATE posts SET view_count = view_count + 1 WHERE id = ?`, [postId]);
+      req.session.viewedPosts.push(postId);
+    }
 
     // 카테고리 정보 조회
     const categoriesQuery = `

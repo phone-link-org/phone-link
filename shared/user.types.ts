@@ -37,6 +37,26 @@ export interface SocialAccountDto {
   readonly createdAt: Date;
 }
 
+export interface UserSuspensionDto {
+  id: number;
+
+  // @IsNumber()
+  // @IsNotEmpty({ message: "정지시킬 사용자의 ID는 필수입니다." })
+  userId: number;
+
+  // @IsString({ message: "정지 사유는 문자열이어야 합니다." })
+  reason: string;
+
+  // @Type(() => Date) // 들어오는 값이 문자열일 경우 Date 객체로 변환
+  // @IsDate({ message: "정지 종료일은 유효한 날짜 형식이어야 합니다." })
+  // @MinDate(new Date(), { message: "정지 종료일은 현재 시간 이후여야 합니다." })
+  // @IsNotEmpty({ message: "정지 종료일은 필수입니다." })
+  suspendedUntil: Date;
+
+  suspendedById: number;
+  createdAt: Date;
+}
+
 //Omit은 특정 타입에서 특정 키를 제외한 타입을 생성하는 타입
 export type SignupFormData = Omit<
   UserDto,
@@ -89,7 +109,33 @@ export type StoreStaffData = {
   systemStatus: UserDto["status"];
 };
 
+// [ 관리자 페이지 > 회원관리 ] 사용자 목록 조회용
 export type UserSimpleDto = Pick<
   UserDto,
   "id" | "profileImageUrl" | "nickname" | "role" | "status"
 >;
+
+// [ 관리자 페이지 > 회원관리 > 모달 ] 사용자 상세 조회용
+export type UserDetailDto = Pick<
+  UserDto,
+  | "id"
+  | "profileImageUrl"
+  | "nickname"
+  | "name"
+  | "email"
+  | "phoneNumber"
+  | "role"
+  | "status"
+  | "lastLoginAt"
+  | "deletedAt"
+  | "createdAt"
+> &
+  Pick<UserSuspensionDto, "reason" | "suspendedById"> & {
+    suspendedUntil?: UserSuspensionDto["suspendedUntil"];
+    storeId?: StoreDto["id"];
+    storeThumbnailUrl: StoreDto["thumbnailUrl"];
+    storeName: StoreDto["name"];
+    providers: string[];
+    suspendedAt?: UserSuspensionDto["createdAt"];
+    sellerStatus?: "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";
+  };

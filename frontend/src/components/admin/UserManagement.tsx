@@ -3,27 +3,28 @@ import { FiUser, FiSearch, FiUsers } from "react-icons/fi";
 import type { UserSimpleDto } from "../../../../shared/user.types";
 import { ROLES } from "../../../../shared/constants";
 import Pagination from "../Pagination";
+import { api } from "../../api/axios";
+import UserDetailModal from "./UserDetailModal";
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserSimpleDto[]>([]);
   const [isLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const usersPerPage = 10;
 
-  // 데모 데이터 (백엔드 구현 전)
+  // user list 조회
   useEffect(() => {
-    const demoUsers: UserSimpleDto[] = Array.from({ length: 25 }, (_, index) => ({
-      id: index + 1,
-      profileImageUrl: index % 3 === 0 ? `/uploads/images/profile/image-${index}.png` : "",
-      nickname: `사용자${index + 1}`,
-      role: index % 13 === 0 ? ROLES.ADMIN : index % 5 === 0 ? ROLES.SELLER : ROLES.USER,
-      status: index % 7 === 0 ? "SUSPENDED" : index % 11 === 0 ? "WITHDRAWN" : "ACTIVE",
-    }));
-    setUsers(demoUsers);
+    const fetchUsers = async () => {
+      const response = await api.get<UserSimpleDto[]>("/admin/users");
+      setUsers(response);
+    };
+    fetchUsers();
   }, []);
 
-  // 역할 한글 변환
+  // role 한글 변환
   const getRoleText = (role: string) => {
     switch (role) {
       case ROLES.ADMIN:
@@ -35,7 +36,7 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // 역할 배지 색상
+  // role 배지 색상
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case ROLES.ADMIN:
@@ -95,6 +96,18 @@ const UserManagement: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // 사용자 카드 클릭 핸들러
+  const handleUserClick = (userId: number) => {
+    setSelectedUserId(userId);
+    setIsModalOpen(true);
+  };
+
+  // 모달 닫기 핸들러
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedUserId(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* 헤더 섹션 */}
@@ -141,8 +154,8 @@ const UserManagement: React.FC = () => {
             {currentUsers.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#292929] rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-primary-light dark:hover:border-primary-dark transition-all duration-150 cursor-pointer shadow-sm hover:shadow-md"
-                onClick={() => console.log("User clicked:", user.id)}
+                className="group flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#292929] rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gradient-to-r hover:from-primary-light/5 hover:to-transparent dark:hover:from-primary-dark/5 hover:border-primary-light dark:hover:border-primary-dark transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02]"
+                onClick={() => handleUserClick(user.id)}
               >
                 {/* ID */}
                 <span className="text-sm font-medium text-gray-900 dark:text-white w-10">#{user.id}</span>
@@ -153,23 +166,23 @@ const UserManagement: React.FC = () => {
                     <img
                       src={`${import.meta.env.VITE_API_URL}${user.profileImageUrl}`}
                       alt={user.nickname || "프로필"}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:scale-110 transition-all duration-200"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
-                      <FiUser className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 group-hover:border-primary-light dark:group-hover:border-primary-dark group-hover:scale-110 transition-all duration-200">
+                      <FiUser className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors duration-200" />
                     </div>
                   )}
                 </div>
 
                 {/* 닉네임과 역할 */}
                 <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-primary-light dark:group-hover:text-primary-dark transition-colors duration-200">
                     {user.nickname || "닉네임 없음"}
                   </span>
                   {getRoleText(user.role) && (
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getRoleBadgeColor(user.role)} flex-shrink-0`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getRoleBadgeColor(user.role)} flex-shrink-0 group-hover:scale-105 transition-transform duration-200`}
                     >
                       {getRoleText(user.role)}
                     </span>
@@ -178,7 +191,7 @@ const UserManagement: React.FC = () => {
 
                 {/* 상태 */}
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeColor(user.status)}`}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeColor(user.status)} group-hover:scale-105 transition-transform duration-200`}
                 >
                   {getStatusText(user.status)}
                 </span>
@@ -190,6 +203,9 @@ const UserManagement: React.FC = () => {
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </>
       )}
+
+      {/* 사용자 상세 정보 모달 */}
+      <UserDetailModal isOpen={isModalOpen} onClose={handleCloseModal} userId={selectedUserId} />
     </div>
   );
 };

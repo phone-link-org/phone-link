@@ -14,11 +14,14 @@ import {
   PhoneManufacturerDto,
   CarrierDto,
   PhoneStorageDto,
+  UserSimpleDto,
 } from "../../../shared/types";
+import { UserDetailDto } from "../../../shared/user.types";
 import { PhoneStorage } from "../typeorm/phoneStorage.entity";
 import { PhoneDevice } from "../typeorm/phoneDevices.entity";
 import { PhoneManufacturer } from "../typeorm/phoneManufacturers.entity";
 import { Carrier } from "../typeorm/carriers.entity";
+import { User } from "../typeorm/users.entity";
 
 const router = Router();
 
@@ -524,6 +527,160 @@ router.post("/carrier", async (req, res) => {
 });
 
 // #endregion
+
+router.get("/users", async (req, res) => {
+  try {
+    const repo = AppDataSource.getRepository(User);
+    // withDeleted() 옵션으로 탈퇴한 회원도 포함하여 조회
+    const data = await repo.find({
+      select: ["id", "profileImageUrl", "nickname", "role", "status"],
+      withDeleted: true, // deletedAt이 NULL이 아닌 레코드도 포함
+    });
+
+    const result: UserSimpleDto[] = data.map((user) => ({
+      id: user.id,
+      profileImageUrl: user.profileImageUrl,
+      nickname: user.nickname,
+      role: user.role,
+      status: user.status,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({
+      success: false,
+      message: "회원 정보 조회 중 오류 발생",
+      error: "Internal Server Error",
+    });
+  }
+});
+
+// 사용자 상세 정보 조회 API
+router.get("/user-detail/:userId", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "유효하지 않은 사용자 ID입니다.",
+      });
+    }
+
+    // 복잡한 조인 쿼리를 통해 사용자 상세 정보를 한 번에 조회
+    // 탈퇴한 사용자도 포함하여 조회 (withDeleted: true)
+    // SELLER의 경우 status에 관계없이 매장 정보를 표시하되, ACTIVE 상태를 우선으로 함
+    const query = `
+      SELECT 
+        u.id as id,
+        u.profile_image_url as profileImageUrl,
+        u.nickname as nickname,
+        u.name as name,
+        u.email as email,
+        u.phone_number as phoneNumber,
+        u.role as role,
+        u.status as status,
+        u.last_login_at as lastLoginAt,
+        u.deleted_at as deletedAt,
+        u.created_at as createdAt,
+        st.id as storeId,
+        st.thumbnail_url as storeThumbnailUrl,
+        st.name as storeName,
+        s.status as sellerStatus,
+        sa_grouped.ssoProvider,
+        us.reason as reason,
+        us.suspended_until as suspendedUntil,
+        us.suspended_by as suspendedById,
+        us.created_at as suspendedAt
+      FROM users u 
+      LEFT JOIN (
+          SELECT 
+              s1.user_id,
+              s1.store_id,
+              s1.status,
+              s1.created_at,
+              ROW_NUMBER() OVER (
+                  PARTITION BY s1.user_id 
+                  ORDER BY 
+                      CASE s1.status 
+                          WHEN 'ACTIVE' THEN 1
+                          WHEN 'PENDING' THEN 2
+                          WHEN 'INACTIVE' THEN 3
+                          WHEN 'REJECTED' THEN 4
+                          ELSE 5
+                      END,
+                      s1.created_at DESC
+              ) as rn
+          FROM sellers s1
+      ) s ON u.id = s.user_id AND s.rn = 1
+      LEFT JOIN stores st ON s.store_id = st.id 
+      LEFT JOIN user_suspensions us ON u.id = us.user_id 
+      LEFT JOIN (
+          SELECT 
+              user_id, 
+              GROUP_CONCAT(provider SEPARATOR '|') as ssoProvider
+          FROM 
+              social_accounts
+          GROUP BY 
+              user_id
+      ) sa_grouped ON u.id = sa_grouped.user_id
+      WHERE u.id = ?
+    `;
+
+    const result = await AppDataSource.query(query, [userId]);
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    const userData = result[0];
+
+    // SSO Provider 배열로 변환 (| 구분자로 분리)
+    const providers = userData.ssoProvider ? userData.ssoProvider.split("|") : [];
+
+    // UserDetailDto 형태로 데이터 변환
+    const userDetail: UserDetailDto = {
+      id: userData.id,
+      profileImageUrl: userData.profileImageUrl || "",
+      nickname: userData.nickname || "",
+      name: userData.name,
+      email: userData.email,
+      phoneNumber: userData.phoneNumber || "",
+      role: userData.role,
+      status: userData.status,
+      lastLoginAt: userData.lastLoginAt ? new Date(userData.lastLoginAt) : undefined,
+      deletedAt: userData.deletedAt ? new Date(userData.deletedAt) : undefined,
+      createdAt: new Date(userData.createdAt),
+      storeId: userData.storeId || undefined,
+      storeThumbnailUrl: userData.storeThumbnailUrl || "",
+      storeName: userData.storeName || "",
+      providers: providers,
+      reason: userData.reason || "",
+      suspendedUntil: userData.suspendedUntil ? new Date(userData.suspendedUntil) : undefined,
+      suspendedById: userData.suspendedById || 0,
+      suspendedAt: userData.suspendedAt ? new Date(userData.suspendedAt) : undefined,
+      sellerStatus: userData.sellerStatus || undefined,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: userDetail,
+    });
+  } catch (error) {
+    console.error("Error fetching user detail:", error);
+    res.status(500).json({
+      success: false,
+      message: "사용자 상세 정보 조회 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
 
 // #region Region Sync
 router.get("/region", async (req, res) => {

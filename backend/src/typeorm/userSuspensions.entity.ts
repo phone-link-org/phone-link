@@ -23,6 +23,9 @@ export class UserSuspension {
   @CreateDateColumn({ name: "created_at", type: "datetime" })
   createdAt: Date;
 
+  @Column({ name: "unsuspended_at", type: "datetime", nullable: true, default: null })
+  unsuspendedAt: Date | null;
+
   // --- 관계 설정 ---
 
   @ManyToOne(() => User, { onDelete: "CASCADE" })

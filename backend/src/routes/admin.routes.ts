@@ -4,8 +4,8 @@ import { AppDataSource } from "../db";
 import { Region } from "../typeorm/regions.entity";
 import { Store } from "../typeorm/stores.entity";
 import { Seller } from "../typeorm/sellers.entity";
-import { isAuthenticated, hasRole } from "../middlewares/auth.middleware";
-import { ROLES } from "../../../shared/constants";
+import { isAuthenticated, hasRole, AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { ROLES, USER_STATUSES } from "../../../shared/constants";
 import { PhoneModel } from "../typeorm/phoneModels.entity";
 import {
   RegionDto,
@@ -22,6 +22,8 @@ import { PhoneDevice } from "../typeorm/phoneDevices.entity";
 import { PhoneManufacturer } from "../typeorm/phoneManufacturers.entity";
 import { Carrier } from "../typeorm/carriers.entity";
 import { User } from "../typeorm/users.entity";
+import { UserSuspension } from "../typeorm/userSuspensions.entity";
+import { IsNull } from "typeorm";
 
 const router = Router();
 
@@ -594,7 +596,8 @@ router.get("/user-detail/:userId", async (req, res) => {
         us.reason as reason,
         us.suspended_until as suspendedUntil,
         us.suspended_by as suspendedById,
-        us.created_at as suspendedAt
+        us.created_at as suspendedAt,
+        us.unsuspended_at as unsuspendedAt
       FROM users u 
       LEFT JOIN (
           SELECT 
@@ -665,6 +668,7 @@ router.get("/user-detail/:userId", async (req, res) => {
       suspendedUntil: userData.suspendedUntil ? new Date(userData.suspendedUntil) : undefined,
       suspendedById: userData.suspendedById || 0,
       suspendedAt: userData.suspendedAt ? new Date(userData.suspendedAt) : undefined,
+      unsuspendedAt: userData.unsuspendedAt ? new Date(userData.unsuspendedAt) : null,
       sellerStatus: userData.sellerStatus || undefined,
     };
 
@@ -679,6 +683,146 @@ router.get("/user-detail/:userId", async (req, res) => {
       message: "사용자 상세 정보 조회 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
+  }
+});
+
+router.post("/suspend-user", async (req: AuthenticatedRequest, res) => {
+  const { userId, reason, duration } = req.body;
+
+  // 트랜잭션을 위한 QueryRunner 생성
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    // 사용자 존재 여부 확인
+    const userRepo = queryRunner.manager.getRepository(User);
+    const user = await userRepo.findOneBy({ id: userId });
+
+    if (!user) {
+      await queryRunner.rollbackTransaction();
+      return res.status(404).json({
+        success: false,
+        error: "Not Found",
+        message: "해당 사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    // 사용자 상태를 SUSPENDED로 변경
+    user.status = USER_STATUSES.SUSPENDED;
+    await userRepo.save(user);
+
+    // 정지 정보 생성
+    const suspendedById = req.user?.id;
+    const suspendedUntil =
+      duration === "permanent"
+        ? new Date("9999-12-31")
+        : new Date(new Date().getTime() + parseInt(duration) * 24 * 60 * 60 * 1000);
+
+    const userSuspensionRepo = queryRunner.manager.getRepository(UserSuspension);
+    const newSuspension = userSuspensionRepo.create({
+      userId,
+      reason,
+      suspendedUntil,
+      suspendedById,
+    });
+    const savedSuspension = await userSuspensionRepo.save(newSuspension);
+
+    // 트랜잭션 커밋
+    await queryRunner.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        newStatus: user.status,
+        suspensionId: savedSuspension.id,
+        suspensionReason: savedSuspension.reason,
+        suspensionUntil: savedSuspension.suspendedUntil,
+        suspensionById: savedSuspension.suspendedById,
+        suspensionAt: savedSuspension.createdAt,
+      },
+    });
+  } catch (error) {
+    // 트랜잭션 롤백
+    await queryRunner.rollbackTransaction();
+    console.error("Error suspending user:", error);
+    res.status(500).json({
+      success: false,
+      message: "사용자 정지 처리 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  } finally {
+    // QueryRunner 해제
+    await queryRunner.release();
+  }
+});
+
+// 정지 해제 API
+router.post("/unsuspend-user", async (req: AuthenticatedRequest, res) => {
+  const { userId } = req.body;
+
+  // 트랜잭션을 위한 QueryRunner 생성
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    // 사용자 존재 여부 확인
+    const userRepo = queryRunner.manager.getRepository(User);
+    const user = await userRepo.findOneBy({ id: userId });
+
+    if (!user) {
+      await queryRunner.rollbackTransaction();
+      return res.status(404).json({
+        success: false,
+        error: "Not Found",
+        message: "해당 사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    // 사용자 상태를 ACTIVE로 변경
+    user.status = USER_STATUSES.ACTIVE;
+    await userRepo.save(user);
+
+    // 정지 정보 업데이트 (가장 최근 정지 정보 중 해제되지 않은 것)
+    const userSuspensionRepo = queryRunner.manager.getRepository(UserSuspension);
+    const userSuspension = await userSuspensionRepo.findOne({
+      where: {
+        userId,
+        unsuspendedAt: IsNull(),
+      },
+      order: { createdAt: "DESC" },
+    });
+    if (!userSuspension) {
+      await queryRunner.rollbackTransaction();
+      return res.status(404).json({
+        success: false,
+        error: "Not Found",
+        message: "해당 사용자의 정지 정보를 찾을 수 없습니다.",
+      });
+    }
+    userSuspension.unsuspendedAt = new Date();
+    await userSuspensionRepo.save(userSuspension);
+
+    // 트랜잭션 커밋
+    await queryRunner.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      data: user.status,
+    });
+  } catch (error) {
+    // 트랜잭션 롤백
+    await queryRunner.rollbackTransaction();
+    console.error("Error unsuspending user:", error);
+    res.status(500).json({
+      success: false,
+      message: "사용자 정지 해제 처리 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  } finally {
+    // QueryRunner 해제
+    await queryRunner.release();
   }
 });
 

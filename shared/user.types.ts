@@ -1,5 +1,5 @@
 import type { StoreDto, SellerDto } from "./types";
-import type { Role, SsoProvider } from "./constants";
+import type { Role, SsoProvider, UserStatus } from "./constants";
 
 export interface UserDto {
   readonly id: number;
@@ -19,7 +19,7 @@ export interface UserDto {
   address?: string;
   addressDetail?: string;
   role: Role;
-  status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
+  status: UserStatus;
   lastLoginType: string;
   readonly lastLoginAt?: Date;
   readonly deletedAt?: Date;
@@ -55,6 +55,7 @@ export interface UserSuspensionDto {
 
   suspendedById: number;
   createdAt: Date;
+  unsuspendedAt: Date | null;
 }
 
 //Omit은 특정 타입에서 특정 키를 제외한 타입을 생성하는 타입
@@ -130,7 +131,7 @@ export type UserDetailDto = Pick<
   | "deletedAt"
   | "createdAt"
 > &
-  Pick<UserSuspensionDto, "reason" | "suspendedById"> & {
+  Pick<UserSuspensionDto, "reason" | "suspendedById" | "unsuspendedAt"> & {
     suspendedUntil?: UserSuspensionDto["suspendedUntil"];
     storeId?: StoreDto["id"];
     storeThumbnailUrl: StoreDto["thumbnailUrl"];

@@ -3,7 +3,7 @@ import { FiUser, FiMail, FiPhone, FiCalendar, FiClock, FiAlertCircle, FiHome, Fi
 import { Link } from "react-router-dom";
 import { Listbox, Transition } from "@headlessui/react";
 import type { UserDetailDto } from "../../../../shared/user.types";
-import { ROLES } from "../../../../shared/constants";
+import { ROLES, USER_STATUSES, type UserStatus } from "../../../../shared/constants";
 import Modal from "../mypage/Modal";
 import LoadingSpinner from "../LoadingSpinner";
 import { api } from "../../api/axios";
@@ -11,14 +11,16 @@ import kakaoIcon from "../../assets/images/kakao.png";
 import naverIcon from "../../assets/images/naver.png";
 import googleIcon from "../../assets/images/google.png";
 import appleIcon from "../../assets/images/apple.png";
+import { toast } from "sonner";
 
 interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: number | null;
+  onUserStatusUpdate?: (userId: number, newStatus: string) => void;
 }
 
-const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, userId }) => {
+const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, userId, onUserStatusUpdate }) => {
   const [userDetail, setUserDetail] = useState<UserDetailDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,22 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   const [showSuspendForm, setShowSuspendForm] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
   const [suspendDuration, setSuspendDuration] = useState("7"); // 기본값: 7일
+
+  // 정지 사유 옵션
+  const suspendReasonOptions = [
+    {
+      value: "사전동의를 얻지 않은 홍보/상업적 목적의 게시글 및 댓글 작성",
+      label: "사전동의를 얻지 않은 홍보/상업적 목적의 게시글 및 댓글 작성",
+    },
+    { value: "도배성 게시글 및 댓글 작성", label: "도배성 게시글 및 댓글 작성" },
+    { value: "불법 사이트 홍보", label: "불법 사이트 홍보" },
+    { value: "개인 연락처/SNS 계정 요구 및 배포", label: "개인 연락처/SNS 계정 요구 및 배포" },
+    { value: "욕설, 비속어, 혐오 발언 사용", label: "욕설, 비속어, 혐오 발언 사용" },
+    { value: "특정 개인/단체에 대한 명예훼손 및 비방", label: "특정 개인/단체에 대한 명예훼손 및 비방" },
+    { value: "음란물 혹은 불법 촬영물 유포 및 공유", label: "음란물 혹은 불법 촬영물 유포 및 공유" },
+    { value: "운영자 및 관리자 사칭", label: "운영자 및 관리자 사칭" },
+    { value: "추천/조회수 조작 (어뷰징)", label: "추천/조회수 조작 (어뷰징)" },
+  ];
 
   // 정지 기간 옵션
   const suspendDurationOptions = [
@@ -39,7 +57,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   // 계정 정지 핸들러
   const handleSuspendClick = () => {
     if (!showSuspendForm) {
-      // 정지 폼 표시
+      // 데이터입력 폼 표시
       setShowSuspendForm(true);
     } else {
       // 실제 정지 API 호출 (추후 구현)
@@ -49,22 +67,49 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
 
   // 정지 폼 제출 핸들러
   const handleSuspendSubmit = async () => {
-    if (!suspendReason.trim()) {
-      setError("정지 사유를 입력해주세요.");
+    if (!suspendReason) {
+      setError("정지 사유를 선택해주세요.");
       return;
     }
 
-    // TODO: 실제 정지 API 호출 코드 작성 예정
-    console.log("정지 요청:", {
-      userId: userId,
+    const response = await api.post<{
+      newStatus: UserStatus;
+      suspensionId: number;
+      suspensionReason: string;
+      suspensionUntil: Date;
+      suspensionById: number;
+      suspensionAt: Date;
+    }>(`/admin/suspend-user`, {
+      userId,
       reason: suspendReason,
       duration: suspendDuration,
     });
 
-    // 임시로 성공 처리
-    alert(
-      `계정이 정지되었습니다.\n사유: ${suspendReason}\n기간: ${suspendDurationOptions.find((opt) => opt.value === suspendDuration)?.label}`,
-    );
+    if (response) {
+      // 사용자 상세 정보 업데이트
+      setUserDetail((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          status: response.newStatus,
+          reason: response.suspensionReason,
+          suspendedUntil: new Date(response.suspensionUntil),
+          suspendedById: response.suspensionById,
+          suspendedAt: new Date(response.suspensionAt),
+        };
+      });
+
+      // 부모 컴포넌트 상태 업데이트
+      if (onUserStatusUpdate && userId) {
+        onUserStatusUpdate(userId, response.newStatus);
+      }
+
+      toast.success("계정이 정지되었습니다.");
+    } else {
+      toast.error("계정 정지에 실패했습니다.");
+    }
+
     setShowSuspendForm(false);
     setSuspendReason("");
     setSuspendDuration("7");
@@ -75,6 +120,45 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
     setShowSuspendForm(false);
     setSuspendReason("");
     setSuspendDuration("7");
+  };
+
+  // 정지 해제 핸들러
+  const handleUnsuspend = async () => {
+    if (!userId) return;
+
+    try {
+      const response = await api.post<UserStatus>(`/admin/unsuspend-user`, {
+        userId,
+      });
+
+      if (response) {
+        // 사용자 상세 정보 업데이트
+        setUserDetail((prev) => {
+          if (!prev) return prev;
+
+          return {
+            ...prev,
+            status: response,
+            reason: "",
+            suspendedUntil: undefined,
+            suspendedById: 0,
+            suspendedAt: undefined,
+          };
+        });
+
+        // 부모 컴포넌트 상태 업데이트
+        if (onUserStatusUpdate && userId) {
+          onUserStatusUpdate(userId, response);
+        }
+
+        toast.success("계정 정지가 해제되었습니다.");
+      } else {
+        toast.error("계정 정지 해제에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("정지 해제 오류:", error);
+      toast.error("계정 정지 해제 중 오류가 발생했습니다.");
+    }
   };
 
   // 사용자 상세 정보 API 호출 함수
@@ -165,11 +249,11 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   // 상태 한글 변환
   const getStatusText = (status: string) => {
     switch (status) {
-      case "ACTIVE":
+      case USER_STATUSES.ACTIVE:
         return "활성";
-      case "SUSPENDED":
+      case USER_STATUSES.SUSPENDED:
         return "정지";
-      case "WITHDRAWN":
+      case USER_STATUSES.WITHDRAWN:
         return "탈퇴";
       default:
         return status;
@@ -179,11 +263,11 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   // 상태 배지 색상
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case "ACTIVE":
+      case USER_STATUSES.ACTIVE:
         return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-700";
-      case "SUSPENDED":
+      case USER_STATUSES.SUSPENDED:
         return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-700";
-      case "WITHDRAWN":
+      case USER_STATUSES.WITHDRAWN:
         return "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600";
       default:
         return "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600";
@@ -468,19 +552,69 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                 <div className="space-y-3">
                   {/* 정지 사유와 정지 기간을 같은 row에 배치 */}
                   <div className="flex gap-3 items-start">
-                    {/* 정지 사유 입력 - 대부분의 width 차지 */}
+                    {/* 정지 사유 선택 - 대부분의 width 차지 */}
                     <div className="flex-1">
-                      <label htmlFor="suspendReason" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        정지 사유 *
-                      </label>
-                      <textarea
-                        id="suspendReason"
-                        value={suspendReason}
-                        onChange={(e) => setSuspendReason(e.target.value)}
-                        placeholder="정지 사유를 입력해주세요..."
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1f1f1f] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none h-10"
-                        rows={1}
-                      />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">정지 사유 *</label>
+                      <Listbox value={suspendReason} onChange={setSuspendReason}>
+                        <div className="relative">
+                          <Listbox.Button className="relative w-full cursor-default rounded-lg bg-gray-50 dark:bg-[#1f1f1f] py-2 pl-3 pr-10 text-left shadow-md border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent sm:text-sm h-10">
+                            <span className="block truncate text-gray-900 dark:text-white">
+                              {suspendReason
+                                ? suspendReasonOptions.find((option) => option.value === suspendReason)?.label
+                                : "정지 사유를 선택해주세요..."}
+                            </span>
+                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                              <FiChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                            </span>
+                          </Listbox.Button>
+                          <Transition
+                            as={React.Fragment}
+                            leave="transition ease-in duration-100"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                          >
+                            <Listbox.Options className="absolute z-10 bottom-full mb-1 w-full overflow-auto rounded-md bg-gray-50 dark:bg-[#1f1f1f] py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-200 dark:border-gray-600 max-h-60">
+                              {suspendReasonOptions.map((option) => (
+                                <Listbox.Option
+                                  key={option.value}
+                                  className={({ active }) =>
+                                    `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                      active
+                                        ? "bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-300"
+                                        : "text-gray-900 dark:text-white"
+                                    }`
+                                  }
+                                  value={option.value}
+                                >
+                                  {({ selected }) => (
+                                    <>
+                                      <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                                        {option.label}
+                                      </span>
+                                      {selected ? (
+                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-red-600 dark:text-red-400">
+                                          <svg
+                                            className="h-5 w-5"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            aria-hidden="true"
+                                          >
+                                            <path
+                                              fillRule="evenodd"
+                                              d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                              clipRule="evenodd"
+                                            />
+                                          </svg>
+                                        </span>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </Listbox.Option>
+                              ))}
+                            </Listbox.Options>
+                          </Transition>
+                        </div>
+                      </Listbox>
                     </div>
 
                     {/* 정지 기간 선택 - 필요한 만큼만 width 차지 */}
@@ -561,7 +695,10 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                 </button>
               )}
               {userDetail.status === "SUSPENDED" && (
-                <button className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors">
+                <button
+                  onClick={handleUnsuspend}
+                  className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
+                >
                   정지 해제
                 </button>
               )}

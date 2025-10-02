@@ -5,11 +5,13 @@ import { AppDataSource } from "../db";
 import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { Seller } from "../typeorm/sellers.entity";
-import { LoginFormData, UserAuthData } from "../../../shared/types";
+import { UserSuspension } from "../typeorm/userSuspensions.entity";
+import { IsNull, MoreThan } from "typeorm";
+import { LoginFormData, UserAuthData, UserSuspensionDto } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
 import { isAuthenticated } from "../middlewares/auth.middleware";
-import { ROLES, SSO_PROVIDERS } from "../../../shared/constants";
+import { ROLES, SSO_PROVIDERS, USER_STATUSES } from "../../../shared/constants";
 
 const router = Router();
 
@@ -67,13 +69,65 @@ router.post("/login", async (req, res) => {
       },
     });
 
-    if (
-      !user ||
-      !user.password ||
-      user.status !== "ACTIVE" ||
-      user.deletedAt !== null ||
-      !(await bcrypt.compare(loginData.password, user.password))
-    ) {
+    // 사용자 존재 여부 및 기본 정보 확인
+    if (!user || !user.password || user.deletedAt !== null) {
+      return res.status(401).json({
+        success: false,
+        message: "이메일 또는 비밀번호를 확인해주세요.",
+        error: "Unauthorized",
+      });
+    }
+
+    // 비밀번호 확인
+    if (!(await bcrypt.compare(loginData.password, user.password))) {
+      return res.status(401).json({
+        success: false,
+        message: "이메일 또는 비밀번호를 확인해주세요.",
+        error: "Unauthorized",
+      });
+    }
+
+    // 정지된 사용자 확인
+    if (user.status === USER_STATUSES.SUSPENDED) {
+      // 정지 정보 조회 (현재 유효한 정지 상태인지 확인)
+      const userSuspensionRepo = AppDataSource.getRepository(UserSuspension);
+      const now = new Date();
+      const suspensionInfo = await userSuspensionRepo.findOne({
+        where: [
+          {
+            userId: user.id,
+            unsuspendedAt: IsNull(),
+            suspendedUntil: MoreThan(now),
+          },
+          {
+            userId: user.id,
+            unsuspendedAt: IsNull(),
+            suspendedUntil: new Date("9999-12-31"), // 영구정지
+          },
+        ],
+        order: { createdAt: "DESC" },
+      });
+
+      const result: UserSuspensionDto = {
+        id: suspensionInfo?.id || 0,
+        userId: suspensionInfo?.userId || 0,
+        reason: suspensionInfo?.reason || "",
+        suspendedUntil: suspensionInfo?.suspendedUntil || new Date("9999-12-31"),
+        suspendedById: suspensionInfo?.suspendedById || 0,
+        createdAt: suspensionInfo?.createdAt || new Date(),
+        unsuspendedAt: suspensionInfo?.unsuspendedAt || null,
+      };
+
+      return res.status(299).json({
+        success: false,
+        message: "정지된 계정입니다.",
+        error: "Account Suspended",
+        suspendInfo: result,
+      });
+    }
+
+    // 활성 상태가 아닌 경우 (탈퇴 등)
+    if (user.status !== USER_STATUSES.ACTIVE) {
       return res.status(401).json({
         success: false,
         message: "이메일 또는 비밀번호를 확인해주세요.",
@@ -256,6 +310,48 @@ router.post("/callback/:provider", async (req, res) => {
     // 사용자 존재 여부에 따라 분기 처리
     if (user) {
       // [기존 사용자 로그인 처리]
+
+      // 정지된 사용자 확인
+      if (user.status === USER_STATUSES.SUSPENDED) {
+        // 정지 정보 조회 (현재 유효한 정지 상태인지 확인)
+        const userSuspensionRepo = AppDataSource.getRepository(UserSuspension);
+        const now = new Date();
+        const suspensionInfo = await userSuspensionRepo.findOne({
+          where: [
+            {
+              userId: user.id,
+              unsuspendedAt: IsNull(),
+              suspendedUntil: MoreThan(now),
+            },
+            {
+              userId: user.id,
+              unsuspendedAt: IsNull(),
+              suspendedUntil: new Date("9999-12-31"), // 영구정지
+            },
+          ],
+          order: { createdAt: "DESC" },
+        });
+
+        if (suspensionInfo) {
+          const result: UserSuspensionDto = {
+            id: suspensionInfo.id,
+            userId: suspensionInfo.userId,
+            reason: suspensionInfo.reason,
+            suspendedUntil: suspensionInfo.suspendedUntil,
+            suspendedById: suspensionInfo.suspendedById,
+            createdAt: suspensionInfo.createdAt,
+            unsuspendedAt: suspensionInfo.unsuspendedAt,
+          };
+
+          return res.status(299).json({
+            success: false,
+            message: "정지된 계정입니다.",
+            error: "Account Suspended",
+            suspendInfo: result,
+          });
+        }
+      }
+
       let storeId: number | undefined;
       if (user.role === ROLES.SELLER && user.sellers && user.sellers.length > 0) {
         const activeSeller = user.sellers.find((s) => s.status === "ACTIVE");

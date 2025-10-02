@@ -77,13 +77,84 @@ const LoginPage: React.FC = () => {
     }
 
     try {
-      const { status } = await login(loginData);
-      if (status === 200) {
+      const { status, suspendInfo } = await login(loginData);
+
+      if (status === 200 && !suspendInfo) {
         toast.success("로그인 되었습니다.");
         navigate("/");
       } else if (status === 202) {
         toast.success("매장 등록 페이지로 이동합니다.");
         navigate("/store/register");
+      } else if (status === 299 && suspendInfo) {
+        // 정지 해제일 계산 (문자열을 Date 객체로 변환)
+        const suspendedUntilDate = new Date(suspendInfo.suspendedUntil);
+        const isPermanent = suspendedUntilDate.getTime() >= new Date("9999-12-31").getTime();
+
+        // 정지일과 해제일을 상세한 형태로 포맷팅
+        const formatDetailedDate = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+        };
+
+        const suspendedDate = formatDetailedDate(new Date(suspendInfo.createdAt));
+        const releaseDate = isPermanent ? "영구정지" : formatDetailedDate(suspendedUntilDate);
+
+        // 다크모드/라이트모드에 따른 스타일 설정
+        const isDark = theme === "dark";
+
+        await Swal.fire({
+          title: isPermanent ? "영구정지된 계정입니다." : "정지된 계정입니다.",
+          html: `
+            <div style="
+              text-align: left; 
+              color: ${isDark ? "#e5e7eb" : "#1f2937"}; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+            ">
+              <div style="
+                background: ${isDark ? "#292929" : "#f7fafc"}; 
+                border: 1px solid ${isDark ? "#666666" : "#e2e8f0"}; 
+                border-radius: 8px; 
+                padding: 16px; 
+                margin: 16px 0;
+              ">
+                <div style="margin-bottom: 12px;">
+                  <strong style="color: ${isDark ? "#9DC183" : "#4F7942"}; display: block; margin-bottom: 4px;">정지 사유:</strong>
+                  <span>${suspendInfo.reason}</span>
+                </div>
+                <div style="margin-bottom: 12px;">
+                  <strong style="color: ${isDark ? "#9DC183" : "#4F7942"}; display: block; margin-bottom: 4px;">정지일:</strong>
+                  <span>${suspendedDate}</span>
+                </div>
+                <div>
+                  <strong style="color: ${isDark ? "#9DC183" : "#4F7942"}; display: block; margin-bottom: 4px;">해제일:</strong>
+                  <span style="color: ${isPermanent ? (isDark ? "#F97171" : "#EF4444") : isDark ? "#68D391" : "#48BB78"};">
+                    ${releaseDate}
+                  </span>
+                </div>
+              </div>
+              <p style="
+                font-size: 14px; 
+                color: ${isDark ? "#a0aec0" : "#718096"}; 
+                margin: 0;
+                text-align: center;
+              ">
+                문의사항이 있으시면 고객센터로 연락해주세요.
+              </p>
+            </div>
+          `,
+          icon: "error",
+          confirmButtonText: "확인",
+          background: isDark ? "#343434" : "#fff",
+          color: isDark ? "#e5e7eb" : "#1f2937",
+          confirmButtonColor: isDark ? "#9DC183" : "#4F7942",
+        });
+
+        navigate("/");
       }
     } catch (error) {
       console.error("Error logging in:", error);

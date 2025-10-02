@@ -19,6 +19,8 @@ export const USER_STATUSES = {
   WITHDRAWN: "WITHDRAWN",
 } as const;
 
+export type UserStatus = (typeof USER_STATUSES)[keyof typeof USER_STATUSES];
+
 export const SELLER_STATUSES = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",

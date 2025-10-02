@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiUser, FiSearch, FiUsers } from "react-icons/fi";
 import type { UserSimpleDto } from "../../../../shared/user.types";
-import { ROLES } from "../../../../shared/constants";
+import { ROLES, type UserStatus } from "../../../../shared/constants";
 import Pagination from "../Pagination";
 import { api } from "../../api/axios";
 import UserDetailModal from "./UserDetailModal";
@@ -108,6 +108,13 @@ const UserManagement: React.FC = () => {
     setSelectedUserId(null);
   };
 
+  // 사용자 상태 업데이트 함수
+  const updateUserStatus = (userId: number, newStatus: string) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) => (user.id === userId ? { ...user, status: newStatus as UserStatus } : user)),
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* 헤더 섹션 */}
@@ -205,7 +212,12 @@ const UserManagement: React.FC = () => {
       )}
 
       {/* 사용자 상세 정보 모달 */}
-      <UserDetailModal isOpen={isModalOpen} onClose={handleCloseModal} userId={selectedUserId} />
+      <UserDetailModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        userId={selectedUserId}
+        onUserStatusUpdate={updateUserStatus}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 // src/stores/authStore.ts
 import { create } from "zustand";
 import apiClient from "../api/axios"; // 제공해주신 axios 인스턴스 경로
-import type { UserAuthData, LoginFormData } from "../../../shared/types"; // DTO 경로
+import type { UserAuthData, LoginFormData, UserSuspensionDto } from "../../../shared/types"; // DTO 경로
 
 // API의 data 필드에 담겨 오는 데이터 타입
 interface LoginSuccessData {
@@ -22,6 +22,10 @@ export type SocialLoginResult =
       type: "SIGNUP_REQUIRED";
       ssoData: any;
       signupToken: string;
+    }
+  | {
+      type: "SUSPENDED_ACCOUNT";
+      suspendInfo: UserSuspensionDto;
     };
 
 // 소셜로그인(SSO) Response data type
@@ -44,7 +48,7 @@ interface AuthState {
 
 // 스토어의 액션(action) 타입 정의
 interface AuthActions {
-  login: (credentials: LoginFormData) => Promise<{ status: number }>;
+  login: (credentials: LoginFormData) => Promise<{ status: number; suspendInfo?: UserSuspensionDto }>;
   handleSocialLoginCallback: (provider: string, code: string) => Promise<SocialLoginResult>;
   logout: (onLogout?: () => void) => Promise<void>;
   withdrawal: (user: UserAuthData, onWithdrawal?: () => void) => Promise<void>;
@@ -82,13 +86,26 @@ export const useAuthStore = create<AuthStore>((set) => {
       set({ isLoading: true, error: null });
       try {
         // Server 로그인 API 호출
-        const response = await apiClient.post<{ data: LoginSuccessData }>("/auth/login", credentials);
-
+        const response = await apiClient.post<{
+          success: boolean;
+          message: string;
+          data?: LoginSuccessData; // 로그인 성공 시 데이터
+          suspendInfo?: UserSuspensionDto; // 정지된 사용자일 경우 반환되는 정지 정보
+        }>("/auth/login", credentials);
         const loginData = response.data.data;
         const status = response.status;
+        if (response.data.success && loginData && !response.data.suspendInfo) {
+          setLoginSuccessState(loginData);
+        }
 
-        setLoginSuccessState(loginData);
+        if (!loginData && response.data.suspendInfo) {
+          // 정지된 계정의 경우 로딩 상태 해제
+          set({ isLoading: false });
+          return { status, suspendInfo: response.data.suspendInfo };
+        }
 
+        // 기타 경우에도 로딩 상태 해제
+        set({ isLoading: false });
         return { status };
       } catch (error: any) {
         const errorMessage = error.response?.data?.message || "로그인에 실패했습니다.";
@@ -104,14 +121,24 @@ export const useAuthStore = create<AuthStore>((set) => {
       try {
         // Server 소셜 로그인 콜백 API 호출
         const response = await apiClient.post<{
-          data: SocialLoginResponseData;
+          data?: SocialLoginResponseData;
+          suspendInfo?: UserSuspensionDto;
         }>(`/auth/callback/${provider}`, { code });
 
         const responseData = response.data.data;
         const status = response.status;
 
+        // 정지된 계정 처리
+        if (status === 299 && response.data.suspendInfo) {
+          set({ isLoading: false });
+          return {
+            type: "SUSPENDED_ACCOUNT",
+            suspendInfo: response.data.suspendInfo,
+          };
+        }
+
         // 가입 이력이 없는 신규 사용자인 경우
-        if (responseData.isNewUser && responseData.ssoData && responseData.signupToken) {
+        if (responseData?.isNewUser && responseData?.ssoData && responseData?.signupToken) {
           set({ isLoading: false }); // 로딩 상태만 해제
           return {
             type: "SIGNUP_REQUIRED",
@@ -121,10 +148,10 @@ export const useAuthStore = create<AuthStore>((set) => {
         }
 
         if (
-          !responseData.isNewUser &&
+          !responseData?.isNewUser &&
           status === 202 &&
-          responseData.userAuthData === null &&
-          responseData.token === null
+          responseData?.userAuthData === null &&
+          responseData?.token === null
         ) {
           return {
             type: "EXISTING_ACCOUNT",
@@ -133,7 +160,7 @@ export const useAuthStore = create<AuthStore>((set) => {
         }
 
         // 기존 사용자 로그인 성공 (일반 사용자 또는 매장 등록 필요한 판매자)
-        if (responseData.token && responseData.userAuthData) {
+        if (responseData?.token && responseData?.userAuthData) {
           setLoginSuccessState({
             token: responseData.token,
             userAuthData: responseData.userAuthData,

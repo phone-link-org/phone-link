@@ -15,7 +15,7 @@ import { SocialAccount } from "./socialAccounts.entity";
 import { UserFavorites } from "./userFavorites.entity";
 import { PostLike } from "./postLikes.entity";
 import { CommentLike } from "./commentLikes.entity";
-import { ROLES, Role } from "../../../shared/constants";
+import { ROLES, Role, USER_STATUSES, UserStatus } from "../../../shared/constants";
 
 @Entity("users")
 @Index("idx_status", ["status"])
@@ -80,11 +80,11 @@ export class User {
   //ACTIVE: 활성화, SUSPENDED: 정지, WITHDRAWN: 탈퇴
   @Column({
     type: "enum",
-    enum: ["ACTIVE", "SUSPENDED", "WITHDRAWN"],
+    enum: [USER_STATUSES.ACTIVE, USER_STATUSES.SUSPENDED, USER_STATUSES.WITHDRAWN],
     nullable: false,
-    default: "ACTIVE",
+    default: USER_STATUSES.ACTIVE,
   })
-  status: "ACTIVE" | "SUSPENDED" | "WITHDRAWN";
+  status: UserStatus;
 
   @Column({ name: "last_login_at", type: "datetime" })
   lastLoginAt?: Date;

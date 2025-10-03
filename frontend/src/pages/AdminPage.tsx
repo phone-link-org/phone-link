@@ -45,57 +45,61 @@ const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 mt-16">
+    <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-8 mt-16">
       <h1 className="text-3xl font-bold mb-6 text-foreground-light dark:text-foreground-dark">관리자 페이지</h1>
 
       <div className="bg-white dark:bg-[#292929] rounded-t-lg shadow-lg p-0 mb-0">
         <div className="border-b border-gray-200 dark:border-background-dark">
-          <nav className="-mb-px flex gap-6 px-6" aria-label="Tabs">
+          <nav className="-mb-px flex gap-2 sm:gap-4 md:gap-6 px-2 sm:px-4 md:px-6 overflow-x-auto" aria-label="Tabs">
             <button
-              className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+              className={`shrink-0 border-b-2 py-3 sm:py-4 px-1 sm:px-2 text-xs sm:text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${
                 activeTab === "store-approval"
                   ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
               }`}
               onClick={() => setActiveTab("store-approval")}
             >
-              매장 등록 승인
+              <span className="hidden sm:inline">매장 등록 승인</span>
+              <span className="sm:hidden">매장 승인</span>
             </button>
             <button
-              className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+              className={`shrink-0 border-b-2 py-3 sm:py-4 px-1 sm:px-2 text-xs sm:text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${
                 activeTab === "master-data-management"
                   ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
               }`}
               onClick={() => setActiveTab("master-data-management")}
             >
-              기본정보 관리
+              <span className="hidden sm:inline">기본정보 관리</span>
+              <span className="sm:hidden">기본정보</span>
             </button>
             <button
-              className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+              className={`shrink-0 border-b-2 py-3 sm:py-4 px-1 sm:px-2 text-xs sm:text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${
                 activeTab === "user-management"
                   ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
               }`}
               onClick={() => setActiveTab("user-management")}
             >
-              회원 관리
+              <span className="hidden sm:inline">회원 관리</span>
+              <span className="sm:hidden">회원</span>
             </button>
             <button
-              className={`shrink-0 border-b-2 py-4 px-2 text-base font-semibold transition-colors duration-200 focus:outline-none ${
+              className={`shrink-0 border-b-2 py-3 sm:py-4 px-1 sm:px-2 text-xs sm:text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none whitespace-nowrap ${
                 activeTab === "system-region"
                   ? "border-primary-light dark:border-primary-dark text-primary-light dark:text-primary-dark"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
               }`}
               onClick={() => setActiveTab("system-region")}
             >
-              시스템 지역 설정
+              <span className="hidden sm:inline">시스템 지역 설정</span>
+              <span className="sm:hidden">지역 설정</span>
             </button>
           </nav>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#292929] rounded-b-lg shadow-lg px-6 pb-6 pt-6 min-h-[500px]">
+      <div className="bg-white dark:bg-[#292929] rounded-b-lg shadow-lg px-2 sm:px-4 md:px-6 pb-4 sm:pb-6 pt-4 sm:pt-6 min-h-[500px]">
         {activeTab === "store-approval" && (
           <div className="space-y-6">
             <p className="text-gray-600 dark:text-gray-300">승인 대기 중인 매장 등록 요청을 관리합니다.</p>
@@ -126,19 +130,19 @@ const AdminPage: React.FC = () => {
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-[#454545]">
                       <thead className="bg-gray-50 dark:bg-[#454545]">
                         <tr>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          <th className="px-2 sm:px-4 md:px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             매장명
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          <th className="px-2 sm:px-4 md:px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             지역
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          <th className="hidden sm:table-cell px-2 sm:px-4 md:px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             연락처
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          <th className="hidden md:table-cell px-2 sm:px-4 md:px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             사용자 이메일
                           </th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          <th className="px-2 sm:px-4 md:px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             등록일
                           </th>
                         </tr>
@@ -153,19 +157,19 @@ const AdminPage: React.FC = () => {
                               setShowModal(true);
                             }}
                           >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-gray-900 dark:text-gray-100">
+                            <td className="px-2 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-gray-900 dark:text-gray-100">
                               {store.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
+                            <td className="px-2 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {store.regionName}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
+                            <td className="hidden sm:table-cell px-2 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {store.contact}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
+                            <td className="hidden md:table-cell px-2 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {store.userEmail}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
+                            <td className="px-2 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-300">
                               {new Date(store.createdAt).toLocaleDateString("ko-KR", {
                                 year: "numeric",
                                 month: "2-digit",

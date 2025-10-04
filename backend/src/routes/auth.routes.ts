@@ -63,7 +63,8 @@ router.post("/login", async (req, res) => {
   const loginData: LoginFormData = req.body;
 
   try {
-    const user = await AppDataSource.getRepository(User).findOne({
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({
       where: {
         email: loginData.email,
       },
@@ -108,22 +109,31 @@ router.post("/login", async (req, res) => {
         order: { createdAt: "DESC" },
       });
 
-      const result: UserSuspensionDto = {
-        id: suspensionInfo?.id || 0,
-        userId: suspensionInfo?.userId || 0,
-        reason: suspensionInfo?.reason || "",
-        suspendedUntil: suspensionInfo?.suspendedUntil || new Date("9999-12-31"),
-        suspendedById: suspensionInfo?.suspendedById || 0,
-        createdAt: suspensionInfo?.createdAt || new Date(),
-        unsuspendedAt: suspensionInfo?.unsuspendedAt || null,
-      };
+      //TODO: 시간을 어떻게 잡야야될지 모르겠음!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      if (suspensionInfo?.suspendedUntil && suspensionInfo.suspendedUntil < now) {
+        // 정지기간이 만료인 경우 정지 상태 해제
+        suspensionInfo.unsuspendedAt = now;
+        await userSuspensionRepo.save(suspensionInfo);
+        user.status = USER_STATUSES.ACTIVE;
+        await userRepo.save(user);
+      } else {
+        const result: UserSuspensionDto = {
+          id: suspensionInfo?.id || 0,
+          userId: suspensionInfo?.userId || 0,
+          reason: suspensionInfo?.reason || "",
+          suspendedUntil: suspensionInfo?.suspendedUntil || new Date("9999-12-31"),
+          suspendedById: suspensionInfo?.suspendedById || 0,
+          createdAt: suspensionInfo?.createdAt || new Date(),
+          unsuspendedAt: suspensionInfo?.unsuspendedAt || null,
+        };
 
-      return res.status(299).json({
-        success: false,
-        message: "정지된 계정입니다.",
-        error: "Account Suspended",
-        suspendInfo: result,
-      });
+        return res.status(299).json({
+          success: false,
+          message: "정지된 계정입니다.",
+          error: "Account Suspended",
+          suspendInfo: result,
+        });
+      }
     }
 
     // 활성 상태가 아닌 경우 (탈퇴 등)

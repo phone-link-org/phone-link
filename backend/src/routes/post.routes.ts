@@ -394,8 +394,6 @@ router.post("/write/:category", async (req, res) => {
     newPost.userId = userId;
     newPost.viewCount = 0;
     newPost.likeCount = 0;
-    newPost.createdAt = new Date();
-    newPost.updatedAt = new Date();
 
     const savedPost = await queryRunner.manager.save(Post, newPost);
 
@@ -719,8 +717,6 @@ router.post("/comment", isAuthenticated, async (req: AuthenticatedRequest, res) 
     comment.content = newComment.content.trim();
     comment.parentId = newComment.parentId ? newComment.parentId : undefined;
     comment.userId = userId!;
-    comment.createdAt = new Date();
-    comment.updatedAt = new Date();
     const savedComment = await AppDataSource.manager.save(comment);
 
     const responseData: CommentListDto = {

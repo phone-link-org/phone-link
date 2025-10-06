@@ -157,8 +157,6 @@ router.post("/register", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), 
       description: description || null,
       approvalStatus: approvalStatus || "PENDING",
       createdBy: createdBy,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
     await storeRepo.save(newStore);

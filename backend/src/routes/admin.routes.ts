@@ -801,8 +801,12 @@ router.post("/unsuspend-user", async (req: AuthenticatedRequest, res) => {
         message: "해당 사용자의 정지 정보를 찾을 수 없습니다.",
       });
     }
-    userSuspension.unsuspendedAt = new Date();
-    await userSuspensionRepo.save(userSuspension);
+    await queryRunner.manager
+      .createQueryBuilder()
+      .update(UserSuspension)
+      .set({ unsuspendedAt: () => "CURRENT_TIMESTAMP" })
+      .where("id = :id", { id: userSuspension.id })
+      .execute();
 
     // 트랜잭션 커밋
     await queryRunner.commitTransaction();

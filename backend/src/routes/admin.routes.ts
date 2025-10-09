@@ -714,10 +714,15 @@ router.post("/suspend-user", async (req: AuthenticatedRequest, res) => {
 
     // 정지 정보 생성
     const suspendedById = req.user?.id;
+
+    // 한국 시간대 기준으로 현재 시간 계산
+    const now = new Date();
+    const koreanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC + 9시간
+
     const suspendedUntil =
       duration === "permanent"
         ? new Date("9999-12-31")
-        : new Date(new Date().getTime() + parseInt(duration) * 24 * 60 * 60 * 1000);
+        : new Date(koreanTime.getTime() + parseInt(duration) * 24 * 60 * 60 * 1000);
 
     const userSuspensionRepo = queryRunner.manager.getRepository(UserSuspension);
     const newSuspension = userSuspensionRepo.create({
@@ -804,7 +809,7 @@ router.post("/unsuspend-user", async (req: AuthenticatedRequest, res) => {
     await queryRunner.manager
       .createQueryBuilder()
       .update(UserSuspension)
-      .set({ unsuspendedAt: () => "CURRENT_TIMESTAMP" })
+      .set({ unsuspendedAt: () => "NOW()" })
       .where("id = :id", { id: userSuspension.id })
       .execute();
 

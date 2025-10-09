@@ -22,7 +22,7 @@ const SocialModal: React.FC<SocialModalProps> = ({ isOpen, onClose }) => {
 
   async function removeAccount(provider: string) {
     const isRemovable = await api.get(`/user/check-unlink/${provider}`);
-    console.log(isRemovable);
+
     if (isRemovable) {
       Swal.fire({
         title: `정말 연결을 해제하시겠습니까?`,

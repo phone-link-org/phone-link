@@ -131,7 +131,6 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
 
     setIsSubmitting(true);
     try {
-      console.log("제출할 데이터:", submissionData);
       const response = await apiClient.post(`/store/${storeId}/req-plans`, submissionData);
 
       if (response.data !== null) {

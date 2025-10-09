@@ -128,10 +128,10 @@ const MyPage: React.FC = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           {/* 로그아웃 버튼 */}
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end mb-2 mr-2">
             <button
               onClick={() => logout()}
-              className="px-4 py-2 rounded bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+              className="text-sm text-gray-600 dark:text-gray-400 underline hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200"
             >
               로그아웃
             </button>

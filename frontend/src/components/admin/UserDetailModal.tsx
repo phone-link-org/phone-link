@@ -94,9 +94,9 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
           ...prev,
           status: response.newStatus,
           reason: response.suspensionReason,
-          suspendedUntil: new Date(response.suspensionUntil),
+          suspendedUntil: response.suspensionUntil,
           suspendedById: response.suspensionById,
-          suspendedAt: new Date(response.suspensionAt),
+          suspendedAt: response.suspensionAt,
         };
       });
 
@@ -207,15 +207,29 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   if (!isOpen) return null;
 
   // 날짜 포맷팅
-  const formatDate = (date: Date | undefined) => {
+  const formatDate = (date: string | undefined) => {
     if (!date) return "-";
-    return new Date(date).toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+
+    if (typeof date === "string" && date.includes("T")) {
+      // "2025-10-06T17:32:59.000Z" 형태의 문자열을 직접 파싱
+      const [datePart, timePart] = date.split("T");
+      const [year, month, day] = datePart.split("-");
+
+      // 시간 부분에서 초와 밀리초 제거
+      const timeOnly = timePart.split(".")[0]; // "17:32:59"
+      const [hours, minutes] = timeOnly.split(":");
+
+      return `${year}. ${month}. ${day}. ${hours}:${minutes}`;
+    } else {
+      // Date 객체인 경우 기존 로직 유지
+      const dateObj = new Date(date);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const hours = String(dateObj.getHours()).padStart(2, "0");
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+      return `${year}. ${month}. ${day}. ${hours}:${minutes}`;
+    }
   };
 
   // role 한글 변환
@@ -362,7 +376,9 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">탈퇴일시</p>
-                  <p className="text-sm text-gray-900 dark:text-white">{formatDate(userDetail.deletedAt)}</p>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {formatDate(userDetail.deletedAt?.toString())}
+                  </p>
                 </div>
               </div>
             )}
@@ -382,11 +398,13 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <p className="text-gray-600 dark:text-gray-400">정지 일시</p>
-                      <p className="text-gray-900 dark:text-white">{formatDate(userDetail.suspendedAt)}</p>
+                      <p className="text-gray-900 dark:text-white">{formatDate(userDetail.suspendedAt?.toString())}</p>
                     </div>
                     <div>
                       <p className="text-gray-600 dark:text-gray-400">해제일</p>
-                      <p className="text-gray-900 dark:text-white">{formatDate(userDetail.suspendedUntil)}</p>
+                      <p className="text-gray-900 dark:text-white">
+                        {formatDate(userDetail.suspendedUntil?.toString())}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-600 dark:text-gray-400">정지 관리자 ID</p>
@@ -522,14 +540,16 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                   <FiCalendar className="w-3 h-3 text-gray-400 dark:text-gray-500" />
                   <p className="text-xs text-gray-500 dark:text-gray-400">가입일</p>
                 </div>
-                <p className="text-xs text-gray-900 dark:text-white">{formatDate(userDetail.createdAt)}</p>
+                <p className="text-xs text-gray-900 dark:text-white">{formatDate(userDetail.createdAt?.toString())}</p>
               </div>
               <div className="p-2 bg-gray-50 dark:bg-[#1f1f1f] rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="flex items-center gap-1.5 mb-1">
                   <FiClock className="w-3 h-3 text-gray-400 dark:text-gray-500" />
                   <p className="text-xs text-gray-500 dark:text-gray-400">최근 로그인</p>
                 </div>
-                <p className="text-xs text-gray-900 dark:text-white">{formatDate(userDetail.lastLoginAt)}</p>
+                <p className="text-xs text-gray-900 dark:text-white">
+                  {formatDate(userDetail.lastLoginAt?.toString())}
+                </p>
               </div>
             </div>
 

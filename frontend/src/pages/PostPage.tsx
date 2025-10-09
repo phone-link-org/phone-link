@@ -250,7 +250,6 @@ const PostPage: React.FC = () => {
 
   //     try {
   //       // TODO: API 호출로 답글 생성
-  //       console.log("답글 작성:", reply);
   //       setReply(null);
   //       setReplyingTo(null);
   //       // 답글 작성 후 댓글 목록 새로고침

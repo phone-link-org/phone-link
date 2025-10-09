@@ -91,15 +91,12 @@ const ExcelUpload: React.FC = () => {
         const workbook = XLSX.read(binaryStr, { type: "binary" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        console.log(worksheet);
 
         const json = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
         }) as any[][];
-        console.log(json);
 
         const parsedData = parseExcelData(json);
-        console.log(parsedData);
         setTableData(toExcelStyleTable(json));
         setData(parsedData);
       } catch (error) {

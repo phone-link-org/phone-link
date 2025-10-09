@@ -35,7 +35,6 @@ const StorePage: React.FC = () => {
   const toggleFavorite = async () => {
     try {
       const response = await api.post<boolean>(`/store/favorite`, { userId: user?.id, storeId: storeId });
-      console.log(response);
       setIsFavorite(response);
     } catch (error) {
       console.error(error);

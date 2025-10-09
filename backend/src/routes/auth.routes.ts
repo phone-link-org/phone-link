@@ -6,7 +6,7 @@ import { User } from "../typeorm/users.entity";
 import { SocialAccount } from "../typeorm/socialAccounts.entity";
 import { Seller } from "../typeorm/sellers.entity";
 import { UserSuspension } from "../typeorm/userSuspensions.entity";
-import { IsNull, MoreThan } from "typeorm";
+import { IsNull } from "typeorm";
 import { LoginFormData, UserAuthData, UserSuspensionDto } from "../../../shared/types";
 import axios from "axios";
 import { ssoConfig } from "../config/sso-config";
@@ -88,51 +88,76 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // 한국 시간대로 현재 시간 계산
+    const now = new Date();
+    const koreanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC + 9시간
+
     // 정지된 사용자 확인
     if (user.status === USER_STATUSES.SUSPENDED) {
       // 정지 정보 조회 (현재 유효한 정지 상태인지 확인)
       const userSuspensionRepo = AppDataSource.getRepository(UserSuspension);
-      const now = new Date();
       const suspensionInfo = await userSuspensionRepo.findOne({
-        where: [
-          {
-            userId: user.id,
-            unsuspendedAt: IsNull(),
-            suspendedUntil: MoreThan(now),
-          },
-          {
-            userId: user.id,
-            unsuspendedAt: IsNull(),
-            suspendedUntil: new Date("9999-12-31"), // 영구정지
-          },
-        ],
+        where: {
+          userId: user.id,
+          unsuspendedAt: IsNull(),
+        },
         order: { createdAt: "DESC" },
       });
 
-      //TODO: 시간을 어떻게 잡야야될지 모르겠음!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      if (suspensionInfo?.suspendedUntil && suspensionInfo.suspendedUntil < now) {
-        // 정지기간이 만료인 경우 정지 상태 해제
-        suspensionInfo.unsuspendedAt = now;
-        await userSuspensionRepo.save(suspensionInfo);
+      // 정지 정보가 있는 경우
+      if (suspensionInfo) {
+        const permanentSuspensionDate = new Date("9999-12-31");
+        const isPermanent = suspensionInfo.suspendedUntil.getTime() >= permanentSuspensionDate.getTime();
+
+        // 영구정지이거나 정지 기간이 남아있는 경우
+        if (isPermanent || suspensionInfo.suspendedUntil > koreanTime) {
+          const result: UserSuspensionDto = {
+            id: suspensionInfo.id,
+            userId: suspensionInfo.userId,
+            reason: suspensionInfo.reason,
+            suspendedUntil: suspensionInfo.suspendedUntil,
+            suspendedById: suspensionInfo.suspendedById,
+            createdAt: suspensionInfo.createdAt,
+            unsuspendedAt: suspensionInfo.unsuspendedAt,
+          };
+
+          return res.status(299).json({
+            success: false,
+            message: "정지된 계정입니다.",
+            error: "Account Suspended",
+            suspendInfo: result,
+          });
+        }
+
+        // 정지 해제일이 지난 경우 정지 해제 처리 (트랜잭션 적용)
+        if (suspensionInfo.suspendedUntil < koreanTime) {
+          const queryRunner = AppDataSource.createQueryRunner();
+          await queryRunner.connect();
+          await queryRunner.startTransaction();
+
+          try {
+            // 정지 정보 업데이트 (해제일 기록)
+            suspensionInfo.unsuspendedAt = koreanTime;
+            await queryRunner.manager.save(UserSuspension, suspensionInfo);
+
+            // 사용자 상태 업데이트 (ACTIVE로 변경)
+            user.status = USER_STATUSES.ACTIVE;
+            await queryRunner.manager.save(User, user);
+
+            await queryRunner.commitTransaction();
+          } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error("정지 해제 트랜잭션 실패:", error);
+            throw error;
+          } finally {
+            await queryRunner.release();
+          }
+        }
+      } else {
+        // 정지 정보가 없는데 status가 SUSPENDED인 경우 (데이터 불일치) - ACTIVE로 복구
+        console.warn(`정지 정보 없이 SUSPENDED 상태인 사용자 발견: userId=${user.id}`);
         user.status = USER_STATUSES.ACTIVE;
         await userRepo.save(user);
-      } else {
-        const result: UserSuspensionDto = {
-          id: suspensionInfo?.id || 0,
-          userId: suspensionInfo?.userId || 0,
-          reason: suspensionInfo?.reason || "",
-          suspendedUntil: suspensionInfo?.suspendedUntil || new Date("9999-12-31"),
-          suspendedById: suspensionInfo?.suspendedById || 0,
-          createdAt: suspensionInfo?.createdAt || new Date(),
-          unsuspendedAt: suspensionInfo?.unsuspendedAt || null,
-        };
-
-        return res.status(299).json({
-          success: false,
-          message: "정지된 계정입니다.",
-          error: "Account Suspended",
-          suspendInfo: result,
-        });
       }
     }
 
@@ -170,7 +195,7 @@ router.post("/login", async (req, res) => {
     // JWT 생성
     const token = createToken(user, storeId);
 
-    user.lastLoginAt = new Date();
+    user.lastLoginAt = koreanTime;
     user.lastLoginType = "local";
     await AppDataSource.getRepository(User).save(user);
 
@@ -291,6 +316,10 @@ router.post("/callback/:provider", async (req, res) => {
       await socialAccountRepo.save(socialAccount);
 
       user = socialAccount.user;
+      // 한국 시간대로 현재 시간 계산
+      const now = new Date();
+      const koreanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC + 9시간
+      user.lastLoginAt = koreanTime;
       user.lastLoginType = provider;
       await userRepo.save(user);
     } else if (existingUser) {
@@ -321,44 +350,76 @@ router.post("/callback/:provider", async (req, res) => {
     if (user) {
       // [기존 사용자 로그인 처리]
 
+      // 한국 시간대로 현재 시간 계산
+      const now = new Date();
+      const koreanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC + 9시간
+
       // 정지된 사용자 확인
       if (user.status === USER_STATUSES.SUSPENDED) {
         // 정지 정보 조회 (현재 유효한 정지 상태인지 확인)
         const userSuspensionRepo = AppDataSource.getRepository(UserSuspension);
-        const now = new Date();
         const suspensionInfo = await userSuspensionRepo.findOne({
-          where: [
-            {
-              userId: user.id,
-              unsuspendedAt: IsNull(),
-              suspendedUntil: MoreThan(now),
-            },
-            {
-              userId: user.id,
-              unsuspendedAt: IsNull(),
-              suspendedUntil: new Date("9999-12-31"), // 영구정지
-            },
-          ],
+          where: {
+            userId: user.id,
+            unsuspendedAt: IsNull(),
+          },
           order: { createdAt: "DESC" },
         });
 
+        // 정지 정보가 있는 경우
         if (suspensionInfo) {
-          const result: UserSuspensionDto = {
-            id: suspensionInfo.id,
-            userId: suspensionInfo.userId,
-            reason: suspensionInfo.reason,
-            suspendedUntil: suspensionInfo.suspendedUntil,
-            suspendedById: suspensionInfo.suspendedById,
-            createdAt: suspensionInfo.createdAt,
-            unsuspendedAt: suspensionInfo.unsuspendedAt,
-          };
+          const permanentSuspensionDate = new Date("9999-12-31");
+          const isPermanent = suspensionInfo.suspendedUntil.getTime() >= permanentSuspensionDate.getTime();
 
-          return res.status(299).json({
-            success: false,
-            message: "정지된 계정입니다.",
-            error: "Account Suspended",
-            suspendInfo: result,
-          });
+          // 영구정지이거나 정지 기간이 남아있는 경우
+          if (isPermanent || suspensionInfo.suspendedUntil > koreanTime) {
+            const result: UserSuspensionDto = {
+              id: suspensionInfo.id,
+              userId: suspensionInfo.userId,
+              reason: suspensionInfo.reason,
+              suspendedUntil: suspensionInfo.suspendedUntil, // 정지 해제일
+              suspendedById: suspensionInfo.suspendedById,
+              createdAt: suspensionInfo.createdAt, // 정지일
+              unsuspendedAt: suspensionInfo.unsuspendedAt, // 관리자가 직접 해제한 일시 혹은 사용자가 정지 해제일 이후에 로그인한 일시
+            };
+
+            return res.status(299).json({
+              success: false,
+              message: "정지된 계정입니다.",
+              error: "Account Suspended",
+              suspendInfo: result,
+            });
+          }
+
+          // 정지 해제일이 지난 경우 정지 해제 처리 (트랜잭션 적용)
+          if (suspensionInfo.suspendedUntil < koreanTime) {
+            const queryRunner = AppDataSource.createQueryRunner();
+            await queryRunner.connect();
+            await queryRunner.startTransaction();
+
+            try {
+              // 정지 정보 업데이트 (해제일 기록)
+              suspensionInfo.unsuspendedAt = koreanTime;
+              await queryRunner.manager.save(UserSuspension, suspensionInfo);
+
+              // 사용자 상태 업데이트 (ACTIVE로 변경)
+              user.status = USER_STATUSES.ACTIVE;
+              await queryRunner.manager.save(User, user);
+
+              await queryRunner.commitTransaction();
+            } catch (error) {
+              await queryRunner.rollbackTransaction();
+              console.error("정지 해제 트랜잭션 실패 (소셜 로그인):", error);
+              throw error;
+            } finally {
+              await queryRunner.release();
+            }
+          }
+        } else {
+          // 정지 정보가 없는데 status가 SUSPENDED인 경우 (데이터 불일치) - ACTIVE로 복구
+          console.warn(`정지 정보 없이 SUSPENDED 상태인 사용자 발견 (소셜 로그인): userId=${user.id}`);
+          user.status = USER_STATUSES.ACTIVE;
+          await userRepo.save(user);
         }
       }
 

@@ -87,18 +87,32 @@ const SsoCallbackPage: React.FC = () => {
             const suspendedUntilDate = new Date(suspendInfo.suspendedUntil);
             const isPermanent = suspendedUntilDate.getTime() >= new Date("9999-12-31").getTime();
 
-            // 정지일과 해제일을 상세한 형태로 포맷팅
-            const formatDetailedDate = (date: Date) => {
-              const year = date.getFullYear();
-              const month = String(date.getMonth() + 1).padStart(2, "0");
-              const day = String(date.getDate()).padStart(2, "0");
-              const hours = String(date.getHours()).padStart(2, "0");
-              const minutes = String(date.getMinutes()).padStart(2, "0");
-              return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+            // 정지일과 해제일을 상세한 형태로 포맷팅 (한국 시간대 적용)
+            const formatDetailedDate = (dateString: string | Date) => {
+              if (typeof dateString === "string" && dateString.includes("T")) {
+                // "2025-10-06T17:32:59.000Z" 형태의 문자열을 직접 파싱
+                const [datePart, timePart] = dateString.split("T");
+                const [year, month, day] = datePart.split("-");
+
+                // 시간 부분에서 초와 밀리초 제거
+                const timeOnly = timePart.split(".")[0]; // "17:32:59"
+                const [hours, minutes] = timeOnly.split(":");
+
+                return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+              } else {
+                // Date 객체인 경우 기존 로직 유지
+                const date = typeof dateString === "string" ? new Date(dateString) : dateString;
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                const hours = String(date.getHours()).padStart(2, "0");
+                const minutes = String(date.getMinutes()).padStart(2, "0");
+                return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+              }
             };
 
-            const suspendedDate = formatDetailedDate(new Date(suspendInfo.createdAt));
-            const releaseDate = isPermanent ? "영구정지" : formatDetailedDate(suspendedUntilDate);
+            const suspendedDate = formatDetailedDate(suspendInfo.createdAt);
+            const releaseDate = isPermanent ? "영구정지" : formatDetailedDate(suspendInfo.suspendedUntil);
 
             // 다크모드/라이트모드에 따른 스타일 설정
             const isDark = theme === "dark";

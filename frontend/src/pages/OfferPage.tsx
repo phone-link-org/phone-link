@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/axios";
 import ModelSelector from "../components/offer/ModelSelector";
 import RegionSelector from "../components/offer/RegionSelector";
@@ -24,6 +24,7 @@ import { CARRIERS, OFFER_TYPES, SORT_ORDER, type OfferType, type SortOrder } fro
 const OfferPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<"region" | "model" | "carrier" | "offerType">("region");
 
@@ -40,6 +41,7 @@ const OfferPage: React.FC = () => {
   const [loading, setLoading] = useState(false); // 데이터 로딩 상태
   const [sortOrder, setSortOrder] = useState<SortOrder>(SORT_ORDER.DEFAULT); // 정렬 순서 상태
   const SERVER = import.meta.env.VITE_API_URL;
+  const isInitialLoad = useRef(true); // 초기 로드 여부 추적
 
   const fetchOfferDatas = useCallback(
     async (isNewSearch = false) => {
@@ -97,9 +99,54 @@ const OfferPage: React.FC = () => {
   );
   // ---
 
-  // 컴포넌트 마운트 시 첫 데이터 로드
+  // 컴포넌트 마운트 시 URL에서 검색 조건 복원
   useEffect(() => {
-    fetchOfferDatas(true);
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+
+      try {
+        // URL에서 검색 조건 복원
+        const regionsParam = searchParams.get("regions");
+        const modelsParam = searchParams.get("models");
+        const carriersParam = searchParams.get("carriers");
+        const offerTypesParam = searchParams.get("offerTypes");
+        const sortParam = searchParams.get("sort");
+        const sidoParam = searchParams.get("sido");
+
+        if (regionsParam) {
+          setSelectedRegions(JSON.parse(decodeURIComponent(regionsParam)));
+        }
+        if (modelsParam) {
+          setSelectedModels(JSON.parse(decodeURIComponent(modelsParam)));
+        }
+        if (carriersParam) {
+          setSelectedCarriers(JSON.parse(decodeURIComponent(carriersParam)));
+        }
+        if (offerTypesParam) {
+          setSelectedOfferTypes(JSON.parse(decodeURIComponent(offerTypesParam)));
+        }
+        if (sortParam && Object.values(SORT_ORDER).includes(sortParam as SortOrder)) {
+          setSortOrder(sortParam as SortOrder);
+        }
+        if (sidoParam) {
+          setLastSelectedSido(JSON.parse(decodeURIComponent(sidoParam)));
+        }
+
+        // URL에 검색 조건이 있으면 자동 검색
+        if (regionsParam || modelsParam || carriersParam || offerTypesParam) {
+          // 다음 렌더링 사이클에서 검색 실행
+          setTimeout(() => {
+            fetchOfferDatas(true);
+          }, 100);
+        } else {
+          // 검색 조건이 없으면 기본 데이터 로드
+          fetchOfferDatas(true);
+        }
+      } catch (error) {
+        console.error("URL 파라미터 파싱 오류:", error);
+        fetchOfferDatas(true);
+      }
+    }
   }, []);
 
   // 정렬 순서 변경 시, 새로운 검색 실행
@@ -112,6 +159,40 @@ const OfferPage: React.FC = () => {
     fetchOfferDatas(true);
   }, [sortOrder]);
 
+  // 검색 조건을 URL에 저장하는 함수
+  const updateURLParams = useCallback(() => {
+    const params = new URLSearchParams();
+
+    if (selectedRegions.length > 0) {
+      params.set("regions", encodeURIComponent(JSON.stringify(selectedRegions)));
+    }
+    if (selectedModels.length > 0) {
+      params.set("models", encodeURIComponent(JSON.stringify(selectedModels)));
+    }
+    if (selectedCarriers.length > 0) {
+      params.set("carriers", encodeURIComponent(JSON.stringify(selectedCarriers)));
+    }
+    if (selectedOfferTypes.length > 0) {
+      params.set("offerTypes", encodeURIComponent(JSON.stringify(selectedOfferTypes)));
+    }
+    if (sortOrder !== SORT_ORDER.DEFAULT) {
+      params.set("sort", sortOrder);
+    }
+    if (lastSelectedSido) {
+      params.set("sido", encodeURIComponent(JSON.stringify(lastSelectedSido)));
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [
+    selectedRegions,
+    selectedModels,
+    selectedCarriers,
+    selectedOfferTypes,
+    sortOrder,
+    lastSelectedSido,
+    setSearchParams,
+  ]);
+
   const handleSearch = () => {
     if (
       selectedRegions.length === 0 &&
@@ -122,6 +203,9 @@ const OfferPage: React.FC = () => {
       toast.error("검색할 조건이 없습니다.");
       return; // 검색 조건이 없으면 fetch하지 않고 종료
     }
+
+    // URL 파라미터 업데이트
+    updateURLParams();
 
     pageRef.current = 1; // 페이지 1로 초기화
     setOfferDatas([]); // 기존 데이터 초기화
@@ -162,6 +246,10 @@ const OfferPage: React.FC = () => {
         setSelectedCarriers([]);
         setSelectedOfferTypes([]);
         setSortOrder(SORT_ORDER.DEFAULT); // 정렬 순서도 초기화
+        setLastSelectedSido(null);
+
+        // URL 파라미터도 초기화
+        setSearchParams({}, { replace: true });
       }
     });
   };
@@ -170,9 +258,23 @@ const OfferPage: React.FC = () => {
   // --- 정렬 버튼 토글 핸들러 ---
   const handleSortToggle = () => {
     setSortOrder((currentOrder) => {
-      if (currentOrder === SORT_ORDER.DEFAULT) return SORT_ORDER.PRICE_ASC;
-      if (currentOrder === SORT_ORDER.PRICE_ASC) return SORT_ORDER.PRICE_DESC;
-      return SORT_ORDER.DEFAULT;
+      const newOrder =
+        currentOrder === SORT_ORDER.DEFAULT
+          ? SORT_ORDER.PRICE_ASC
+          : currentOrder === SORT_ORDER.PRICE_ASC
+            ? SORT_ORDER.PRICE_DESC
+            : SORT_ORDER.DEFAULT;
+
+      // URL 파라미터 업데이트
+      const params = new URLSearchParams(searchParams);
+      if (newOrder !== SORT_ORDER.DEFAULT) {
+        params.set("sort", newOrder);
+      } else {
+        params.delete("sort");
+      }
+      setSearchParams(params, { replace: true });
+
+      return newOrder;
     });
   };
 

@@ -299,5 +299,4 @@ npm run build
 
 <div align="center">
   <p>Made by <a href="https://github.com/HyunZai">HyunZai</a> & <a href="https://github.com/bonzonkim">bonzonkim</a></p>
-  <p>📱 바가지는 그만! 스마트폰 가격 비교의 새로운 기준, PhoneLink</p>
 </div>

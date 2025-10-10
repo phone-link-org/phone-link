@@ -22,6 +22,7 @@ router.get("/latest", async (req, res) => {
         "o.price AS price",
         "pm.image_url AS imageUrl",
         "pm2.id AS manufacturerId",
+        "GREATEST(o.created_at, COALESCE(o.updated_at, o.created_at)) AS latestTime",
       ])
       .innerJoin("o.store", "s")
       .innerJoin("s.region", "r")
@@ -36,7 +37,7 @@ router.get("/latest", async (req, res) => {
       .andWhere("s.status = :status", { status: "OPEN" })
       .andWhere("o.price IS NOT NULL")
       .andWhere("s.approval_status = :approvalStatus", { approvalStatus: "APPROVED" })
-      .orderBy("o.createdAt", "DESC");
+      .orderBy("latestTime", "DESC");
 
     const allOffers: OfferSearchResult[] = await qb.getRawMany();
 

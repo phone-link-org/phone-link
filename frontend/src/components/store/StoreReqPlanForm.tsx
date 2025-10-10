@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import type ReqPlanDto from "../../../../shared/reqPlan.types.ts";
+import type { ReqPlanDto } from "../../../../shared/types";
 import apiClient from "../../api/axios.ts";
 import LoadingSpinner from "../LoadingSpinner";
 import { useTheme } from "../../hooks/useTheme.ts";
@@ -26,9 +26,9 @@ interface StoreReqPlanFormProps {
 const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable = true }) => {
   // 1. 상태 구조를 배열에서 객체로 변경
   const [reqPlans, setReqPlans] = useState<ReqPlansState>({
-    "1": { storeId: storeId, carrierId: 1, name: "", monthlyFee: "", duration: "" }, // SKT
-    "2": { storeId: storeId, carrierId: 2, name: "", monthlyFee: "", duration: "" }, // KT
-    "3": { storeId: storeId, carrierId: 3, name: "", monthlyFee: "", duration: "" }, // LG U+
+    "1": { storeId: storeId, carrierId: 1, name: "", monthlyFee: 0, duration: 0 }, // SKT
+    "2": { storeId: storeId, carrierId: 2, name: "", monthlyFee: 0, duration: "" }, // KT
+    "3": { storeId: storeId, carrierId: 3, name: "", monthlyFee: 0, duration: "" }, // LG U+
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { theme } = useTheme();
@@ -53,7 +53,7 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
           // API에 없는 통신사는 기본값으로 채워줌
           Object.keys(CARRIERS).forEach((id) => {
             if (!newReqPlans[id]) {
-              newReqPlans[id] = { storeId: storeId, carrierId: parseInt(id), name: "", monthlyFee: "", duration: "" };
+              newReqPlans[id] = { storeId: storeId, carrierId: parseInt(id), name: "", monthlyFee: 0, duration: "" };
             }
           });
 
@@ -108,7 +108,7 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
     // 3. 유효성 검사 수정
     for (const carrierId in reqPlans) {
       const plan = reqPlans[carrierId as keyof typeof CARRIERS];
-      if (!plan.name.trim() || plan.monthlyFee === "" || plan.duration === "") {
+      if (!plan.name.trim() || plan.monthlyFee === 0 || plan.duration === "") {
         Swal.fire({
           icon: "warning",
           title: "입력 오류",

@@ -14,82 +14,96 @@
 **PhoneLink**는 스마트폰 구매 시 다양한 매장의 가격을 비교할 수 있는 B2B2C 플랫폼입니다.
 소비자는 최적의 가격을 찾을 수 있고, 판매자는 경쟁력 있는 가격을 제시할 수 있으며, 관리자는 전체 생태계를 관리할 수 있습니다.
 
-### 🏢 비즈니스 모델
-
-- **B2B2C 플랫폼**: 매장(판매자) ↔ 플랫폼 ↔ 소비자
-- **광고 수익**: 매장 프로모션 및 배너 광고를 통한 수익 창출
-
 ## 🏗️ 시스템 아키텍처
 
 ```mermaid
-graph TD
-    subgraph "User"
-        U[Browser]
+graph TB
+    subgraph "클라이언트"
+        Browser[웹 브라우저<br/>React SPA]
     end
 
-    subgraph " "
-        subgraph "Frontend"
-            Nginx[Nginx Static Server]
-        end
-
-        subgraph "Backend"
-            JWT[JWT Middleware]
-            BE[Node.js / Express]
-            FS[Filesystem]
-        end
-
-        subgraph "Database"
-            DB[MySQL]
-        end
+    subgraph "프론트엔드 - React 19.1.0"
+        Router[React Router v7<br/>클라이언트 라우팅]
+        Zustand[Zustand<br/>상태 관리]
+        Axios[Axios<br/>HTTP 클라이언트<br/>JWT 자동 주입]
     end
 
-    U -- "[ Request HTML/JS/CSS ]" --> Nginx
-    Nginx -- "[ Serve Static React App ]" --> U
+    subgraph "백엔드 - Node.js + Express"
+        CORS[CORS<br/>Cross-Origin]
+        Auth[JWT 인증<br/>권한 검증]
+        Routes[11개 API 라우터<br/>auth/user/offer/store/post<br/>admin/phone/region/upload<br/>priceInput/util]
+        Multer[Multer<br/>파일 업로드<br/>5MB 제한]
+    end
 
-    %% JWT Middleware Step Added
-    U -- "[ API Request with Token ]" --> JWT
-    JWT -- "[ Token Verified ]" --> BE
-    
-    BE -- "[ API Response ]" --> U
-    BE -- "[ TypeORM ]" --> DB
-    DB -- "[ DB Result ]" --> BE
+    subgraph "데이터 계층"
+        ORM[TypeORM 0.3.25<br/>23개 Entity<br/>Transaction 지원]
+        MySQL[(MySQL 8.0<br/>timezone: Asia/Seoul)]
+    end
 
-    BE -- "[ Multer ]" --> FS
-    FS -- "[ Store/Read Files ]" --> BE
-    
-    BE -- "[ SSO Auth ]" --> SSO[SSO Providers: Naver, Kakao]
+    subgraph "파일 시스템"
+        Storage[정적 파일<br/>/uploads/images/<br/>store/device/profile<br/>post/carrier]
+    end
 
-    %% Styles
-    style U fill:#f9f,stroke:#333,stroke-width:2px,color:#000
-    style Nginx fill:#269539,stroke:#333,stroke-width:2px,color:#000
-    style JWT fill:#f5a623,stroke:#333,stroke-width:2px,color:#000
-    style BE fill:#8CC84B,stroke:#333,stroke-width:2px,color:#000
-    style DB fill:#336791,stroke:#333,stroke-width:2px,color:#000
-    style FS fill:#999,stroke:#333,stroke-width:2px,color:#000
+    subgraph "외부 서비스"
+        OAuth[OAuth 2.0<br/>Naver/Kakao]
+    end
 
+    Browser --> Router
+    Router --> Zustand
+    Zustand --> Axios
+
+    Axios -->|Authorization: Bearer| CORS
+    CORS --> Auth
+    Auth --> Routes
+    Routes --> Multer
+    Multer --> Storage
+    Routes --> ORM
+    ORM --> MySQL
+
+    Routes -.->|SSO 인증| OAuth
+    Storage -.->|이미지 URL| Browser
+
+    style Browser fill:#f9f,stroke:#333,stroke-width:2px
+    style Router fill:#61DAFB,stroke:#333,stroke-width:2px
+    style Zustand fill:#61DAFB,stroke:#333,stroke-width:2px
+    style Axios fill:#61DAFB,stroke:#333,stroke-width:2px
+    style CORS fill:#f5a623,stroke:#333,stroke-width:2px
+    style Auth fill:#f5a623,stroke:#333,stroke-width:2px
+    style Routes fill:#8CC84B,stroke:#333,stroke-width:2px
+    style Multer fill:#8CC84B,stroke:#333,stroke-width:2px
+    style ORM fill:#8CC84B,stroke:#333,stroke-width:2px
+    style MySQL fill:#336791,stroke:#333,stroke-width:2px,color:#fff
+    style Storage fill:#999,stroke:#333,stroke-width:2px
+    style OAuth fill:#FF6B6B,stroke:#333,stroke-width:2px
 ```
 
 ## 🚀 핵심 기능
 
-### 1. 📊 실시간 가격 비교 시스템
-
-**기술적 특징:**
+### 1. 📊 가격 비교
 
 - 복합 조건 검색 (제조사, 모델, 용량, 통신사, 지역)
-- 매장별 상세 정보 제공
+- 조건별 상세 정보 제공 (출고가, 자급제 가격, 요금제 정보)
+- 무한 스크롤 페이지네이션 (Intersection Observer API)
 
 ### 2. 🏪 매장 관리 시스템
 
-- **매장 등록**: 사업자 정보, 위치, 영업시간 등록
-- **가격 관리**: Excel 업로드, 개별 가격 등록/수정
-- **부가서비스**: 통신사별 부가서비스 및 요금제 관리
-- **승인 시스템**: 관리자 승인 후 서비스 활성화
+- **매장 등록**: 사업자 정보, 위치, 영업시간, 연락처 등록
+- **기기별 가격 관리**: Excel 대량 업로드, 개별 가격 등록/수정
+- **요금제 관리**: 통신사별 필수 요금제 및 월 납입금 설정
+- **부가서비스 관리**: 부가서비스 등록 및 의무 기간 관리
+- **직원 관리**: SELLER 역할 기반 매장 접근 제어
 
-### 3. 📱 반응형 UI/UX
+### 3. 👥 관리자 시스템
 
-- **다크/라이트 모드**: 사용자 선호도에 따른 테마 전환
-- **모바일 최적화**: Tailwind CSS를 활용한 반응형 디자인
-- **직관적 네비게이션**: 역할별 맞춤 메뉴 구성
+- **매장 승인 관리**: 매장 등록 승인/반려 처리
+- **마스터 데이터 관리**: 제조사, 모델, 통신사, 지역, 카테고리 CRUD
+- **사용자 관리**: 사용자 조회, 정지/해제, 권한 관리
+
+### 4. 🎨 사용자 경험
+
+- **다크모드 지원**: Context API 기반 라이트/다크 테마 전환
+- **반응형 디자인**: Tailwind CSS를 활용한 다양한 디바이스 지원
+- **직관적 UI/UX**: 역할별 맞춤 네비게이션 및 알림 시스템
 
 ## 🛠️ 기술 스택
 
@@ -118,9 +132,18 @@ graph TD
 erDiagram
     USERS ||--o{ SELLERS : "has"
     USERS ||--o{ SOCIAL_ACCOUNTS : "has"
+    USERS ||--o{ USER_SUSPENSIONS : "has"
+    USERS ||--o{ USER_FAVORITES : "has"
+    USERS ||--o{ POSTS : "writes"
+    USERS ||--o{ COMMENTS : "writes"
+
     SELLERS ||--o{ STORES : "manages"
+
     STORES ||--o{ OFFERS : "provides"
-    STORES ||--o{ ADDONS : "offers"
+    STORES ||--o{ REQ_PLANS : "has"
+    STORES ||--o{ USER_FAVORITES : "favorited_by"
+
+    REGIONS ||--o{ STORES : "located_in"
 
     PHONE_MANUFACTURERS ||--o{ PHONE_MODELS : "produces"
     PHONE_MODELS ||--o{ PHONE_DEVICES : "has"
@@ -129,7 +152,17 @@ erDiagram
 
     CARRIERS ||--o{ OFFERS : "provides"
     CARRIERS ||--o{ ADDONS : "offers"
-    REGIONS ||--o{ STORES : "located_in"
+    CARRIERS ||--o{ REQ_PLANS : "has"
+
+    CATEGORIES ||--o{ POST_CATEGORIES : "categorizes"
+    POSTS ||--o{ POST_CATEGORIES : "belongs_to"
+    POSTS ||--o{ COMMENTS : "has"
+    POSTS ||--o{ POST_LIKES : "liked_by"
+    POSTS ||--o{ POST_IMAGES : "contains"
+    POSTS ||--o{ POST_FILES : "contains"
+
+    COMMENTS ||--o{ COMMENTS : "replies_to"
+    COMMENTS ||--o{ COMMENT_LIKES : "liked_by"
 
     USERS {
         bigint id PK
@@ -138,17 +171,24 @@ erDiagram
         string nickname
         enum role
         enum status
+        string profile_image_url
+        datetime last_login_at
         datetime created_at
         datetime updated_at
+        datetime deleted_at
     }
 
     STORES {
         bigint id PK
         string name
         string address
+        string contact
+        string thumbnail_url
         enum approval_status
-        bigint seller_id FK
+        enum status
+        bigint created_by FK
         datetime created_at
+        datetime updated_at
     }
 
     OFFERS {
@@ -159,6 +199,28 @@ erDiagram
         enum offer_type
         int price
         datetime created_at
+        datetime updated_at
+    }
+
+    POSTS {
+        bigint id PK
+        bigint user_id FK
+        string title
+        text content
+        int view_count
+        int like_count
+        datetime created_at
+        datetime updated_at
+    }
+
+    USER_SUSPENSIONS {
+        bigint id PK
+        bigint user_id FK
+        string reason
+        datetime suspended_until
+        bigint suspended_by FK
+        datetime created_at
+        datetime unsuspended_at
     }
 ```
 
@@ -224,36 +286,18 @@ cd backend && npm run dev   # http://localhost:4000
 npm run build
 ```
 
-## 🎯 향후 개발 계획
-
-### Phase 1: 핵심 기능 강화
-
-- [ ] 실시간 알림 시스템 (WebSocket)
-- [ ] 고급 필터링 및 검색 기능
-- [ ] 가격 히스토리 및 트렌드 분석
-
-### Phase 2: 사용자 경험 개선
-
-- [ ] 모바일 앱 (React Native)
-- [ ] AI 기반 가격 추천 시스템
-- [ ] 소셜 로그인 확장 (Apple, Google)
-
-### Phase 3: 비즈니스 확장
-
-- [ ] 핸드폰 직접 판매
-- [ ] 커뮤니티 확장
-
 ## 📄 라이선스
 
 이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 📞 연락처
 
-프로젝트 링크: [https://github.com/HyunZai/phone-link](https://github.com/HyunZai/phone-link)
+**Email:** khj980211@naver.com  
+**프로젝트 링크:** [https://github.com/HyunZai/phone-link](https://github.com/HyunZai/phone-link)
 
 ---
 
 <div align="center">
-  <p>Made by HyunZai</p>
+  <p>Made by <a href="https://github.com/HyunZai">HyunZai</a> & <a href="https://github.com/bonzonkim">bonzonkim</a></p>
   <p>📱 바가지는 그만! 스마트폰 가격 비교의 새로운 기준, PhoneLink</p>
 </div>

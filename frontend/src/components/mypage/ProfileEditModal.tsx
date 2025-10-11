@@ -9,6 +9,8 @@ import axios from "axios";
 import type { UserDto, UserUpdateData, StoreDto } from "../../../../shared/types";
 import { ROLES } from "../../../../shared/constants";
 import Modal from "./Modal";
+import Swal from "sweetalert2";
+import { useTheme } from "../../hooks/useTheme";
 
 interface DaumPostcodeData {
   address: string;
@@ -60,6 +62,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   const [stores, setStores] = useState<StoreDto[]>([]);
   const [isOriginalSeller, setIsOriginalSeller] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [fullBirthday, setFullBirthday] = useState<string>(""); // YYYY-MM-DD 형식
 
   // 매장 목록 가져오기
   useEffect(() => {
@@ -85,10 +88,19 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     setSelectedStore(stores.find((store) => store.id === formData?.storeId) || null);
   }, [stores]);
 
-  // 기존 사용자가 SELLER인지 확인 (최초 한 번만)
+  // 기존 사용자가 SELLER인지 확인 & 생년월일 조합 (최초 한 번만)
   useEffect(() => {
     if (formData && !hasInitialized) {
       setIsOriginalSeller(formData.role === ROLES.SELLER);
+
+      // birthYear와 birthday를 조합하여 YYYY-MM-DD 형식으로 변환
+      if (formData.birthYear && formData.birthday) {
+        const fullDate = `${formData.birthYear}-${formData.birthday}`;
+        setFullBirthday(fullDate);
+      } else {
+        setFullBirthday("");
+      }
+
       setHasInitialized(true);
     }
   }, [formData, hasInitialized]);
@@ -225,7 +237,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         toast.error("사용자 정보를 불러오는 중입니다.");
         return;
       }
-      // 비밀번호가 비어있으면 제외
+      // 업데이트할 데이터 준비
       const updateData: UserUpdateData = {
         id: formData.id,
         nickname: formData.nickname,
@@ -239,8 +251,14 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         storeId: selectedStore?.id,
       };
 
+      // 비밀번호가 입력된 경우에만 포함
       if (newPassword) {
         updateData.password = newPassword;
+      }
+
+      // 생년월일이 입력된 경우에만 포함 (YYYY-MM-DD 형식으로 전송)
+      if (fullBirthday) {
+        updateData.birthday = fullBirthday;
       }
 
       await api.post("/user/profile", updateData);
@@ -266,14 +284,88 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     }
   };
 
-  const toggleRole = () => {
-    setFormData((previous) => {
-      if (!previous) return previous;
-      return {
-        ...previous,
-        role: previous.role === ROLES.SELLER ? ROLES.USER : ROLES.SELLER,
-      } as UserDto & { storeId?: number };
-    });
+  const { theme } = useTheme();
+
+  const toggleRole = async () => {
+    // 판매자 → 일반 사용자로 전환 시 확인 모달
+    if (formData?.role === ROLES.SELLER) {
+      const result = await Swal.fire({
+        html: `<b>일반 사용자로 전환 시, 소속 매장(${selectedStore?.name})에 대한 모든 권한이 없어집니다.</b><br/>그래도 진행하시겠습니까?`,
+        icon: "warning",
+        showCancelButton: true,
+        background: theme === "dark" ? "#343434" : "#fff",
+        color: theme === "dark" ? "#e5e7eb" : "#1f2937",
+        confirmButtonColor: theme === "dark" ? "#9DC183" : "#4F7942",
+        cancelButtonColor: theme === "dark" ? "#F97171" : "#EF4444",
+        confirmButtonText: "확인",
+        cancelButtonText: "취소",
+      });
+
+      // 취소를 누르면 role 변경하지 않음
+      if (!result.isConfirmed) return;
+
+      setIsSubmitting(true);
+
+      try {
+        // 1. seller status를 INACTIVE로 변경
+        await api.post("/store/update-staff-status", {
+          storeId: selectedStore?.id,
+          userId: formData?.id,
+          newStatus: "INACTIVE",
+        });
+
+        // 2. user role을 USER로 변경 (즉시 저장)
+        const updateData: UserUpdateData = {
+          id: formData.id,
+          nickname: formData.nickname,
+          profileImageUrl: formData.profileImageUrl,
+          address: formData.address,
+          addressDetail: formData.addressDetail,
+          postalCode: formData.postalCode,
+          sido: formData.sido,
+          sigungu: formData.sigungu,
+          role: ROLES.USER,
+          storeId: selectedStore?.id,
+        };
+
+        // 생년월일이 입력된 경우에만 포함
+        if (fullBirthday) {
+          updateData.birthday = fullBirthday;
+        }
+
+        await api.post("/user/profile", updateData);
+
+        // 성공 시 로컬 상태 업데이트
+        setFormData((previous) => {
+          if (!previous) return previous;
+          return {
+            ...previous,
+            role: ROLES.USER,
+          } as UserDto & { storeId?: number };
+        });
+
+        toast.success("일반 사용자로 전환되었습니다.");
+        onClose(); // 모달 닫기
+      } catch (error) {
+        console.error("일반 사용자 전환 오류:", error);
+        if (axios.isAxiosError(error) && error.response) {
+          toast.error(error.response.data.message || "일반 사용자 전환 중 오류가 발생했습니다.");
+        } else {
+          toast.error("일반 사용자 전환 중 오류가 발생했습니다.");
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // 일반 사용자 → 판매자 전환은 기존대로 (수정 버튼으로 저장)
+      setFormData((previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          role: ROLES.SELLER,
+        } as UserDto & { storeId?: number };
+      });
+    }
   };
 
   return (
@@ -292,7 +384,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 id="email"
                 value={formData?.email ?? ""}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-[#1a1a1a] dark:border-gray-600 dark:text-gray-400 cursor-not-allowed"
               />
             </div>
 
@@ -335,15 +427,20 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             {/* Nickname */}
             <div>
               <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                닉네임
+                닉네임 <span className="text-xs text-gray-500">({formData?.nickname?.length || 0}/12)</span>
               </label>
               <input
                 type="text"
                 id="nickname"
                 name="nickname"
                 value={formData?.nickname ?? ""}
-                onChange={handleChange}
+                onChange={(e) => {
+                  if (e.target.value.length <= 12) {
+                    handleChange(e);
+                  }
+                }}
                 onFocus={handleFocus}
+                maxLength={12}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
               />
             </div>
@@ -367,7 +464,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                       className={`w-full h-10 flex items-center justify-center text-sm border rounded-l-md transition-colors duration-200 ${
                         formData?.gender === "M"
                           ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
-                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-500"
+                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-[#1a1a1a] dark:text-gray-500 dark:border-gray-600"
                       }`}
                     >
                       남성
@@ -388,7 +485,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                       className={`w-full h-10 flex items-center justify-center text-sm border rounded-r-md transition-colors duration-200 ${
                         formData?.gender === "F"
                           ? "bg-primary-light text-white border-primary-light dark:bg-primary-dark dark:text-[#292929] dark:border-primary-dark"
-                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-500"
+                          : "bg-gray-100 text-gray-400 border-gray-300 dark:bg-[#1a1a1a] dark:text-gray-500 dark:border-gray-600"
                       }`}
                     >
                       여성
@@ -406,9 +503,10 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   type="date"
                   id="birthday"
                   name="birthday"
-                  value={formData?.birthday ?? ""}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
+                  value={fullBirthday}
+                  onChange={(e) => setFullBirthday(e.target.value)}
+                  onFocus={handleFocus}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                 />
               </div>
             </div>
@@ -423,7 +521,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 id="phoneNumber"
                 value={formData?.phoneNumber ?? ""}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-[#1a1a1a] dark:border-gray-600 dark:text-gray-400 cursor-not-allowed"
               />
             </div>
           </div>
@@ -500,35 +598,23 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">
                     일반 사용자
                   </span>
-                  <label
-                    htmlFor="role"
-                    className={`relative ${isOriginalSeller ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  >
+                  <label htmlFor="role" className="relative cursor-pointer">
                     <input
                       id="role"
                       name="role"
                       type="checkbox"
                       className="sr-only peer"
                       checked={formData?.role === ROLES.SELLER}
-                      onChange={isOriginalSeller ? undefined : toggleRole}
-                      disabled={isOriginalSeller}
+                      onChange={toggleRole}
                     />
-                    <div
-                      className={`w-11 h-6 transition-colors duration-200 rounded-full peer peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${
-                        isOriginalSeller
-                          ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
-                          : "bg-gray-200 dark:bg-gray-700"
-                      }`}
-                    ></div>
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 transition-colors duration-200 rounded-full peer peer-checked:bg-primary-light dark:peer-checked:bg-primary-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                   </label>
                   <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none">판매자</span>
                 </div>
                 <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {isOriginalSeller
-                    ? "기존 판매자 계정입니다. 계정 유형은 변경할 수 없습니다."
-                    : formData?.role === ROLES.SELLER
-                      ? "판매자 계정으로 변경 시 매장 관리 기능을 사용할 수 있습니다."
-                      : "일반 사용자 계정입니다."}
+                  {formData?.role === ROLES.SELLER
+                    ? "판매자 계정입니다. 일반 사용자로 변경하면 매장 관리 기능을 사용할 수 없습니다."
+                    : "일반 사용자 계정입니다. 판매자로 변경하면 매장 관리 기능을 사용할 수 있습니다."}
                 </p>
               </div>
             )}
@@ -541,7 +627,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 </label>
                 {isOriginalSeller ? (
                   // 기존 판매자: 읽기전용 표시
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-300 cursor-not-allowed">
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-[#1a1a1a] dark:border-gray-500 dark:text-gray-300 cursor-not-allowed">
                     {selectedStore ? selectedStore.name : "매장 정보 없음"}
                   </div>
                 ) : (

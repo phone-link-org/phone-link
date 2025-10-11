@@ -85,6 +85,7 @@ export type UserUpdateData = Pick<
   | "sido"
   | "sigungu"
   | "role"
+  | "birthday"
 > & {
   storeId?: StoreDto["id"];
 };

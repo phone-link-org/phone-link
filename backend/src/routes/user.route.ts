@@ -429,9 +429,26 @@ router.post("/profile", isAuthenticated, async (req, res) => {
       if (userUpdateData.sido !== undefined) userToUpdate.sido = userUpdateData.sido;
       if (userUpdateData.sigungu !== undefined) userToUpdate.sigungu = userUpdateData.sigungu;
 
+      // 생년월일 업데이트 (YYYY-MM-DD 형식)
+      if (userUpdateData.birthday !== undefined) {
+        const birthDate = userUpdateData.birthday;
+        if (birthDate) {
+          const birthYear = Number(birthDate.split("-")[0]);
+          userToUpdate.birthYear = birthYear;
+          userToUpdate.birthday = `${birthDate.split("-")[1]}-${birthDate.split("-")[2]}`;
+
+          // 연령대 계산
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYear;
+          if (age >= 0 && age < 150) {
+            const startOfRange = Math.floor(age / 10) * 10;
+            userToUpdate.ageRange = `${startOfRange}-${startOfRange + 9}`;
+          }
+        }
+      }
+
       // 일반 사용자 -> 판매자 전환인 경우
       if (userToUpdate.role === ROLES.USER && userUpdateData.role === ROLES.SELLER && userUpdateData.storeId) {
-        console.log("여기 타는지 확인용 로그 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
         // 이미 판매자로 등록되어 있는지 확인
         const existingSeller = await sellerRepo.findOne({
           where: {
@@ -441,14 +458,25 @@ router.post("/profile", isAuthenticated, async (req, res) => {
         });
 
         if (existingSeller) {
-          throw new Error("이미 해당 매장의 판매자로 등록되어 있습니다.");
+          // INACTIVE 상태인 경우 PENDING으로 재활성화
+          if (existingSeller.status === "INACTIVE") {
+            existingSeller.status = "PENDING";
+            await sellerRepo.save(existingSeller);
+          } else if (existingSeller.status === "ACTIVE") {
+            throw new Error("이미 해당 매장의 활성화된 판매자로 등록되어 있습니다.");
+          } else if (existingSeller.status === "PENDING") {
+            throw new Error("이미 해당 매장의 판매자 승인 대기 중입니다.");
+          } else if (existingSeller.status === "REJECTED") {
+            throw new Error("해당 매장의 판매자 승인이 거절되었습니다. 관리자에게 문의하세요.");
+          }
+        } else {
+          // 새로운 seller 레코드 생성
+          const newSeller = new Seller();
+          newSeller.userId = userToUpdate.id;
+          newSeller.storeId = userUpdateData.storeId;
+          newSeller.status = "PENDING";
+          await sellerRepo.save(newSeller);
         }
-
-        const newSeller = new Seller();
-        newSeller.userId = userToUpdate.id;
-        newSeller.storeId = userUpdateData.storeId;
-        newSeller.status = "PENDING";
-        await sellerRepo.save(newSeller);
       }
 
       if (userUpdateData.role && [ROLES.USER, ROLES.SELLER, ROLES.ADMIN].includes(userUpdateData.role)) {

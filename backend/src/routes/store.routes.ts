@@ -754,31 +754,65 @@ router.get("/:storeId/staffs", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADM
 });
 
 router.post("/update-staff-status", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
   try {
     const { storeId, userId, newStatus } = req.body;
-    const sellerRepo = AppDataSource.getRepository(Seller);
+    const sellerRepo = queryRunner.manager.getRepository(Seller);
+    const userRepo = queryRunner.manager.getRepository(User);
+
     const seller = await sellerRepo.findOne({ where: { storeId: parseInt(storeId), userId: parseInt(userId) } });
     if (!seller) {
+      await queryRunner.rollbackTransaction();
       return res.status(404).json({
         success: false,
         message: "직원 조회 중 오류가 발생했습니다.",
       });
     }
 
+    const oldStatus = seller.status;
     seller.status = newStatus as "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";
     await sellerRepo.save(seller);
+
+    // seller status 변경 시 users 테이블의 role도 변경
+    const user = await userRepo.findOne({ where: { id: parseInt(userId) } });
+    if (user) {
+      // ACTIVE → INACTIVE: 판매자 권한 해제
+      if (oldStatus === "ACTIVE" && newStatus === "INACTIVE") {
+        user.role = ROLES.USER;
+        await userRepo.save(user);
+      }
+      // PENDING → REJECTED: 판매자 승인 거절
+      else if (oldStatus === "PENDING" && newStatus === "REJECTED") {
+        user.role = ROLES.USER;
+        await userRepo.save(user);
+      }
+      // 계정 정보 수정 모달에서 승인 전(PENDING) 상태에서 다시 '일반 사용자로' 변경
+      else if (oldStatus === "PENDING" && newStatus === "INACTIVE") {
+        user.role = ROLES.USER;
+        await userRepo.save(user);
+        await sellerRepo.remove(seller);
+      }
+    }
+
+    await queryRunner.commitTransaction();
 
     res.status(200).json({
       success: true,
       message: "직원 상태 업데이트 완료",
     });
   } catch (error) {
+    await queryRunner.rollbackTransaction();
     console.error("Error during updating staff status", error);
     res.status(500).json({
       success: false,
       message: "직원 상태 업데이트 중 오류가 발생했습니다.",
       error: "Internal Server Error",
     });
+  } finally {
+    await queryRunner.release();
   }
 });
 

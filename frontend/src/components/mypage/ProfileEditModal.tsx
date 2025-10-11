@@ -307,33 +307,12 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       setIsSubmitting(true);
 
       try {
-        // 1. seller status를 INACTIVE로 변경
+        // seller status를 INACTIVE로 변경 (백엔드에서 user.role도 자동으로 USER로 변경)
         await api.post("/store/update-staff-status", {
           storeId: selectedStore?.id,
           userId: formData?.id,
           newStatus: "INACTIVE",
         });
-
-        // 2. user role을 USER로 변경 (즉시 저장)
-        const updateData: UserUpdateData = {
-          id: formData.id,
-          nickname: formData.nickname,
-          profileImageUrl: formData.profileImageUrl,
-          address: formData.address,
-          addressDetail: formData.addressDetail,
-          postalCode: formData.postalCode,
-          sido: formData.sido,
-          sigungu: formData.sigungu,
-          role: ROLES.USER,
-          storeId: selectedStore?.id,
-        };
-
-        // 생년월일이 입력된 경우에만 포함
-        if (fullBirthday) {
-          updateData.birthday = fullBirthday;
-        }
-
-        await api.post("/user/profile", updateData);
 
         // 성공 시 로컬 상태 업데이트
         setFormData((previous) => {

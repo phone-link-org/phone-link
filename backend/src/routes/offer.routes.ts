@@ -2,7 +2,14 @@
 import { Router } from "express";
 import { AppDataSource } from "../db";
 import { Offer } from "../typeorm/offers.entity";
-import { OfferDetailFormData, OfferModelDto, OfferRegionDto, OfferSearchResult, PhoneStorageDto } from "shared/types";
+import {
+  AddonFormData,
+  OfferDetailFormData,
+  OfferModelDto,
+  OfferRegionDto,
+  OfferSearchResult,
+  PhoneStorageDto,
+} from "shared/types";
 import { SORT_ORDER } from "../../../shared/constants";
 
 const router = Router();
@@ -152,6 +159,39 @@ router.get("/:offerId", async (req, res) => {
       success: false,
       error: "Internal Server Error",
       message: "판매 정보를 불러오던 중 오류가 발생했습니다.",
+    });
+  }
+});
+
+router.get("/:offerId/addon-info", async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const offerRepo = AppDataSource.getRepository(Offer);
+
+    const addons = await offerRepo
+      .createQueryBuilder("o")
+      .select([
+        "a.name AS name",
+        "a.carrier_id AS carrierId",
+        "a.monthly_fee AS monthlyFee",
+        "a.duration_months AS durationMonths",
+        "a.penalty_fee AS penaltyFee",
+      ])
+      .innerJoin("o.store", "s")
+      .innerJoin("addons", "a", "a.store_id = s.id AND a.carrier_id = o.carrier_id")
+      .where("o.id = :offerId", { offerId })
+      .getRawMany<AddonFormData[]>();
+
+    res.status(200).json({
+      success: true,
+      data: addons,
+    });
+  } catch (error) {
+    console.error("Error fetching addon info:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "부가서비스 정보를 불러오던 중 오류가 발생했습니다.",
     });
   }
 });

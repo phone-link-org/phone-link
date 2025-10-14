@@ -4,22 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import { toast } from "sonner";
 import { HiBuildingStorefront, HiMapPin, HiPhone, HiUser, HiLink, HiMiniInformationCircle } from "react-icons/hi2";
-import type { StoreRegisterFormData } from "../../../shared/types";
+import type { StoreRegisterFormData, DaumPostcodeData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import ImageUpload from "../components/ImageUpload";
 import Swal from "sweetalert2";
 import { useTheme } from "../hooks/useTheme";
 import axios from "axios";
-
-interface DaumPostcodeData {
-  address: string;
-  addressType: "R" | "J";
-  bname: string;
-  buildingName: string;
-  zonecode: string;
-  sido: string;
-  sigunguCode: string;
-}
 
 const StoreRegisterPage: React.FC = () => {
   const { theme } = useTheme(); // 현재 테마 가져오기
@@ -347,7 +337,7 @@ const StoreRegisterPage: React.FC = () => {
                     type="text"
                     id="ownerName"
                     name="ownerName"
-                    value={formData.ownerName}
+                    value={formData.ownerName ?? ""}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-background-dark dark:border-gray-500 dark:text-white"
                     placeholder="대표자명을 입력하세요"

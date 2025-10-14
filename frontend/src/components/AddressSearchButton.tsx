@@ -1,18 +1,7 @@
 import React from "react";
 import { useDaumPostcodePopup } from "react-daum-postcode";
 import { useTheme } from "../hooks/useTheme";
-
-// SignupPage에서 사용하는 타입과 동일하게 맞춰줍니다.
-interface DaumPostcodeData {
-  address: string;
-  addressType: "R" | "J";
-  bname: string;
-  buildingName: string;
-  zonecode: string;
-  sido: string;
-  sigungu: string;
-  sigunguCode: string;
-}
+import type { DaumPostcodeData } from "../../../shared/types";
 
 interface AddressSearchButtonProps {
   onAddressComplete: (data: DaumPostcodeData) => void;

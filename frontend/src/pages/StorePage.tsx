@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ExcelUpload from "../components/store/ExcelUpload";
 import StoreAddonForm from "../components/store/StoreAddonForm";
 import StoreOfferPriceForm from "../components/store/StoreOfferPriceForm";
 import { useParams } from "react-router-dom";
 import StoreReqPlanForm from "../components/store/StoreReqPlanForm";
 import { api } from "../api/axios";
-import type { StoreDto } from "../../../shared/store.types";
+import axios from "axios";
+import type { StoreDto, StoreRegisterFormData, DaumPostcodeData } from "../../../shared/types";
 import {
   FiMapPin,
   FiPhone,
@@ -22,6 +23,7 @@ import { useAuthStore } from "../store/authStore";
 import { ROLES } from "../../../shared/constants";
 import { toast } from "sonner";
 import StoreStaffForm from "../components/store/StoreStaffForm";
+import AddressSearchButton from "../components/AddressSearchButton";
 
 const StorePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"prices" | "excel" | "addon" | "requiredPlan" | "staff">("prices");
@@ -35,7 +37,14 @@ const StorePage: React.FC = () => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedStore, setEditedStore] = useState<StoreDto | null>(null);
+  const [editedStore, setEditedStore] = useState<StoreRegisterFormData | null>(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [tempAddress, setTempAddress] = useState({
+    address: "",
+    addressDetail: "",
+    regionCode: "",
+  });
+  const addressDetailRef = useRef<HTMLInputElement>(null);
 
   // 사용자 권한 확인
   const isSeller = user?.role === ROLES.SELLER;
@@ -56,8 +65,24 @@ const StorePage: React.FC = () => {
 
   // 편집 모드 진입
   const handleEditClick = () => {
-    setEditedStore({ ...store! });
-    setIsEditMode(true);
+    if (store) {
+      const formData: StoreRegisterFormData = {
+        name: store.name,
+        description: store.description,
+        regionCode: store.regionCode,
+        address: store.address,
+        addressDetail: store.addressDetail,
+        contact: store.contact,
+        thumbnailUrl: store.thumbnailUrl,
+        link_1: store.link_1,
+        link_2: store.link_2,
+        ownerName: store.ownerName,
+        approvalStatus: store.approvalStatus,
+        createdBy: store.createdBy,
+      };
+      setEditedStore(formData);
+      setIsEditMode(true);
+    }
   };
 
   // 편집 취소
@@ -68,21 +93,42 @@ const StorePage: React.FC = () => {
 
   // 편집 저장
   const handleSaveEdit = async () => {
-    try {
-      // TODO: 백엔드 API 호출 (아직 구현 안함)
-      // await api.put(`/store/${storeId}`, editedStore);
+    if (!editedStore || !storeId) {
+      toast.error("수정할 정보가 없습니다.");
+      return;
+    }
 
-      setStore(editedStore);
+    try {
+      // 백엔드 API 호출
+      const response = await api.post(`/store/${storeId}/edit-info`, {
+        editedStore,
+      });
+
+      // 서버에서 받은 업데이트된 매장 정보로 상태 업데이트
+      if (response.data) {
+        setStore(response.data);
+      } else {
+        // 응답에 data가 없으면 로컬 상태 병합
+        setStore({
+          ...store!,
+          ...editedStore,
+        });
+      }
+
       setIsEditMode(false);
       toast.success("매장 정보가 수정되었습니다.");
     } catch (error) {
-      console.error(error);
-      toast.error("매장 정보 수정 중 오류가 발생했습니다.");
+      console.error("매장 정보 수정 오류:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        toast.error(error.response.data.message || "매장 정보 수정 중 오류가 발생했습니다.");
+      } else {
+        toast.error("매장 정보 수정 중 오류가 발생했습니다.");
+      }
     }
   };
 
   // 편집 중인 매장 정보 변경
-  const handleInputChange = (field: keyof StoreDto, value: string) => {
+  const handleInputChange = (field: keyof StoreRegisterFormData, value: string) => {
     if (editedStore) {
       setEditedStore({
         ...editedStore,
@@ -91,11 +137,76 @@ const StorePage: React.FC = () => {
     }
   };
 
+  // 주소 변경 모달 열기
+  const handleAddressModalOpen = () => {
+    setTempAddress({
+      address: editedStore?.address || "",
+      addressDetail: editedStore?.addressDetail || "",
+      regionCode: editedStore?.regionCode || "",
+    });
+    setIsAddressModalOpen(true);
+  };
+
+  // 주소 변경 모달 닫기
+  const handleAddressModalClose = () => {
+    setIsAddressModalOpen(false);
+    setTempAddress({
+      address: "",
+      addressDetail: "",
+      regionCode: "",
+    });
+  };
+
+  // 다음 주소 검색 완료 핸들러
+  const handleAddressComplete = (data: DaumPostcodeData) => {
+    let fullAddress = data.address;
+    let extraAddress = "";
+
+    if (data.addressType === "R") {
+      if (data.bname !== "") {
+        extraAddress += data.bname;
+      }
+      if (data.buildingName !== "") {
+        extraAddress += extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
+      }
+      fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
+    }
+
+    setTempAddress((prev) => ({
+      ...prev,
+      address: fullAddress,
+      regionCode: data.sigunguCode ? `${data.sigunguCode}00000` : prev.regionCode,
+    }));
+
+    // 상세 주소 필드로 포커스 이동
+    addressDetailRef.current?.focus();
+  };
+
+  // 주소 변경 저장
+  const handleAddressSave = () => {
+    if (editedStore) {
+      setEditedStore({
+        ...editedStore,
+        address: tempAddress.address,
+        addressDetail: tempAddress.addressDetail,
+        regionCode: tempAddress.regionCode,
+      });
+    }
+    handleAddressModalClose();
+    toast.success("주소가 변경되었습니다.");
+  };
+
   // 링크 타입 감지 함수
   const getLinkInfo = (url: string) => {
     if (url.includes("blog.naver")) {
       return {
         label: "네이버 블로그",
+        color:
+          "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
+      };
+    } else if (url.includes("band.us")) {
+      return {
+        label: "네이버 밴드",
         color:
           "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
       };
@@ -238,16 +349,47 @@ const StorePage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6">
           {/* 매장 썸네일 */}
           <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start">
-            {store.thumbnailUrl ? (
-              <img
-                src={`${import.meta.env.VITE_API_URL}${store.thumbnailUrl}`}
-                alt={store.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-600"
-              />
+            {isEditMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  // TODO: 이미지 업로드 로직 구현
+                  toast.info("기능 준비 중입니다.");
+                }}
+                className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-600 group cursor-pointer"
+              >
+                {editedStore?.thumbnailUrl ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL}${editedStore.thumbnailUrl}`}
+                    alt={editedStore.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <FiHome className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-gray-400 dark:text-gray-500" />
+                  </div>
+                )}
+                {/* Hover 오버레이 */}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
+                  <span className="text-white text-xs sm:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    변경하기
+                  </span>
+                </div>
+              </button>
             ) : (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
-                <FiHome className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-gray-400 dark:text-gray-500" />
-              </div>
+              <>
+                {store.thumbnailUrl ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL}${store.thumbnailUrl}`}
+                    alt={store.name}
+                    className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-600"
+                  />
+                ) : (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
+                    <FiHome className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-gray-400 dark:text-gray-500" />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -335,8 +477,18 @@ const StorePage: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">주소</p>
                   <p className="text-sm sm:text-base text-gray-900 dark:text-white break-words">
-                    {store.address}
-                    {store.addressDetail && ` ${store.addressDetail}`}
+                    {isEditMode ? editedStore?.address : store.address}
+                    {isEditMode
+                      ? editedStore?.addressDetail && ` ${editedStore.addressDetail}`
+                      : store.addressDetail && ` ${store.addressDetail}`}
+                    {isEditMode && (
+                      <button
+                        onClick={handleAddressModalOpen}
+                        className="ml-2 text-xs sm:text-sm text-primary-light dark:text-primary-dark hover:underline whitespace-nowrap"
+                      >
+                        주소 변경
+                      </button>
+                    )}
                   </p>
                 </div>
               </div>
@@ -486,6 +638,89 @@ const StorePage: React.FC = () => {
           ) : null}
         </div>
       </div>
+
+      {/* 주소 변경 모달 */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#292929] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* 모달 헤더 */}
+            <div className="sticky top-0 bg-white dark:bg-[#292929] border-b border-gray-200 dark:border-gray-500 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">주소 변경</h2>
+              <button
+                onClick={handleAddressModalClose}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div className="px-6 py-4 space-y-4">
+              {/* 기본 주소 */}
+              <div>
+                <label
+                  htmlFor="modal-address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  기본 주소
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    id="modal-address"
+                    value={tempAddress.address}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-md bg-gray-50 dark:bg-background-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark"
+                    placeholder="주소 검색 버튼을 클릭하세요"
+                  />
+                  <AddressSearchButton onAddressComplete={handleAddressComplete} />
+                </div>
+              </div>
+
+              {/* 상세 주소 */}
+              <div>
+                <label
+                  htmlFor="modal-addressDetail"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  상세 주소
+                </label>
+                <input
+                  type="text"
+                  id="modal-addressDetail"
+                  ref={addressDetailRef}
+                  value={tempAddress.addressDetail}
+                  onChange={(e) =>
+                    setTempAddress((prev) => ({
+                      ...prev,
+                      addressDetail: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-md bg-white dark:bg-background-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark"
+                  placeholder="상세 주소를 입력하세요"
+                />
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="sticky bottom-0 bg-white dark:bg-[#292929] border-t border-gray-200 dark:border-gray-500 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={handleAddressModalClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddressSave}
+                disabled={!tempAddress.address}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-light dark:bg-primary-dark dark:text-background-dark hover:opacity-90 rounded-md transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,15 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api/axios";
 import { format } from "date-fns";
 import type { OfferDetailFormData, AddonFormData } from "../../../shared/types";
-import {
-  FiExternalLink,
-  FiMessageCircle,
-  FiPhone,
-  FiLink,
-  FiSmartphone,
-  FiChevronDown,
-  FiChevronUp,
-} from "react-icons/fi";
+import { FiExternalLink, FiMessageCircle, FiPhone, FiSmartphone, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { CARRIERS, OFFER_TYPES } from "../../../shared/constants";
 
 const formatOfferType = (type?: string): string => {
@@ -27,6 +19,40 @@ const formatOfferType = (type?: string): string => {
 
 const getOfferTypeBadgeColor = (offerType?: string) => {
   return offerType === OFFER_TYPES.MNP ? "bg-emerald-500 text-white" : "bg-amber-500 text-white";
+};
+
+// 링크 타입 감지 함수 (StorePage와 동일)
+const getLinkInfo = (url: string) => {
+  if (url.includes("blog.naver")) {
+    return {
+      label: "네이버 블로그",
+      color:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
+    };
+  } else if (url.includes("band.us")) {
+    return {
+      label: "네이버 밴드",
+      color:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
+    };
+  } else if (url.includes("kakao")) {
+    return {
+      label: "카카오 채널",
+      color:
+        "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/30",
+    };
+  } else if (url.includes("youtube")) {
+    return {
+      label: "유튜브",
+      color: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30",
+    };
+  } else {
+    return {
+      label: "링크",
+      color:
+        "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30",
+    };
+  }
 };
 
 const getCarrierBadgeColor = (carrier?: string) => {
@@ -554,37 +580,37 @@ const OfferDetailPage: React.FC = () => {
             {(offerFormData.storeLink_1 || offerFormData.storeLink_2) && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">소셜 링크</span>
-                <div className="flex flex-wrap items-center gap-x-4 sm:justify-end sm:w-3/4">
-                  {offerFormData.storeLink_1 && (
-                    <a
-                      href={offerFormData.storeLink_1}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
-                    >
-                      <FiLink />
-                      <span className="break-all">
-                        {offerFormData.storeLink_1.length > 27
-                          ? `${offerFormData.storeLink_1.substring(0, 27)}...`
-                          : offerFormData.storeLink_1}
-                      </span>
-                    </a>
-                  )}
-                  {offerFormData.storeLink_2 && (
-                    <a
-                      href={offerFormData.storeLink_2}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
-                    >
-                      <FiLink />
-                      <span className="break-all">
-                        {offerFormData.storeLink_2.length > 27
-                          ? `${offerFormData.storeLink_2.substring(0, 27)}...`
-                          : offerFormData.storeLink_2}
-                      </span>
-                    </a>
-                  )}
+                <div className="flex flex-wrap gap-2 sm:justify-end sm:w-3/4">
+                  {offerFormData.storeLink_1 &&
+                    (() => {
+                      const linkInfo = getLinkInfo(offerFormData.storeLink_1);
+                      return (
+                        <a
+                          href={offerFormData.storeLink_1}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${linkInfo.color}`}
+                        >
+                          <span>{linkInfo.label}</span>
+                          <FiExternalLink className="ml-1.5 w-3.5 h-3.5" />
+                        </a>
+                      );
+                    })()}
+                  {offerFormData.storeLink_2 &&
+                    (() => {
+                      const linkInfo = getLinkInfo(offerFormData.storeLink_2);
+                      return (
+                        <a
+                          href={offerFormData.storeLink_2}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${linkInfo.color}`}
+                        >
+                          <span>{linkInfo.label}</span>
+                          <FiExternalLink className="ml-1.5 w-3.5 h-3.5" />
+                        </a>
+                      );
+                    })()}
                 </div>
               </div>
             )}

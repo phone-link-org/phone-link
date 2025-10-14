@@ -47,58 +47,53 @@ router.get("/stores", async (req, res) => {
 });
 
 // 매장명 중복 확인 엔드포인트
-router.get(
-  "/check-name",
-  isAuthenticated, // 로그인 여부 확인 미들웨어
-  hasRole([ROLES.SELLER, ROLES.ADMIN]), // 권한 확인 미들웨어
-  async (req, res) => {
-    try {
-      const { inputStoreName } = req.query;
+router.get("/check-name", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
+  try {
+    const { inputStoreName } = req.query;
 
-      if (!inputStoreName || typeof inputStoreName !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "매장명을 입력해주세요.",
-          error: "Bad Request",
-        });
-      }
-
-      const storeRepo = AppDataSource.getRepository(Store);
-      const transformedName = inputStoreName.trim().toLowerCase().replace(/\s+/g, "");
-
-      // 대소문자 구분 없이 비교하기 위해 모든 매장을 가져와서 비교
-      const allStores = await storeRepo.find();
-      const existingStore = allStores.find(
-        (store) => store.name.trim().toLowerCase().replace(/\s+/g, "") === transformedName,
-      );
-
-      if (existingStore) {
-        return res.status(200).json({
-          success: true,
-          data: {
-            isDuplicate: true,
-            message: "이미 존재하는 매장명입니다.",
-          },
-        });
-      } else {
-        return res.status(200).json({
-          success: true,
-          data: {
-            isDuplicate: false,
-            message: "사용 가능한 매장명입니다.",
-          },
-        });
-      }
-    } catch (e) {
-      console.error("Error during checking store name", e);
-      res.status(500).json({
+    if (!inputStoreName || typeof inputStoreName !== "string") {
+      return res.status(400).json({
         success: false,
-        message: "매장명 확인 중 오류가 발생했습니다.",
-        error: "Internal Server Error",
+        message: "매장명을 입력해주세요.",
+        error: "Bad Request",
       });
     }
-  },
-);
+
+    const storeRepo = AppDataSource.getRepository(Store);
+    const transformedName = inputStoreName.trim().toLowerCase().replace(/\s+/g, "");
+
+    // 대소문자 구분 없이 비교하기 위해 모든 매장을 가져와서 비교
+    const allStores = await storeRepo.find();
+    const existingStore = allStores.find(
+      (store) => store.name.trim().toLowerCase().replace(/\s+/g, "") === transformedName,
+    );
+
+    if (existingStore) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isDuplicate: true,
+          message: "이미 존재하는 매장명입니다.",
+        },
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isDuplicate: false,
+          message: "사용 가능한 매장명입니다.",
+        },
+      });
+    }
+  } catch (e) {
+    console.error("Error during checking store name", e);
+    res.status(500).json({
+      success: false,
+      message: "매장명 확인 중 오류가 발생했습니다.",
+      error: "Internal Server Error",
+    });
+  }
+});
 
 // 매장 등록 요청 엔드포인트
 router.post("/register", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
@@ -217,6 +212,7 @@ router.get("/pending", isAuthenticated, hasRole([ROLES.ADMIN]), async (req, res)
   }
 });
 
+//특정 매장 시세표 조회
 router.get("/:storeId/offers", async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -310,6 +306,7 @@ router.get("/:storeId/offers", async (req, res) => {
   }
 });
 
+//특정 매장 시세표 저장
 router.post(
   "/:storeId/offers",
   isAuthenticated,
@@ -440,6 +437,7 @@ router.post(
   },
 );
 
+//특정 매장 부가서비스 조회
 router.get("/:storeId/addons", async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -470,6 +468,7 @@ router.get("/:storeId/addons", async (req, res) => {
   }
 });
 
+//특정 매장 기본 정보 조회
 router.get("/:storeId/detail", async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -515,6 +514,86 @@ router.get("/:storeId/detail", async (req, res) => {
     });
   }
 });
+
+router.post(
+  "/:storeId/edit-info",
+  isAuthenticated,
+  hasRole([ROLES.SELLER, ROLES.ADMIN]),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { storeId } = req.params;
+      const { editedStore } = req.body;
+
+      // storeId 유효성 검사
+      const storeIdNumber = parseInt(storeId);
+      if (isNaN(storeIdNumber)) {
+        return res.status(400).json({
+          success: false,
+          message: "유효하지 않은 매장 ID입니다.",
+        });
+      }
+
+      const storeRepo = AppDataSource.getRepository(Store);
+
+      // 매장 존재 여부 확인
+      const store = await storeRepo.findOne({ where: { id: storeIdNumber } });
+      if (!store) {
+        return res.status(404).json({
+          success: false,
+          message: "매장을 찾을 수 없습니다.",
+        });
+      }
+
+      // 권한 확인 (ADMIN이 아닌 경우, 해당 매장의 직원인지 확인)
+      if (req.user?.role !== ROLES.ADMIN) {
+        const sellerRepo = AppDataSource.getRepository(Seller);
+        const seller = await sellerRepo.findOne({
+          where: {
+            userId: req.user?.id,
+            storeId: storeIdNumber,
+            status: "ACTIVE",
+          },
+        });
+
+        if (!seller) {
+          return res.status(403).json({
+            success: false,
+            message: "해당 매장의 정보를 수정할 권한이 없습니다.",
+          });
+        }
+      }
+
+      // 매장 기본 정보 업데이트
+      store.name = editedStore.name || store.name;
+      store.description = editedStore.description !== undefined ? editedStore.description : store.description;
+      store.regionCode = editedStore.regionCode || store.regionCode;
+      store.address = editedStore.address || store.address;
+      store.addressDetail = editedStore.addressDetail || store.addressDetail;
+      store.contact = editedStore.contact || store.contact;
+      store.link_1 = editedStore.link_1 !== undefined ? editedStore.link_1 : store.link_1;
+      store.link_2 = editedStore.link_2 !== undefined ? editedStore.link_2 : store.link_2;
+      store.thumbnailUrl = editedStore.thumbnailUrl !== undefined ? editedStore.thumbnailUrl : store.thumbnailUrl;
+      if (req.user?.id) {
+        store.updatedBy = req.user.id;
+      }
+
+      await storeRepo.save(store);
+
+      res.status(200).json({
+        success: true,
+        message: "매장 정보가 성공적으로 수정되었습니다.",
+        data: store,
+      });
+    } catch (error) {
+      console.error("Error during saving store info", error);
+      res.status(500).json({
+        success: false,
+        message: "매장 기본 정보 저장 중 오류가 발생했습니다.",
+        error: "Internal Server Error",
+      });
+    }
+  },
+);
 
 router.post("/:storeId/addon-save", isAuthenticated, hasRole([ROLES.SELLER, ROLES.ADMIN]), async (req, res) => {
   try {

@@ -4,6 +4,7 @@ import type { ReqPlanDto } from "../../../../shared/types";
 import apiClient from "../../api/axios.ts";
 import LoadingSpinner from "../LoadingSpinner";
 import { useTheme } from "../../hooks/useTheme.ts";
+import { FiAlertTriangle } from "react-icons/fi";
 
 // 통신사 ID와 이름을 매핑 (UI 렌더링 순서와 키를 고정)
 const CARRIERS: { [key: string]: string } = {
@@ -31,6 +32,7 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
     "3": { storeId: storeId, carrierId: 3, name: "", monthlyFee: 0, duration: "" }, // LG U+
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -58,6 +60,10 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
           });
 
           setReqPlans(newReqPlans);
+          setShowWarning(false);
+        } else {
+          // 조회된 정보가 없으면 경고 메시지 표시
+          setShowWarning(true);
         }
       } catch (error) {
         console.error("요금제 정보를 불러오는 데 실패했습니다.", error);
@@ -134,6 +140,7 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
       const response = await apiClient.post(`/store/${storeId}/req-plans`, submissionData);
 
       if (response.data !== null) {
+        setShowWarning(false); // 저장 성공 시 경고 메시지 숨김
         Swal.fire({
           icon: "success",
           title: "저장 완료",
@@ -165,6 +172,19 @@ const StoreReqPlanForm: React.FC<StoreReqPlanFormProps> = ({ storeId, isEditable
     <>
       <LoadingSpinner isVisible={isSubmitting} title="요금제 정보 저장 중" subtitle="잠시만 기다려주세요..." />
       <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* 경고 메시지 */}
+        {showWarning && isEditable && (
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-400 p-4 rounded-md">
+            <div className="flex items-start gap-3">
+              <FiAlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                통신3사 필수요금제 정보를 입력하지 않으면 사용자들에게 판매정보가 제대로 노출되지 않습니다. 반드시
+                요금제 정보를 입력해주세요.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3 sm:space-y-4">
           {/* 4. CARRIERS 객체를 기준으로 고정된 UI 렌더링 */}
           {Object.entries(CARRIERS).map(([carrierId, carrierName]) => (

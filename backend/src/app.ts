@@ -20,12 +20,18 @@ dotenv.config();
 
 const app = express();
 
+// 정적 파일 제공을 위한 미들웨어 설정
+const uploadsPath = path.join(process.cwd(), "uploads")
+console.log(`uploadsPath: ${uploadsPath}`)
+app.use("/uploads", express.static(uploadsPath));
+
 // JSON 파싱 미들웨어 설정
 app.use(express.json());
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // 프론트 주소
+    //origin: "http://localhost:5173", // 프론트 주소
+    origin: "http://phonelink-frontend-service.phonelink:80", // 프론트 주소
     methods: ["GET", "POST"],
     credentials: true,
   }),
@@ -46,8 +52,6 @@ app.use(
   }),
 );
 
-// 정적 파일 제공을 위한 미들웨어 설정
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/api/offer", offerRoutes);
 app.use("/api/price-input", priceInputRoutes);
@@ -60,5 +64,18 @@ app.use("/api/phone", phoneRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/util", utilRoutes);
+
+// --- 디버깅용 임시 코드 ---
+app.get("/api/debug-paths", (req, res) => {
+  const cwd = process.cwd();
+  const staticPath = path.join(cwd, "uploads");
+  res.json({
+    "process.cwd()": cwd,
+    "express.static path": staticPath,
+    "__dirname": __dirname,
+    "calculated __dirname path": path.join(__dirname, "../uploads"),
+  });
+});
+// --- 디버깅용 임시 코드 끝 ---
 
 export default app;

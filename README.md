@@ -1,18 +1,40 @@
 # 📱 PhoneLink - 스마트폰 가격 비교 플랫폼
 
 <div align="center">
-  <img src="https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Express-5.1.0-000000?style=for-the-badge&logo=express&logoColor=white" />
-  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeORM-0.3.25-262627?style=for-the-badge&logo=typeorm&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeORM-262627?style=for-the-badge&logo=typeorm&logoColor=white" />
 </div>
 
 ## 🎯 프로젝트 개요
 
-**PhoneLink**는 스마트폰 구매 시 다양한 매장의 가격을 비교할 수 있는 B2B2C 플랫폼입니다.
-소비자는 최적의 가격을 찾을 수 있고, 판매자는 경쟁력 있는 가격을 제시할 수 있으며, 관리자는 전체 생태계를 관리할 수 있습니다.
+### 📈 시장 변화
+
+2025년 7월 22일, 단통법이 폐지되어 휴대폰 보조금 경쟁이 다시 시작되었습니다. 과거 단통법 시절에는 '뽐뿌', '알고사', '네이버 밴드' 등 소수 커뮤니티에서만 '성지'라 불리는 곳의 보조금 정보가 음성적으로 공유되었습니다.
+
+### 🎯 해결하고자 하는 문제
+
+보조금은 합법화되었지만, 정보는 여전히 각 판매점에 흩어져 있습니다. 소비자는 발품을 팔아야만 최저가를 찾을 수 있는 **'정보의 파편화'** 문제가 발생했습니다.
+
+### 💡 PhoneLink의 솔루션
+
+**PhoneLink**는 이러한 정보의 파편화 문제를 해결하는 B2B2C 플랫폼입니다. 소비자는 최적의 가격을 쉽게 찾을 수 있고, 판매자는 경쟁력 있는 가격을 제시할 수 있으며, 관리자는 전체 생태계를 효율적으로 관리할 수 있습니다.
+
+#### 소비자를 위한 가치
+
+- **시간 절약**: 한 번의 검색으로 최적의 구매처 발견
+- **합리적인 구매**: 전국 휴대폰 가격 정보를 쉽고 투명하게 비교하여 호갱 당하지 않는 합리적 구매
+- **신뢰할 수 있는 거래**: 검증된 판매자 정보로 안전한 거래 환경 제공
+- **커뮤니티 기반 집단지성**: 사용자 경험 공유를 통한 집단지성 활용
+
+#### 판매자를 위한 가치
+
+- **효율적인 마케팅**: 플랫폼 노출을 통한 고객 유입
+- **간편한 시세 관리**: 직관적인 UI로 빠른 시세 정보 업데이트
+- **경쟁력 강화**: 가격 경쟁력에 집중할 수 있는 환경 제공
 
 ## 🏗️ 시스템 아키텍처
 
@@ -22,8 +44,8 @@ graph TB
         Browser[웹 브라우저<br/>React SPA]
     end
 
-    subgraph "프론트엔드 - React 19.1.0"
-        Router[React Router v7<br/>클라이언트 라우팅]
+    subgraph "프론트엔드 - React"
+        Router[React Router<br/>클라이언트 라우팅]
         Zustand[Zustand<br/>상태 관리]
         Axios[Axios<br/>HTTP 클라이언트<br/>JWT 자동 주입]
     end
@@ -32,12 +54,12 @@ graph TB
         CORS[CORS<br/>Cross-Origin]
         Auth[JWT 인증<br/>권한 검증]
         Routes[11개 API 라우터<br/>auth/user/offer/store/post<br/>admin/phone/region/upload<br/>priceInput/util]
-        Multer[Multer<br/>파일 업로드<br/>5MB 제한]
+        Multer[Multer<br/>파일 업로드]
     end
 
     subgraph "데이터 계층"
-        ORM[TypeORM 0.3.25<br/>23개 Entity<br/>Transaction 지원]
-        MySQL[(MySQL 8.0<br/>timezone: Asia/Seoul)]
+        ORM[TypeORM<br/>23개 Entity<br/>Transaction 지원]
+        MySQL[(MySQL<br/>timezone: Asia/Seoul)]
     end
 
     subgraph "파일 시스템"
@@ -63,18 +85,18 @@ graph TB
     Routes -.->|SSO 인증| OAuth
     Storage -.->|이미지 URL| Browser
 
-    style Browser fill:#f9f,stroke:#333,stroke-width:2px
-    style Router fill:#61DAFB,stroke:#333,stroke-width:2px
-    style Zustand fill:#61DAFB,stroke:#333,stroke-width:2px
-    style Axios fill:#61DAFB,stroke:#333,stroke-width:2px
-    style CORS fill:#f5a623,stroke:#333,stroke-width:2px
-    style Auth fill:#f5a623,stroke:#333,stroke-width:2px
-    style Routes fill:#8CC84B,stroke:#333,stroke-width:2px
-    style Multer fill:#8CC84B,stroke:#333,stroke-width:2px
-    style ORM fill:#8CC84B,stroke:#333,stroke-width:2px
-    style MySQL fill:#336791,stroke:#333,stroke-width:2px,color:#fff
-    style Storage fill:#999,stroke:#333,stroke-width:2px
-    style OAuth fill:#FF6B6B,stroke:#333,stroke-width:2px
+    style Browser fill:#f8f9fa,stroke:#495057,stroke-width:2px
+    style Router fill:#e9ecef,stroke:#495057,stroke-width:2px
+    style Zustand fill:#e9ecef,stroke:#495057,stroke-width:2px
+    style Axios fill:#e9ecef,stroke:#495057,stroke-width:2px
+    style CORS fill:#dee2e6,stroke:#495057,stroke-width:2px
+    style Auth fill:#dee2e6,stroke:#495057,stroke-width:2px
+    style Routes fill:#ced4da,stroke:#495057,stroke-width:2px
+    style Multer fill:#ced4da,stroke:#495057,stroke-width:2px
+    style ORM fill:#ced4da,stroke:#495057,stroke-width:2px
+    style MySQL fill:#adb5bd,stroke:#495057,stroke-width:2px,color:#fff
+    style Storage fill:#6c757d,stroke:#495057,stroke-width:2px,color:#fff
+    style OAuth fill:#495057,stroke:#495057,stroke-width:2px,color:#fff
 ```
 
 ## 🚀 핵심 기능
@@ -109,7 +131,7 @@ graph TB
 
 ### Frontend
 
-- **React 18.2.0** - 컴포넌트 기반 UI 개발
+- **React** - 컴포넌트 기반 UI 개발
 - **TypeScript** - 타입 안정성 및 개발 생산성
 - **Vite** - 빠른 개발 서버 및 빌드 도구
 - **Tailwind CSS** - 유틸리티 우선 CSS 프레임워크
@@ -119,11 +141,11 @@ graph TB
 
 ### Backend
 
-- **Node.js 18+** - 서버 런타임
-- **Express 5.1.0** - 웹 프레임워크
+- **Node.js** - 서버 런타임
+- **Express** - 웹 프레임워크
 - **TypeScript** - 타입 안정성
-- **TypeORM 0.3.25** - ORM 및 데이터베이스 관리
-- **MySQL 8.0** - 관계형 데이터베이스
+- **TypeORM** - ORM 및 데이터베이스 관리
+- **MySQL** - 관계형 데이터베이스
 - **JWT** - 인증 토큰 관리
 
 ## 📊 데이터베이스 설계
@@ -132,7 +154,6 @@ graph TB
 erDiagram
     USERS ||--o{ SELLERS : "has"
     USERS ||--o{ SOCIAL_ACCOUNTS : "has"
-    USERS ||--o{ USER_SUSPENSIONS : "has"
     USERS ||--o{ USER_FAVORITES : "has"
     USERS ||--o{ POSTS : "writes"
     USERS ||--o{ COMMENTS : "writes"
@@ -213,14 +234,16 @@ erDiagram
         datetime updated_at
     }
 
-    USER_SUSPENSIONS {
+    SOCIAL_ACCOUNTS {
         bigint id PK
         bigint user_id FK
-        string reason
-        datetime suspended_until
-        bigint suspended_by FK
+        string provider
+        string provider_id
+        string email
+        string name
+        string profile_image_url
         datetime created_at
-        datetime unsuspended_at
+        datetime updated_at
     }
 ```
 

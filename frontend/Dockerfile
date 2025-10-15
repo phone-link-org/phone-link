@@ -1,6 +1,8 @@
 # Stage 1: Build the React application
 FROM node:24-alpine AS build
 
+LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
+
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json ./

@@ -353,7 +353,7 @@ npm run build
 ## 📞 연락처
 
 **Email:** khj980211@naver.com  
-**프로젝트 링크:** [https://github.com/HyunZai/phone-link](https://github.com/HyunZai/phone-link)
+**프로젝트 링크:** [https://github.com/phone-link-org/phone-link](https://github.com/phone-link-org/phone-link)
 
 ---
 

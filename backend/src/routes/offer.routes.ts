@@ -93,8 +93,7 @@ router.get("/latest", async (req, res) => {
       success: true,
       data: uniqueModelOffers,
     });
-  } catch (error) {
-    console.error("Error fetching latest offers:", error);
+  } catch {
     res.status(500).json({
       success: false,
       error: "Internal Server Error",

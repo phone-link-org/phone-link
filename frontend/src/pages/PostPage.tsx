@@ -46,7 +46,6 @@ const PostPage: React.FC = () => {
         if (response) {
           setPost(response);
           setIsLiked(response.isLiked || false);
-
         } else {
           setIsNotFound(true);
           navigate("/404", { replace: true });
@@ -111,8 +110,6 @@ const PostPage: React.FC = () => {
     }
   };
 
-
-
   // 공유 버튼 클릭 핸들러
   const handleShare = async () => {
     const currentUrl = window.location.href;
@@ -172,8 +169,6 @@ const PostPage: React.FC = () => {
     // TODO: 사용자 프로필 모달/팝업 구현
   };
 
-
-
   // 상대적 시간 표시 함수
   const getRelativeTime = (dateString: string) => {
     const now = new Date();
@@ -195,7 +190,6 @@ const PostPage: React.FC = () => {
 
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
-
 
   // 게시글이 없으면 404 처리 (이미 navigate로 리다이렉트됨)
   if (!post || isNotFound) return null;

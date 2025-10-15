@@ -39,9 +39,7 @@ const PostComment: React.FC<PostCommentProps> = ({ post, setPost }) => {
       setPost((prevPost: any) => ({
         ...prevPost,
         comments: prevPost.comments.map((c: CommentListDto) =>
-          c.id === commentId
-            ? { ...c, isLiked: response, likeCount: response ? c.likeCount + 1 : c.likeCount - 1 }
-            : c
+          c.id === commentId ? { ...c, isLiked: response, likeCount: response ? c.likeCount + 1 : c.likeCount - 1 } : c,
         ),
       }));
     } catch (error) {
@@ -182,9 +180,7 @@ const PostComment: React.FC<PostCommentProps> = ({ post, setPost }) => {
               </div>
             </div>
           )}
-          <div className="mt-3 space-y-3">
-            {replies.map((reply) => renderComment(reply, depth + 1))}
-          </div>
+          <div className="mt-3 space-y-3">{replies.map((reply) => renderComment(reply, depth + 1))}</div>
         </div>
       </div>
     );
@@ -192,9 +188,7 @@ const PostComment: React.FC<PostCommentProps> = ({ post, setPost }) => {
 
   return (
     <div className="bg-white dark:bg-[#292929] rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        {post.comments.length} Comments
-      </h3>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{post.comments.length} Comments</h3>
       <div className="mb-6">
         <textarea
           value={newComment.content}
@@ -215,9 +209,7 @@ const PostComment: React.FC<PostCommentProps> = ({ post, setPost }) => {
         </div>
       </div>
       <div className="space-y-5">
-        {post.comments
-          .filter((comment) => !comment.parentId)
-          .map((comment) => renderComment(comment))}
+        {post.comments.filter((comment) => !comment.parentId).map((comment) => renderComment(comment))}
       </div>
     </div>
   );

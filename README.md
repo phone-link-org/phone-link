@@ -85,18 +85,18 @@ graph TB
     Routes -.->|SSO 인증| OAuth
     Storage -.->|이미지 URL| Browser
 
-    style Browser fill:#f8f9fa,stroke:#495057,stroke-width:2px
-    style Router fill:#e9ecef,stroke:#495057,stroke-width:2px
-    style Zustand fill:#e9ecef,stroke:#495057,stroke-width:2px
-    style Axios fill:#e9ecef,stroke:#495057,stroke-width:2px
-    style CORS fill:#dee2e6,stroke:#495057,stroke-width:2px
-    style Auth fill:#dee2e6,stroke:#495057,stroke-width:2px
-    style Routes fill:#ced4da,stroke:#495057,stroke-width:2px
-    style Multer fill:#ced4da,stroke:#495057,stroke-width:2px
-    style ORM fill:#ced4da,stroke:#495057,stroke-width:2px
-    style MySQL fill:#adb5bd,stroke:#495057,stroke-width:2px,color:#fff
-    style Storage fill:#6c757d,stroke:#495057,stroke-width:2px,color:#fff
-    style OAuth fill:#495057,stroke:#495057,stroke-width:2px,color:#fff
+    style Browser fill:#1e3a8a,stroke:#1e40af,stroke-width:2px,color:#fff
+    style Router fill:#166534,stroke:#15803d,stroke-width:2px,color:#fff
+    style Zustand fill:#166534,stroke:#15803d,stroke-width:2px,color:#fff
+    style Axios fill:#166534,stroke:#15803d,stroke-width:2px,color:#fff
+    style CORS fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fff
+    style Auth fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fff
+    style Routes fill:#581c87,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Multer fill:#581c87,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style ORM fill:#581c87,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style MySQL fill:#3F6E93,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Storage fill:#374151,stroke:#6b7280,stroke-width:2px,color:#fff
+    style OAuth fill:#dc2626,stroke:#ef4444,stroke-width:2px,color:#fff
 ```
 
 ## 🚀 핵심 기능
@@ -104,7 +104,7 @@ graph TB
 ### 1. 📊 가격 비교
 
 - 복합 조건 검색 (제조사, 모델, 용량, 통신사, 지역)
-- 조건별 상세 정보 제공 (출고가, 자급제 가격, 요금제 정보)
+- 조건별 상세 정보 제공 (출고가, 자급제 가격과의 비교, 요금제/부가서비스 정보, 24개월 총 유지비)
 - 무한 스크롤 페이지네이션 (Intersection Observer API)
 
 ### 2. 🏪 매장 관리 시스템

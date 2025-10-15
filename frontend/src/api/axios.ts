@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import type { AxiosResponse, AxiosRequestConfig } from "axios";
+import { logger } from "../utils/Logger";
 
 export interface ApiResponse<T = any> {
   data?: T;
@@ -35,19 +36,39 @@ const apiClient = axios.create({
 // 인터셉터
 // TODO: JWT 토큰 인증 로직
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // 요청 로깅
+    await logger.info(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+      headers: config.headers,
+      data: config.data,
+      params: config.params,
+    });
+
     return config;
   },
-  (error) => Promise.reject(error),
+  async (error) => {
+    await logger.error("API Request Error", error, {
+      message: "Failed to process request",
+    });
+    return Promise.reject(error);
+  },
 );
 
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // 성공 응답 로깅 (개발 환경에서만)
+  async (response: AxiosResponse) => {
+    // 성공 응답 로깅
+    await logger.info(`API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status,
+      responseTime: Date.now() - (response.config as any).startTime,
+      dataSize: JSON.stringify(response.data).length,
+    });
+
+    // 개발 환경에서만 콘솔에도 출력
     if (import.meta.env.VITE_DEV_MODE) {
       console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
         status: response.status,
@@ -57,7 +78,7 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  (error: AxiosError<ApiError>) => {
+  async (error: AxiosError<ApiError>) => {
     const { response, message, config } = error;
     const errorMessage = response?.data?.message || message;
 
@@ -70,6 +91,14 @@ apiClient.interceptors.response.use(
       responseData: response?.data, // 응답 데이터를 객체에 포함
       timestamp: new Date().toISOString(),
     };
+
+    // 에러 로깅
+    await logger.error(`API Error: ${requestInfo.method} ${requestInfo.url}`, error, {
+      status: response?.status,
+      responseData: response?.data,
+      requestData: config?.data,
+      headers: config?.headers,
+    });
 
     console.groupCollapsed(`❌ API Error: ${requestInfo.method} ${requestInfo.url}`);
     console.error("Request Info:", requestInfo);

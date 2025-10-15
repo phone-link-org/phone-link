@@ -1,9 +1,11 @@
-export enum LogLevel {
-  ERROR = "ERROR",
-  WARN = "WARN",
-  INFO = "INFO",
-  DEBUG = "DEBUG",
-}
+export const LogLevel = {
+  ERROR: "ERROR",
+  WARN: "WARN",
+  INFO: "INFO",
+  DEBUG: "DEBUG",
+} as const;
+
+export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
 export interface LogEntry {
   timestamp: string;
@@ -36,7 +38,7 @@ class Logger {
         const user = JSON.parse(userData);
         this.userId = user.id;
       } catch (error) {
-        console.warn("Failed to parse user data from localStorage");
+        console.warn("Failed to parse user data from localStorage", error);
       }
     }
   }
@@ -110,33 +112,6 @@ class Logger {
     } catch (error) {
       console.warn("Failed to send log to server:", error);
     }
-  }
-
-  private formatLogEntry(entry: LogEntry): string {
-    const baseInfo = {
-      timestamp: entry.timestamp,
-      level: entry.level,
-      message: entry.message,
-      ...(entry.file && { file: entry.file }),
-      ...(entry.line && { line: entry.line }),
-      ...(entry.function && { function: entry.function }),
-      ...(entry.sessionId && { sessionId: entry.sessionId }),
-      ...(entry.userId && { userId: entry.userId }),
-      ...(entry.url && { url: entry.url }),
-      ...(entry.userAgent && { userAgent: entry.userAgent }),
-    };
-
-    let logString = JSON.stringify(baseInfo, null, 2);
-
-    if (entry.stack) {
-      logString += `\nStack Trace:\n${entry.stack}`;
-    }
-
-    if (entry.data) {
-      logString += `\nAdditional Data:\n${JSON.stringify(entry.data, null, 2)}`;
-    }
-
-    return logString + "\n" + "=".repeat(80) + "\n";
   }
 
   private logToConsole(entry: LogEntry): void {

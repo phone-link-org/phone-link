@@ -124,7 +124,7 @@ const LatestOffers: React.FC = () => {
                 src={offer.imageUrl}
                 alt={offer.modelName}
                 className="w-full h-32 object-contain mb-3"
-                onError={async (e) => {
+                onError={async () => {
                   await logger.warn("Failed to load offer image", {
                     component: "LatestOffers",
                     offerId: offer.id,

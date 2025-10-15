@@ -12,4 +12,4 @@ export * from "./addon.types";
 export * from "./reqPlan.types";
 export * from "./post.types";
 export * from "./price.types";
-
+export * from "./util.types";

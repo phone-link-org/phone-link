@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Combobox } from "@headlessui/react";
 import { FaTrashAlt, FaChevronDown } from "react-icons/fa";
+import { FiAlertTriangle } from "react-icons/fi";
 import type { AddonFormData, CarrierDto } from "../../../../shared/types";
 import { api } from "../../api/axios";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
     },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   const { theme } = useTheme();
 
@@ -40,19 +42,21 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
     try {
       const fetchAddons = async () => {
         const response = await api.get<AddonFormData[]>(`/store/${storeId}/addons`);
-        setAddons(
-          response.length > 0
-            ? response
-            : [
-                {
-                  name: "",
-                  carrierId: 1,
-                  monthlyFee: 0,
-                  durationMonths: 0,
-                  penaltyFee: 0,
-                },
-              ],
-        );
+        if (response.length > 0) {
+          setAddons(response);
+          setShowWarning(false);
+        } else {
+          setAddons([
+            {
+              name: "",
+              carrierId: 1,
+              monthlyFee: 0,
+              durationMonths: 0,
+              penaltyFee: 0,
+            },
+          ]);
+          setShowWarning(true);
+        }
       };
       fetchAddons();
     } catch (error) {
@@ -177,6 +181,7 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
           await api.post(`/store/${storeId}/addon-save`, {
             addons,
           });
+          setShowWarning(false); // 저장 성공 시 경고 메시지 숨김
           toast.success("저장되었습니다.");
         } catch (error) {
           console.error("Error saving addons:", error);
@@ -192,6 +197,19 @@ const StoreAddonForm: React.FC<{ storeId: number; isEditable?: boolean }> = ({ s
     <>
       <LoadingSpinner isVisible={isSubmitting} title="부가서비스 정보 저장 중" subtitle="잠시만 기다려주세요..." />
       <div className="p-4 sm:p-6 rounded-b-lg">
+        {/* 경고 메시지 */}
+        {showWarning && isEditable && (
+          <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 p-4 rounded-md mb-4">
+            <div className="flex items-start gap-3">
+              <FiAlertTriangle className="w-5 h-5 text-orange-500 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
+                통신사별 부가서비스 정보를 입력하지 않으면 사용자들에게 제공되는 가격에 부가서비스 금액은 적용되지
+                않습니다.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 헤더 - 데스크톱에서만 표시 */}
         <div className="hidden lg:flex gap-3 px-2 text-center mb-4">
           <div className="w-32">

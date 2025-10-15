@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api/axios";
 import { format } from "date-fns";
-import type { OfferDetailFormData } from "../../../shared/types";
-import { FiExternalLink, FiMessageCircle, FiPhone, FiLink, FiSmartphone } from "react-icons/fi";
+import type { OfferDetailFormData, AddonFormData } from "../../../shared/types";
+import { FiExternalLink, FiMessageCircle, FiPhone, FiSmartphone, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { CARRIERS, OFFER_TYPES } from "../../../shared/constants";
 
 const formatOfferType = (type?: string): string => {
@@ -19,6 +19,40 @@ const formatOfferType = (type?: string): string => {
 
 const getOfferTypeBadgeColor = (offerType?: string) => {
   return offerType === OFFER_TYPES.MNP ? "bg-emerald-500 text-white" : "bg-amber-500 text-white";
+};
+
+// 링크 타입 감지 함수 (StorePage와 동일)
+const getLinkInfo = (url: string) => {
+  if (url.includes("blog.naver")) {
+    return {
+      label: "네이버 블로그",
+      color:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
+    };
+  } else if (url.includes("band.us")) {
+    return {
+      label: "네이버 밴드",
+      color:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30",
+    };
+  } else if (url.includes("kakao")) {
+    return {
+      label: "카카오 채널",
+      color:
+        "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/30",
+    };
+  } else if (url.includes("youtube")) {
+    return {
+      label: "유튜브",
+      color: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30",
+    };
+  } else {
+    return {
+      label: "링크",
+      color:
+        "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30",
+    };
+  }
 };
 
 const getCarrierBadgeColor = (carrier?: string) => {
@@ -39,6 +73,9 @@ const OfferDetailPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [offerFormData, setOfferFormData] = useState<OfferDetailFormData | null>(null);
+  const [addons, setAddons] = useState<AddonFormData[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<Set<number>>(new Set());
+  const [isAddonsOpen, setIsAddonsOpen] = useState(false);
   const [mvnoPlan, setMvnoPlan] = useState(30000);
   const [mnoPlan, setMnoPlan] = useState(45000);
   const [unlockedPrice, setUnlockedPrice] = useState(0);
@@ -56,11 +93,26 @@ const OfferDetailPage: React.FC = () => {
     const fetchOfferData = async () => {
       setLoading(true);
       setError(null);
+
       try {
-        const response = await api.get<OfferDetailFormData>(`/offer/${id}`);
-        setOfferFormData(response);
-        if (response.unlockedPrice) {
-          setUnlockedPrice(response.unlockedPrice);
+        // Offer 상세 정보와 부가서비스 정보를 병렬로 조회
+        const [offerResponse, addonsResponse] = await Promise.all([
+          api.get<OfferDetailFormData>(`/offer/${id}`),
+          api.get<AddonFormData[]>(`/offer/${id}/addon-info`),
+        ]);
+
+        setOfferFormData(offerResponse);
+        setAddons(addonsResponse || []);
+
+        console.log(JSON.stringify(addonsResponse, null, 2));
+
+        // 초기에 모든 부가서비스 선택
+        if (addonsResponse && addonsResponse.length > 0) {
+          setSelectedAddonIds(new Set(addonsResponse.map((_, idx) => idx)));
+        }
+
+        if (offerResponse.unlockedPrice) {
+          setUnlockedPrice(offerResponse.unlockedPrice);
         }
       } catch (err) {
         console.error("Error fetching offer data:", err);
@@ -94,8 +146,42 @@ const OfferDetailPage: React.FC = () => {
     );
   }
 
+  // 부가서비스 토글 함수
+  const toggleAddon = (index: number) => {
+    setSelectedAddonIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  // 선택된 부가서비스 총 비용 계산
+  const addonsTotalCost = addons.reduce((total, addon, index) => {
+    if (selectedAddonIds.has(index)) {
+      return total + addon.monthlyFee * addon.durationMonths;
+    }
+    return total;
+  }, 0);
+
+  // 선택되지 않은 부가서비스의 위약금(penaltyFee) 총합 계산
+  const unselectedAddonsPenalty = addons.reduce((total, addon, index) => {
+    if (!selectedAddonIds.has(index)) {
+      return total + addon.penaltyFee * 10000; // 만원 단위 → 원 단위 변환
+    }
+    return total;
+  }, 0);
+
   const selfPurchaseTotal = unlockedPrice + mvnoPlan * 24;
-  const offerTotal = offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000;
+  const offerTotal =
+    offerFormData.monthlyFee * 6 +
+    mnoPlan * 18 +
+    offerFormData.price! * 10000 +
+    unselectedAddonsPenalty + // 미가입 부가서비스 위약금 추가
+    addonsTotalCost;
   const difference = selfPurchaseTotal - offerTotal;
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -319,6 +405,67 @@ const OfferDetailPage: React.FC = () => {
                       <span className="font-mono">x 18</span>
                     </div>
                   </div>
+                  {addons.length > 0 && (
+                    <div className="space-y-1">
+                      <div
+                        className="flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors"
+                        onClick={() => setIsAddonsOpen(!isAddonsOpen)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">
+                            부가서비스 ({addons.filter((_, i) => selectedAddonIds.has(i)).length}/{addons.length}개)
+                          </p>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 hover:underline">
+                            {isAddonsOpen ? "닫기" : "상세보기"}
+                          </span>
+                          {isAddonsOpen ? (
+                            <FiChevronUp className="w-4 h-4 text-gray-500" />
+                          ) : (
+                            <FiChevronDown className="w-4 h-4 text-gray-500" />
+                          )}
+                        </div>
+                        <p className="font-mono">+ {addonsTotalCost.toLocaleString("ko-KR")}원</p>
+                      </div>
+
+                      {isAddonsOpen && (
+                        <div className="ml-4 space-y-1.5 border-l-2 border-gray-200 dark:border-gray-600 pl-3 py-1">
+                          {addons.map((addon, index) => (
+                            <label
+                              key={index}
+                              className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 p-1.5 rounded transition-colors group"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedAddonIds.has(index)}
+                                onChange={() => toggleAddon(index)}
+                                className="mt-0.5 w-4 h-4 accent-primary-light dark:accent-primary-dark rounded cursor-pointer"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline justify-between gap-2">
+                                  <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                                    {addon.name}
+                                  </span>
+                                  <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                    {(addon.monthlyFee * addon.durationMonths).toLocaleString("ko-KR")}원
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {addon.monthlyFee.toLocaleString("ko-KR")}원 × {addon.durationMonths}개월
+                                  </span>
+                                  {addon.penaltyFee > 0 && (
+                                    <span className="text-xs text-orange-500 dark:text-orange-400">
+                                      미가입 시 +{(addon.penaltyFee * 10000).toLocaleString("ko-KR")}원
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     {offerFormData.price! < 0 ? (
                       <>
@@ -336,6 +483,14 @@ const OfferDetailPage: React.FC = () => {
                       </>
                     )}
                   </div>
+                  {unselectedAddonsPenalty > 0 && (
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-orange-600 dark:text-orange-400">부가서비스 미가입 추가금액</p>
+                      <p className="font-mono text-orange-600 dark:text-orange-400">
+                        + {unselectedAddonsPenalty.toLocaleString("ko-KR")}원
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="mt-auto">
@@ -343,10 +498,7 @@ const OfferDetailPage: React.FC = () => {
                 <div className="flex justify-between items-baseline">
                   <p className="font-bold text-lg text-gray-800 dark:text-gray-200">총</p>
                   <p className="font-bold text-2xl text-gray-800 dark:text-gray-200">
-                    {(offerFormData.monthlyFee * 6 + mnoPlan * 18 + offerFormData.price! * 10000).toLocaleString(
-                      "ko-KR",
-                    )}
-                    원
+                    {offerTotal.toLocaleString("ko-KR")}원
                   </p>
                 </div>
               </div>
@@ -428,37 +580,37 @@ const OfferDetailPage: React.FC = () => {
             {(offerFormData.storeLink_1 || offerFormData.storeLink_2) && (
               <div className="flex flex-col sm:flex-row sm:justify-between">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-1/4">소셜 링크</span>
-                <div className="flex flex-wrap items-center gap-x-4 sm:justify-end sm:w-3/4">
-                  {offerFormData.storeLink_1 && (
-                    <a
-                      href={offerFormData.storeLink_1}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
-                    >
-                      <FiLink />
-                      <span className="break-all">
-                        {offerFormData.storeLink_1.length > 27
-                          ? `${offerFormData.storeLink_1.substring(0, 27)}...`
-                          : offerFormData.storeLink_1}
-                      </span>
-                    </a>
-                  )}
-                  {offerFormData.storeLink_2 && (
-                    <a
-                      href={offerFormData.storeLink_2}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 font-semibold text-gray-900 dark:text-gray-100 hover:underline  hover:text-primary-light dark:hover:text-primary-dark"
-                    >
-                      <FiLink />
-                      <span className="break-all">
-                        {offerFormData.storeLink_2.length > 27
-                          ? `${offerFormData.storeLink_2.substring(0, 27)}...`
-                          : offerFormData.storeLink_2}
-                      </span>
-                    </a>
-                  )}
+                <div className="flex flex-wrap gap-2 sm:justify-end sm:w-3/4">
+                  {offerFormData.storeLink_1 &&
+                    (() => {
+                      const linkInfo = getLinkInfo(offerFormData.storeLink_1);
+                      return (
+                        <a
+                          href={offerFormData.storeLink_1}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${linkInfo.color}`}
+                        >
+                          <span>{linkInfo.label}</span>
+                          <FiExternalLink className="ml-1.5 w-3.5 h-3.5" />
+                        </a>
+                      );
+                    })()}
+                  {offerFormData.storeLink_2 &&
+                    (() => {
+                      const linkInfo = getLinkInfo(offerFormData.storeLink_2);
+                      return (
+                        <a
+                          href={offerFormData.storeLink_2}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${linkInfo.color}`}
+                        >
+                          <span>{linkInfo.label}</span>
+                          <FiExternalLink className="ml-1.5 w-3.5 h-3.5" />
+                        </a>
+                      );
+                    })()}
                 </div>
               </div>
             )}

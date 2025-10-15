@@ -13,7 +13,7 @@ export interface StoreDto {
   thumbnailUrl?: string;
   link_1?: string;
   link_2?: string;
-  ownerName?: string;
+  ownerName?: string | null;
   isFeatured: boolean;
   status: "OPEN" | "CLOSED";
   approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
@@ -23,7 +23,7 @@ export interface StoreDto {
   readonly updatedAt?: Date;
 }
 
-// 매장 등록 시 사용할 필드만 선택
+// 매장 등록/수정 시 사용할 필드만 선택
 export type StoreRegisterFormData = Pick<
   StoreDto,
   | "name"

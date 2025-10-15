@@ -6,21 +6,11 @@ import AddressSearchButton from "../AddressSearchButton";
 import ImageUpload from "../ImageUpload";
 import StoreSearchableSelect from "../StoreSearchableSelect";
 import axios from "axios";
-import type { UserDto, UserUpdateData, StoreDto } from "../../../../shared/types";
+import type { UserDto, UserUpdateData, StoreDto, DaumPostcodeData } from "../../../../shared/types";
 import { ROLES } from "../../../../shared/constants";
 import Modal from "./Modal";
 import Swal from "sweetalert2";
 import { useTheme } from "../../hooks/useTheme";
-
-interface DaumPostcodeData {
-  address: string;
-  addressType: "R" | "J";
-  bname: string;
-  buildingName: string;
-  zonecode: string;
-  sido: string;
-  sigungu: string;
-}
 
 interface ProfileEditModalProps {
   isOpen: boolean;

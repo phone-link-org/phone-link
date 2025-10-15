@@ -3,20 +3,10 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { api } from "../api/axios";
 import { toast } from "sonner";
-import type { SignupFormData, StoreDto } from "../../../shared/types";
+import type { SignupFormData, StoreDto, DaumPostcodeData } from "../../../shared/types";
 import AddressSearchButton from "../components/AddressSearchButton";
 import StoreSearchableSelect from "../components/StoreSearchableSelect";
 import { ROLES } from "../../../shared/constants";
-
-interface DaumPostcodeData {
-  address: string;
-  addressType: "R" | "J";
-  bname: string;
-  buildingName: string;
-  zonecode: string;
-  sido: string;
-  sigungu: string;
-}
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState<SignupFormData>({

@@ -14,7 +14,9 @@ import authRoutes from "./routes/auth.routes";
 import uploadRoutes from "./routes/upload.routes";
 import postRoutes from "./routes/post.routes";
 import utilRoutes from "./routes/util.routes";
+import logsRoutes from "./routes/logs.routes";
 import session from "express-session";
+import { requestLoggingMiddleware, errorLoggingMiddleware } from "./middlewares/logging.middleware";
 
 dotenv.config();
 
@@ -27,6 +29,9 @@ app.use("/uploads", express.static(uploadsPath));
 
 // JSON 파싱 미들웨어 설정
 app.use(express.json());
+
+// 로깅 미들웨어 (가장 먼저 적용)
+app.use(requestLoggingMiddleware);
 
 app.use(
   cors({
@@ -64,6 +69,10 @@ app.use("/api/phone", phoneRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/util", utilRoutes);
+app.use("/api/logs", logsRoutes);
+
+// 에러 로깅 미들웨어 (가장 마지막에 적용)
+app.use(errorLoggingMiddleware);
 
 // --- 디버깅용 임시 코드 ---
 app.get("/api/debug-paths", (req, res) => {

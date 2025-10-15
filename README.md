@@ -40,19 +40,38 @@
 
 ### 🏠 메인 페이지
 
-![메인 페이지](https://via.placeholder.com/800x400/1e3a8a/ffffff?text=메인+페이지+스크린샷)
+<p align="center">
+  <img width="500" alt="메인페이지" src="https://github.com/user-attachments/assets/ad128f44-5857-4141-a2e6-3509d1dea6e6" />
+  <img width="500" alt="메인페이지_Light" src="https://github.com/user-attachments/assets/402cb962-6c7c-4da5-9cd4-52b371073ec8" />
+</p>
 
 ### 📊 가격 비교 페이지
 
-![가격 비교 페이지](https://via.placeholder.com/800x400/166534/ffffff?text=가격+비교+페이지+스크린샷)
+<p align="center">
+  <img width="500" alt="_가격비교" src="https://github.com/user-attachments/assets/f8349ab9-baf8-40ad-8eb3-6d3c12f66531" />
+  <img width="500" alt="_판매조건 상세페이지" src="https://github.com/user-attachments/assets/297d43f9-c207-436a-b386-74663fc8e9a0" />
+</p>
 
-### 🏪 매장 관리 페이지
+### 🏪 매장 페이지
 
-![매장 관리 페이지](https://via.placeholder.com/800x400/581c87/ffffff?text=매장+관리+페이지+스크린샷)
+<p align="center">
+  <img width="500" alt="_매장페이지" src="https://github.com/user-attachments/assets/066482e2-94c1-4728-b491-c0ffc0ac6506" />
+  <img width="500" alt="_매장_직원 관리" src="https://github.com/user-attachments/assets/0c0b3760-fb4e-4017-be10-433b15550593" />
+</p>
 
 ### 👥 관리자 페이지
 
-![관리자 페이지](https://via.placeholder.com/800x400/7c2d12/ffffff?text=관리자+페이지+스크린샷)
+<p align="center">
+  <img width="500" alt="_관리자" src="https://github.com/user-attachments/assets/a3c2327c-be53-4fdf-8dfa-be228bf4b593" />
+  <img width="500" alt="_관리자2" src="https://github.com/user-attachments/assets/4654a2d3-f375-4726-9d91-c9a5c01b9b27" />
+</p>
+
+### 💬 커뮤니티 페이지
+
+<p align="center">
+  <img width="500" alt="_게시판" src="https://github.com/user-attachments/assets/3b26efc9-e2ee-46cf-80d3-feadb71f9b64" />
+  <img width="500" alt="_게시글" src="https://github.com/user-attachments/assets/12217b4a-414d-4a82-a1ab-e709d65aba11" />
+</p>
 
 ## 🏗️ 시스템 아키텍처
 

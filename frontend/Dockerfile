@@ -12,7 +12,7 @@ RUN npm run build
 # Stage 2: Serve the application with Nginx
 FROM nginx:1.21-alpine
 
-LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
+LABEL org.opencontainers.image.source=https://github.com/phone-link-org/phone-link
 
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 

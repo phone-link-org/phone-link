@@ -18,7 +18,7 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
+LABEL org.opencontainers.image.source=https://github.com/phone-link-org/phone-link
 
 COPY --from=build /app/backend/package.json /app/package.json
 COPY --from=build /app/backend/package-lock.json /app/package-lock.json

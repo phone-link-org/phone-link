@@ -13,11 +13,11 @@
 
 ### 📈 시장 변화
 
-2025년 7월 22일, 단통법이 폐지되어 휴대폰 보조금 경쟁이 다시 시작되었습니다. 과거 단통법 시절에는 '뽐뿌', '알고사', '네이버 밴드' 등 소수 커뮤니티에서만 '성지'라 불리는 곳의 보조금 정보가 음성적으로 공유되었습니다.
+2025년 7월 22일, 단통법이 폐지되어 휴대폰 보조금 경쟁이 다시 시작되었습니다. 과거 단통법 시절부터 현재까지 '뽐뿌', '알고사', '네이버 밴드' 등 소수 커뮤니티에서만 '성지'라 불리는 곳의 보조금 정보가 음성적으로 공유되고 있습니다.
 
 ### 🎯 해결하고자 하는 문제
 
-보조금은 합법화되었지만, 정보는 여전히 각 판매점에 흩어져 있습니다. 소비자는 발품을 팔아야만 최저가를 찾을 수 있는 **'정보의 파편화'** 문제가 발생했습니다.
+보조금은 합법화되었지만, 정보는 여전히 소수의 커뮤니티에 흩어져 있습니다. 소비자는 발품을 팔아야만 최저가를 찾을 수 있는 **'정보의 파편화'** 문제가 발생했습니다.
 
 ### 💡 PhoneLink의 솔루션
 
@@ -36,6 +36,24 @@
 - **간편한 시세 관리**: 직관적인 UI로 빠른 시세 정보 업데이트
 - **경쟁력 강화**: 가격 경쟁력에 집중할 수 있는 환경 제공
 
+## 📱 핵심 화면
+
+### 🏠 메인 페이지
+
+![메인 페이지](https://via.placeholder.com/800x400/1e3a8a/ffffff?text=메인+페이지+스크린샷)
+
+### 📊 가격 비교 페이지
+
+![가격 비교 페이지](https://via.placeholder.com/800x400/166534/ffffff?text=가격+비교+페이지+스크린샷)
+
+### 🏪 매장 관리 페이지
+
+![매장 관리 페이지](https://via.placeholder.com/800x400/581c87/ffffff?text=매장+관리+페이지+스크린샷)
+
+### 👥 관리자 페이지
+
+![관리자 페이지](https://via.placeholder.com/800x400/7c2d12/ffffff?text=관리자+페이지+스크린샷)
+
 ## 🏗️ 시스템 아키텍처
 
 ```mermaid
@@ -53,17 +71,17 @@ graph TB
     subgraph "백엔드 - Node.js + Express"
         CORS[CORS<br/>Cross-Origin]
         Auth[JWT 인증<br/>권한 검증]
-        Routes[11개 API 라우터<br/>auth/user/offer/store/post<br/>admin/phone/region/upload<br/>priceInput/util]
+        Routes[API 라우터<br/>auth/user/offer/store/post<br/>admin/phone/region/upload<br/>priceInput/util]
         Multer[Multer<br/>파일 업로드]
     end
 
     subgraph "데이터 계층"
-        ORM[TypeORM<br/>23개 Entity<br/>Transaction 지원]
-        MySQL[(MySQL<br/>timezone: Asia/Seoul)]
+        ORM[TypeORM<br/>23개 Entity]
+        MySQL[(MySQL)]
     end
 
     subgraph "파일 시스템"
-        Storage[정적 파일<br/>/uploads/images/<br/>store/device/profile<br/>post/carrier]
+        Storage[이미지<br/>파일]
     end
 
     subgraph "외부 서비스"
@@ -83,7 +101,7 @@ graph TB
     ORM --> MySQL
 
     Routes -.->|SSO 인증| OAuth
-    Storage -.->|이미지 URL| Browser
+    Storage -.->|이미지 / 파일 URL| Browser
 
     style Browser fill:#1e3a8a,stroke:#1e40af,stroke-width:2px,color:#fff
     style Router fill:#166534,stroke:#15803d,stroke-width:2px,color:#fff
@@ -104,7 +122,7 @@ graph TB
 ### 1. 📊 가격 비교
 
 - 복합 조건 검색 (제조사, 모델, 용량, 통신사, 지역)
-- 조건별 상세 정보 제공 (출고가, 자급제 가격과의 비교, 요금제/부가서비스 정보, 24개월 총 유지비)
+- 조건별 상세 정보 제공 (판매 매장 정보, 자급제 가격과의 비교, 요금제/부가서비스 정보, 24개월 총 유지비)
 - 무한 스크롤 페이지네이션 (Intersection Observer API)
 
 ### 2. 🏪 매장 관리 시스템

@@ -43,6 +43,7 @@ const PostComment: React.FC<PostCommentProps> = ({ post, setPost }) => {
         ),
       }));
     } catch (error) {
+      console.error(error);
       toast.error("다시 시도해주세요.");
     }
   };

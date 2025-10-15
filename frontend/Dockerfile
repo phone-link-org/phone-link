@@ -1,8 +1,6 @@
 # Stage 1: Build the React application
 FROM node:24-alpine AS build
 
-LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
-
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json ./
@@ -13,6 +11,8 @@ RUN npm run build
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:1.21-alpine
+
+LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
 
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 

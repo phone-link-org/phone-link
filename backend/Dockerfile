@@ -1,8 +1,6 @@
 # Stage 1: Build
 FROM node:24-alpine AS build
 
-LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
-
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -19,6 +17,8 @@ RUN npm run build --prefix backend
 FROM node:24-alpine
 
 WORKDIR /app
+
+LABEL org.opencontainers.image.source=https://github.com/hyunzai/phone-link
 
 COPY --from=build /app/backend/package.json /app/package.json
 COPY --from=build /app/backend/package-lock.json /app/package-lock.json

@@ -170,9 +170,9 @@ graph TB
 
 - **React** - 컴포넌트 기반 UI 개발
 - **TypeScript** - 타입 안정성 및 개발 생산성
-- **Vite** - 빠른 개발 서버 및 빌드 도구
-- **Tailwind CSS** - 유틸리티 우선 CSS 프레임워크
-- **Zustand** - 경량 상태 관리 라이브러리
+- **Vite** - 빌드 툴
+- **Tailwind CSS** - CSS 프레임워크
+- **Zustand** - 상태 관리 라이브러리
 - **React Router** - SPA 라우팅
 - **Axios** - HTTP 클라이언트
 

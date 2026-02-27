@@ -273,18 +273,20 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, phoneModelData
                       )}
                     </div>
                     <div>
-                      <label
-                        htmlFor="releaseDate"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                      >
-                        출시일
-                      </label>
-                      <input
-                        type="date"
-                        id="releaseDate"
-                        {...register("releaseDate")}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-500 dark:text-white"
-                      />
+                      <div className="relative mt-1">
+                        <label
+                          htmlFor="releaseDate"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          출시일
+                        </label>
+                        <input
+                          type="date"
+                          id="releaseDate"
+                          {...register("releaseDate")}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light dark:bg-[#292929] dark:border-gray-600 dark:text-white sm:text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
 
